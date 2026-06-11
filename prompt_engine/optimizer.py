@@ -64,6 +64,20 @@ class Optimizer:
         except Exception:
             return ""
 
+    def _call_llm(
+        self, system_prompt: str, user_prompt: str, variant: int = 0
+    ) -> tuple[str, int]:
+        """调用 LLM，支持多版本多样性"""
+        system = system_prompt
+        if variant > 0:
+            system += f"\n\nIMPORTANT: This is variant {variant + 1}. Generate a DIFFERENT version from a different creative angle or perspective. Do NOT repeat the same structure as previous versions."
+
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user_prompt},
+        ]
+        return self._provider.chat(messages)
+
     def optimize(self, request: OptimizeRequest) -> OptimizeResult:
         """单条提示词优化主流程"""
         start_time = time.time()
@@ -86,27 +100,29 @@ class Optimizer:
             if few_shot:
                 system_prompt += few_shot
 
-            # 4. 调用 LLM
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": request.prompt},
-            ]
-            raw_output, tokens_used = self._provider.chat(messages)
+            # 4. 调用 LLM（单版本或多候选）
+            num = request.num_candidates
+            total_tokens = 0
+            candidates = []
 
-            # 5. 后处理 + 长度截断
-            optimized = strategy_cls.post_process(raw_output)
-            if len(optimized) > request.max_length:
-                optimized = optimized[:request.max_length]
+            for i in range(num):
+                raw_output, tokens = self._call_llm(system_prompt, request.prompt, variant=i)
+                optimized = strategy_cls.post_process(raw_output)
+                if len(optimized) > request.max_length:
+                    optimized = optimized[:request.max_length]
+                candidates.append(optimized)
+                total_tokens += tokens
 
             elapsed = (time.time() - start_time) * 1000
 
             return OptimizeResult(
-                optimized_prompt=optimized,
+                optimized_prompt=candidates[0],
                 platform=request.platform,
                 style=request.style,
                 model_used=self._provider.model_name,
-                tokens_used=tokens_used,
+                tokens_used=total_tokens,
                 duration_ms=round(elapsed, 1),
+                candidates=candidates if num > 1 else [],
             )
         except Exception as e:
             elapsed = (time.time() - start_time) * 1000

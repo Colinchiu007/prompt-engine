@@ -41,6 +41,7 @@ class OptimizeRequest(BaseModel):
     creative_level: int = Field(default=5, ge=1, le=10, description="创意程度 1-10")
     max_length: int = Field(default=500, ge=50, le=2000, description="优化结果最大字符数")
     negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词，避免的元素")
+    num_candidates: int = Field(default=1, ge=1, le=5, description="候选版本数量，用于 A/B 测试")
 
 
 class BatchOptimizeRequest(BaseModel):
@@ -56,4 +57,5 @@ class OptimizeResult(BaseModel):
     model_used: str = Field(default="", description="LLM 模型名称")
     tokens_used: int = Field(default=0, description="消耗的 token 数")
     duration_ms: float = Field(default=0.0, description="优化耗时（毫秒）")
+    candidates: list[str] = Field(default_factory=list, description="多候选版本（A/B 测试时返回）")
     error: Optional[str] = Field(default=None, description="出错时的错误信息")
