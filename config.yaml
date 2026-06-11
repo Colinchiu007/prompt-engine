@@ -3,7 +3,7 @@
 
 llm:
   # 供应商: openai_compat | xfyun
-  provider: openai_compat
+  provider: xfyun
   openai_compat:
     api_key: "${OPENAI_API_KEY}"
     base_url: "https://openrouter.ai/api/v1"
@@ -12,10 +12,9 @@ llm:
     max_tokens: 500
     timeout: 15
   xfyun:
-    app_id: "${XF_APP_ID}"
-    api_key: "${XF_API_KEY}"
-    api_secret: "${XF_API_SECRET}"
-    model: "generalv3.5"
+    api_key: "d4ca37f4d0ad54353befdf6ccff82e42:MTJhNTkwNWMxNDBlYWJmMDkwNGVlNGQw"
+    base_url: "https://maas-coding-api.cn-huabei-1.xf-yun.com/v2"
+    model: "astron-code-latest"
     temperature: 0.7
     max_tokens: 500
     timeout: 15
@@ -29,6 +28,16 @@ server:
   host: "0.0.0.0"
   port: 8013
   log_level: info
+
+# 知识库（RAG）配置
+knowledge:
+  enabled: true                  # 开关
+  embedding:
+    model: "text-embedding-3-small"
+  persist_dir: "./prompts_db"    # ChromaDB 持久化目录
+  retrieval:
+    top_k: 3                     # 每次检索返回数
+    min_score: 0.3               # 最低相似度阈值
 
 # 平台策略配置
 platforms:

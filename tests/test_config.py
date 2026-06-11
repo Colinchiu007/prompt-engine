@@ -50,7 +50,7 @@ class TestLoadConfig:
         assert "engine" in cfg
         assert "server" in cfg
         assert "platforms" in cfg
-        assert cfg["llm"]["provider"] == "openai_compat"
+        assert cfg["llm"]["provider"] in ("openai_compat", "xfyun")
         assert cfg["engine"]["default_platform"] == "generic"
         assert cfg["server"]["port"] == 8013
 
