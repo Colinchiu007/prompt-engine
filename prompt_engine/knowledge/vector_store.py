@@ -14,9 +14,9 @@ class PromptVectorStore:
         self._persist_dir = Path(persist_dir)
         self._persist_dir.mkdir(parents=True, exist_ok=True)
         self._vectorizer = TfidfVectorizer(
-            max_features=5000,
-            stop_words="english",
-            ngram_range=(1, 2),
+            max_features=2000,
+            stop_words=None,           # 停用词集加载太慢
+            ngram_range=(1, 1),        # 只用 unigram，n-gram 组合爆炸
         )
         self._entries: list[PromptEntry] = []
         self._tfidf_matrix = None
@@ -118,7 +118,7 @@ class PromptVectorStore:
         self._entries = []
         self._tfidf_matrix = None
         self._vectorizer = TfidfVectorizer(
-            max_features=5000, stop_words="english", ngram_range=(1, 2),
+            max_features=2000, stop_words=None, ngram_range=(1, 1),
         )
         path = self._data_path()
         if path.exists():
