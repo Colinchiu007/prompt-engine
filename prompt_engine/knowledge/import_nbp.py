@@ -1,7 +1,10 @@
 """解析 NBP README，提取结构化 prompt 数据并导入 RAG 知识库"""
+import logging
 import re
 import json
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def parse_nbp_readme(readme_path: str) -> list[dict]:
@@ -91,7 +94,8 @@ def import_to_project(parsed_entries: list[dict], project_dir: str):
         try:
             with open(db_path, "r", encoding="utf-8") as f:
                 existing = json.load(f)
-        except:
+        except Exception:
+            logger.warning("Failed to load existing prompts.json, starting fresh")
             existing = []
 
     # 追加新数据

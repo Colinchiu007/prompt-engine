@@ -1,4 +1,5 @@
 """Optimizer — 核心编排器（支持 RAG few-shot 注入）"""
+import logging
 import time
 from pathlib import Path
 from typing import Optional
@@ -6,6 +7,8 @@ from prompt_engine.models import OptimizeRequest, OptimizeResult, ReverseRequest
 from prompt_engine.config import load_config
 from prompt_engine.strategies import get_strategy
 from prompt_engine.llm.base import BaseLLMProvider
+
+logger = logging.getLogger(__name__)
 
 
 class Optimizer:
@@ -61,7 +64,8 @@ class Optimizer:
                 title = meta.get("title", f"示例 {i}")
                 section += f"\n### 参考 {i}: {title}\n```\n{item['document']}\n```\n"
             return section
-        except Exception:
+        except Exception as e:
+            logger.error("RAG retrieval failed: %s", e)
             return ""
 
     def _call_llm(
@@ -131,6 +135,7 @@ class Optimizer:
             )
         except Exception as e:
             elapsed = (time.time() - start_time) * 1000
+            logger.error("reverse_engineer failed: %s", e)
             return ReverseResult(
                 prompt="",
                 platform=request.platform,
@@ -188,6 +193,7 @@ class Optimizer:
             )
         except Exception as e:
             elapsed = (time.time() - start_time) * 1000
+            logger.error("optimize failed for prompt '%s': %s", request.prompt[:50], e)
             return OptimizeResult(
                 optimized_prompt=request.prompt,
                 platform=request.platform,

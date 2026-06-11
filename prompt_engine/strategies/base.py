@@ -1,4 +1,5 @@
 """平台策略基类 + 注册表"""
+from abc import ABC, abstractmethod
 from prompt_engine.models import PlatformType, StyleType
 
 # 策略注册表
@@ -23,12 +24,13 @@ def list_strategies() -> list[str]:
     return list(_strategies.keys())
 
 
-class BaseStrategy:
+class BaseStrategy(ABC):
     """策略基类 — 每个平台继承此类"""
 
     platform: PlatformType = PlatformType.GENERIC
 
     @classmethod
+    @abstractmethod
     def build_system_prompt(
         cls,
         style: StyleType | None = None,
@@ -47,6 +49,7 @@ class BaseStrategy:
         return f"\n9. **避免以下元素**：{negative_prompt}。生成的内容中不得包含这些元素。"
 
     @classmethod
+    @abstractmethod
     def post_process(cls, raw_output: str) -> str:
         """后处理：清理、格式化 LLM 原始输出"""
-        return raw_output.strip().strip('"').strip("'")
+        raise NotImplementedError

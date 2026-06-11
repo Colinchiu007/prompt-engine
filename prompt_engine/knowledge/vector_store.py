@@ -63,7 +63,15 @@ class PromptVectorStore:
         return len(self._entries)
 
     def add_prompts(self, prompts: list[PromptEntry]):
-        """批量添加 prompt"""
+        """批量添加 prompt（一次性重建索引，避免 O(n²)）"""
+        self._entries.extend(prompts)
+        self._rebuild_index()
+        self._save()
+
+    def add_prompts_incremental(self, prompts: list[PromptEntry]):
+        """逐条添加（增量模式，用于少量追加）"""
+        if not prompts:
+            return
         self._entries.extend(prompts)
         self._rebuild_index()
         self._save()

@@ -19,30 +19,18 @@ class OpenAICompatProvider(BaseLLMProvider):
         self._max_tokens = config.get("max_tokens", 500)
         self._timeout = config.get("timeout", 15)
 
-    def chat(self, messages: list[dict], n: int = 1) -> tuple[str, int]:
-        """调用 LLM，返回 (响应文本, token消耗)
-        
-        Args:
-            messages: 消息列表
-            n: 生成数量，用于 A/B 多候选
-        """
+    def chat(self, messages: list[dict]) -> tuple[str, int]:
+        """调用 LLM，返回 (响应文本, token消耗)"""
         response = self._client.chat.completions.create(
             model=self._model,
             messages=messages,
             temperature=self._temperature,
             max_tokens=self._max_tokens,
             timeout=self._timeout,
-            n=n,
         )
-        # 如果 n>1，合并为多候选
-        texts = []
-        tokens = 0
-        for choice in response.choices:
-            texts.append(choice.message.content or "")
-            tokens += choice.usage.prompt_tokens + choice.usage.completion_tokens if choice.usage else 0
-        if len(texts) == 1:
-            return texts[0], tokens
-        return "\n---\n".join(texts), tokens
+        text = response.choices[0].message.content or ""
+        tokens = response.usage.total_tokens if response.usage else 0
+        return text, tokens
 
     @property
     def model_name(self) -> str:

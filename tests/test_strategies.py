@@ -112,10 +112,11 @@ class TestGenericStrategy:
 
 class TestBaseStrategyPostProcess:
     def test_strip_quotes(self):
-        from prompt_engine.strategies.base import BaseStrategy
-        assert BaseStrategy.post_process('"hello"') == "hello"
-        assert BaseStrategy.post_process("'hello'") == "hello"
+        # BaseStrategy 现在是抽象类，用具体策略调用
+        from prompt_engine.strategies import generic
+        assert generic.GenericStrategy.post_process('"hello"') == "hello"
+        assert generic.GenericStrategy.post_process("'hello'") == "hello"
 
     def test_strip_whitespace(self):
-        from prompt_engine.strategies.base import BaseStrategy
-        assert BaseStrategy.post_process("  hello  ") == "hello"
+        from prompt_engine.strategies import generic
+        assert generic.GenericStrategy.post_process("  hello  ") == "hello"
