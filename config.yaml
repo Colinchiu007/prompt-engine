@@ -1,0 +1,50 @@
+# 图片生成提示词优化引擎配置
+# 通过环境变量 CONFIG_PATH 可指定自定义路径
+
+llm:
+  # 供应商: openai_compat | xfyun
+  provider: openai_compat
+  openai_compat:
+    api_key: "${OPENAI_API_KEY}"
+    base_url: "https://api.openai.com/v1"
+    model: "gpt-4o"
+    temperature: 0.7
+    max_tokens: 500
+    timeout: 15
+  xfyun:
+    app_id: "${XF_APP_ID}"
+    api_key: "${XF_API_KEY}"
+    api_secret: "${XF_API_SECRET}"
+    model: "generalv3.5"
+    temperature: 0.7
+    max_tokens: 500
+    timeout: 15
+
+engine:
+  default_platform: generic      # 默认平台
+  default_style: realistic       # 默认风格
+  max_retries: 2                 # LLM 调用重试次数
+
+server:
+  host: "0.0.0.0"
+  port: 8013
+  log_level: info
+
+# 平台策略配置
+platforms:
+  midjourney:
+    enabled: true
+    default_aspect_ratio: "16:9"
+    default_version: "6"
+  stable_diffusion:
+    enabled: true
+  dalle:
+    enabled: true
+  tongyi:
+    enabled: true
+  yizhang:
+    enabled: true
+  jimeng:
+    enabled: true
+  generic:
+    enabled: true
