@@ -29,6 +29,8 @@ class StyleType(str, Enum):
     _3D_RENDER = "3d_render"     # 3D 渲染
     MINIMALIST = "minimalist"    # 极简
     ABSTRACT = "abstract"        # 抽象
+    PORTRAIT = "portrait"        # 人像
+    LANDSCAPE = "landscape"      # 风景
 
 
 class OptimizeRequest(BaseModel):
