@@ -252,8 +252,9 @@ pytest -v
 
 | 阶段 | 任务 | 负责人 |
 |------|------|--------|
-| Phase 2 | RAG 知识库集成（NBP 14,000+ prompts 做 few-shot） | COO/运营 |
-| Phase 2 | 风格模板库 `templates/styles.yaml`（基于 NBP 分类） | COO/运营 |
+| Phase 2 | **RAG 基础设施**（ChromaDB/嵌入/检索API集成到optimizer） | **开发会话** |
+| Phase 2 | RAG 质量调优（top_k/阈值/混合检索策略） | COO/运营 |
+| Phase 2 | 风格模板库 seeds.yaml（基于 NBP 分类提取） | COO/运营 |
 
 ### 数据来源
 
