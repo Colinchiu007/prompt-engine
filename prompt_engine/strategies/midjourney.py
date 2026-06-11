@@ -181,8 +181,10 @@ class MidjourneyStrategy(BaseStrategy):
         style: StyleType | None = None,
         creative_level: int = 5,
         max_length: int = 500,
+        negative_prompt: str | None = None,
     ) -> str:
         style_text = f"风格：{style.value}" if style else "不限定风格"
+        negative_text = cls.build_negative_section(negative_prompt)
 
         ar = _STYLE_AR_MAP.get(style, "16:9") if style else "16:9"
         style_ver = _STYLE_VERSION.get(style, "") if style else ""
@@ -234,7 +236,8 @@ Build as a DETAILED FLOWING DESCRIPTION in this order:
 2. Preserve user's core semantic
 3. Match input language (Chinese→Chinese, English→English)
 4. Within {max_length} characters
-5. {style_text}"""
+5. {style_text}
+{negative_text}"""
 
     @classmethod
     def post_process(cls, raw_output: str) -> str:

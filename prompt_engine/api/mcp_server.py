@@ -47,6 +47,11 @@ async def handle_list_tools() -> list[types.Tool]:
                         "minimum": 1,
                         "maximum": 10,
                     },
+                    "negative_prompt": {
+                        "type": "string",
+                        "description": "负面提示词，避免的元素（可选）",
+                        "default": None,
+                    },
                 },
                 "required": ["prompt"],
             },
@@ -66,6 +71,7 @@ async def handle_call_tool(
     platform_str = arguments.get("platform", "generic")
     style_str = arguments.get("style")
     creative_level = arguments.get("creative_level", 5)
+    negative_prompt = arguments.get("negative_prompt")
 
     try:
         platform = PlatformType(platform_str)
@@ -84,6 +90,7 @@ async def handle_call_tool(
         platform=platform,
         style=style,
         creative_level=creative_level,
+        negative_prompt=negative_prompt,
     )
 
     optimizer = get_optimizer()

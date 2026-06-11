@@ -33,8 +33,10 @@ class YizhangStrategy(BaseStrategy):
         style: StyleType | None = None,
         creative_level: int = 5,
         max_length: int = 500,
+        negative_prompt: str | None = None,
     ) -> str:
         style_text = f"风格：{style.value}" if style else "不限定风格"
+        negative_text = cls.build_negative_section(negative_prompt)
         style_tags = _STYLE_TAGS.get(style, "") if style else ""
 
         return f"""你是一位文心一格（百度 AI 绘画）提示词专家。将用户输入的简单描述改写成高质量提示词。
@@ -77,7 +79,8 @@ class YizhangStrategy(BaseStrategy):
 3. 保留用户原始描述的核心语义
 4. 描述应具体、有画面感
 5. 输出长度控制在 {max_length} 字符以内
-6. {style_text}"""
+6. {style_text}
+{negative_text}"""
 
     @classmethod
     def post_process(cls, raw_output: str) -> str:

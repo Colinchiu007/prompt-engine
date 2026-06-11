@@ -34,9 +34,17 @@ class BaseStrategy:
         style: StyleType | None = None,
         creative_level: int = 5,
         max_length: int = 500,
+        negative_prompt: str | None = None,
     ) -> str:
         """构建系统提示词，指导 LLM 按照平台规则输出"""
         raise NotImplementedError
+
+    @classmethod
+    def build_negative_section(cls, negative_prompt: str | None) -> str:
+        """构建负面提示词段落"""
+        if not negative_prompt:
+            return ""
+        return f"\n9. **避免以下元素**：{negative_prompt}。生成的内容中不得包含这些元素。"
 
     @classmethod
     def post_process(cls, raw_output: str) -> str:

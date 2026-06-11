@@ -80,8 +80,10 @@ class StableDiffusionStrategy(BaseStrategy):
         style: StyleType | None = None,
         creative_level: int = 5,
         max_length: int = 500,
+        negative_prompt: str | None = None,
     ) -> str:
         style_text = f"风格：{style.value}" if style else "不限定风格"
+        negative_text = cls.build_negative_section(negative_prompt)
         quality_prefix = cls._style_prompt_block(style)
         negative = cls._negative_prompt(style)
         lighting = cls._lighting_tags(creative_level)
@@ -131,7 +133,8 @@ ALWAYS include this negative prompt internally:
 4. Words ordered by importance descending
 5. Each important quality/concept should have weight applied
 6. Within {max_length} characters
-7. {style_text}"""
+7. {style_text}
+{negative_text}"""
 
     @classmethod
     def post_process(cls, raw_output: str) -> str:

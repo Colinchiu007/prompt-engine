@@ -15,8 +15,10 @@ class GenericStrategy(BaseStrategy):
         style: StyleType | None = None,
         creative_level: int = 5,
         max_length: int = 500,
+        negative_prompt: str | None = None,
     ) -> str:
         style_text = f"风格：{style.value}" if style else "不限定风格"
+        negative_text = cls.build_negative_section(negative_prompt)
 
         return f"""You are an AI image prompt expert. Rewrite the user's input into a high-quality, platform-agnostic image generation prompt.
 
@@ -45,7 +47,8 @@ Build a DETAILED FLOWING DESCRIPTION in this order:
 2. Preserve user's core semantic meaning
 3. Output language matches input language
 4. Within {max_length} characters
-5. {style_text}"""
+5. {style_text}
+{negative_text}"""
 
     @classmethod
     def post_process(cls, raw_output: str) -> str:

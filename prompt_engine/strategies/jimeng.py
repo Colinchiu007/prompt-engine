@@ -58,8 +58,10 @@ class JimengStrategy(BaseStrategy):
         style: StyleType | None = None,
         creative_level: int = 5,
         max_length: int = 500,
+        negative_prompt: str | None = None,
     ) -> str:
         style_text = f"风格：{style.value}" if style else "不限定风格"
+        negative_text = cls.build_negative_section(negative_prompt)
         style_vision = _STYLE_VISION.get(style, "") if style else ""
         impact = cls._impact_words(creative_level)
 
@@ -113,7 +115,8 @@ class JimengStrategy(BaseStrategy):
 3. 保留用户原始描述的核心语义
 4. 写成一到两个短段落，有画面冲击力
 5. 输出长度控制在 {max_length} 字符以内
-6. {style_text}"""
+6. {style_text}
+{negative_text}"""
 
     @classmethod
     def post_process(cls, raw_output: str) -> str:

@@ -40,6 +40,7 @@ class OptimizeRequest(BaseModel):
     style: Optional[StyleType] = Field(default=None, description="艺术风格")
     creative_level: int = Field(default=5, ge=1, le=10, description="创意程度 1-10")
     max_length: int = Field(default=500, ge=50, le=2000, description="优化结果最大字符数")
+    negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词，避免的元素")
 
 
 class OptimizeResult(BaseModel):
@@ -49,4 +50,5 @@ class OptimizeResult(BaseModel):
     style: Optional[StyleType] = Field(default=None, description="使用的风格")
     model_used: str = Field(default="", description="LLM 模型名称")
     tokens_used: int = Field(default=0, description="消耗的 token 数")
+    duration_ms: float = Field(default=0.0, description="优化耗时（毫秒）")
     error: Optional[str] = Field(default=None, description="出错时的错误信息")

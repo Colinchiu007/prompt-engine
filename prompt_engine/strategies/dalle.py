@@ -79,8 +79,10 @@ class DalleStrategy(BaseStrategy):
         style: StyleType | None = None,
         creative_level: int = 5,
         max_length: int = 500,
+        negative_prompt: str | None = None,
     ) -> str:
         style_text = f"风格：{style.value}" if style else "不限定风格"
+        negative_text = cls.build_negative_section(negative_prompt)
         style_desc = _STYLE_DESCRIPTIONS.get(style, "") if style else ""
         detail_chain = cls._detail_chain(creative_level)
 
@@ -134,7 +136,7 @@ Write a flowing, detailed description in THIS order:
 4. Match input language (Chinese→Chinese, English→English)
 5. Within {max_length} characters
 6. {style_text}
-"""
+{negative_text}"""
 
     @classmethod
     def post_process(cls, raw_output: str) -> str:
