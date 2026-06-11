@@ -43,6 +43,11 @@ class OptimizeRequest(BaseModel):
     negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词，避免的元素")
 
 
+class BatchOptimizeRequest(BaseModel):
+    """批量优化请求"""
+    requests: list[OptimizeRequest] = Field(..., min_length=1, max_length=10, description="优化请求列表，最多 10 条")
+
+
 class OptimizeResult(BaseModel):
     """优化结果"""
     optimized_prompt: str = Field(..., description="优化后的提示词")

@@ -2,7 +2,7 @@
 from functools import lru_cache
 from fastapi import FastAPI, HTTPException
 from prompt_engine.optimizer import Optimizer
-from prompt_engine.models import OptimizeRequest, OptimizeResult
+from prompt_engine.models import OptimizeRequest, BatchOptimizeRequest, OptimizeResult
 
 app = FastAPI(
     title="Prompt Engine API",
@@ -30,6 +30,19 @@ async def optimize(request: OptimizeRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/v1/optimize/batch", response_model=list[OptimizeResult])
+async def batch_optimize(request: BatchOptimizeRequest):
+    """批量优化多条提示词（最多 10 条，并行执行）"""
+    import asyncio
+    optimizer = get_optimizer()
+
+    async def run_one(req: OptimizeRequest) -> OptimizeResult:
+        return await asyncio.to_thread(optimizer.optimize, req)
+
+    results = await asyncio.gather(*[run_one(r) for r in request.requests])
+    return results
 
 
 @app.get("/v1/platforms")
