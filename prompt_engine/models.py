@@ -49,6 +49,25 @@ class BatchOptimizeRequest(BaseModel):
     requests: list[OptimizeRequest] = Field(..., min_length=1, max_length=10, description="优化请求列表，最多 10 条")
 
 
+class ReverseRequest(BaseModel):
+    """图片逆向工程请求"""
+    image_url: str = Field(..., description="图片 URL")
+    platform: PlatformType = Field(default=PlatformType.GENERIC, description="目标平台")
+    style: Optional[StyleType] = Field(default=None, description="艺术风格")
+    detail: str = Field(default="auto", description="视觉分析详细度: low / auto / high")
+
+
+class ReverseResult(BaseModel):
+    """逆向工程结果"""
+    prompt: str = Field(..., description="生成的提示词")
+    platform: PlatformType = Field(..., description="目标平台")
+    style: Optional[StyleType] = Field(default=None, description="艺术风格")
+    model_used: str = Field(default="", description="LLM 模型名称")
+    description: str = Field(default="", description="图片描述（纯文本版本）")
+    duration_ms: float = Field(default=0.0, description="耗时")
+    error: Optional[str] = Field(default=None, description="错误信息")
+
+
 class OptimizeResult(BaseModel):
     """优化结果"""
     optimized_prompt: str = Field(..., description="优化后的提示词")

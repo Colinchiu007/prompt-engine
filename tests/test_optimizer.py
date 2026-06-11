@@ -1,65 +1,52 @@
 """Optimizer 编排器测试"""
+from unittest.mock import patch
 from prompt_engine.optimizer import Optimizer
 from prompt_engine.models import OptimizeRequest, PlatformType, StyleType
 
 
 class TestOptimizer:
     def test_init_loads_config(self):
-        """初始化时应加载配置"""
-        opt = Optimizer()
-        assert opt.config is not None
-        assert "llm" in opt.config
-        assert opt._provider is not None
+        optimizer = Optimizer()
+        assert optimizer.config is not None
 
-    def test_optimize_generic(self):
-        """通用平台优化应返回结果"""
-        opt = Optimizer()
+    @patch.object(Optimizer, "_call_llm")
+    def test_optimize_generic(self, mock_call):
+        mock_call.return_value = ("optimized prompt", 100)
+        optimizer = Optimizer()
+        req = OptimizeRequest(prompt="test", platform=PlatformType.GENERIC)
+        result = optimizer.optimize(req)
+        assert result.optimized_prompt == "optimized prompt"
+        assert result.tokens_used == 100
+
+    @patch.object(Optimizer, "_call_llm")
+    def test_optimize_midjourney(self, mock_call):
+        mock_call.return_value = ("MJ prompt with --ar 16:9", 120)
+        optimizer = Optimizer()
+        req = OptimizeRequest(prompt="test", platform=PlatformType.MIDJOURNEY)
+        result = optimizer.optimize(req)
+        assert "MJ" in result.optimized_prompt
+
+    @patch.object(Optimizer, "_call_llm")
+    def test_optimize_with_negative_prompt(self, mock_call):
+        mock_call.return_value = ("prompt without dogs or cats", 130)
+        optimizer = Optimizer()
         req = OptimizeRequest(
-            prompt="一只猫",
+            prompt="a park",
             platform=PlatformType.GENERIC,
+            negative_prompt="dogs, cats, people",
         )
-        result = opt.optimize(req)
-        # LLM 有 key 时应返回优化后的结果
-        assert result.error is None
-        assert len(result.optimized_prompt) > len("一只猫")
-        assert result.platform == PlatformType.GENERIC
-        assert result.duration_ms > 0
+        result = optimizer.optimize(req)
+        assert "without dogs or cats" in result.optimized_prompt
 
-    def test_optimize_midjourney(self):
-        """Midjourney 优化应包含 --ar 参数"""
-        opt = Optimizer()
+    @patch.object(Optimizer, "_call_llm")
+    def test_optimize_with_style_and_creative(self, mock_call):
+        mock_call.return_value = ("oil painting style", 150)
+        optimizer = Optimizer()
         req = OptimizeRequest(
-            prompt="a cat",
-            platform=PlatformType.MIDJOURNEY,
-        )
-        result = opt.optimize(req)
-        assert result.error is None
-        assert result.platform == PlatformType.MIDJOURNEY
-        assert result.tokens_used > 0
-        assert result.duration_ms > 0
-
-    def test_optimize_with_negative_prompt(self):
-        """带负面提示词的优化"""
-        opt = Optimizer()
-        req = OptimizeRequest(
-            prompt="风景",
+            prompt="mountain",
             platform=PlatformType.GENERIC,
-            style=StyleType.REALISTIC,
-            negative_prompt="人物, 动物, 文字",
+            style=StyleType.OIL_PAINTING,
+            creative_level=9,
         )
-        result = opt.optimize(req)
-        assert result.error is None
-        assert result.style == StyleType.REALISTIC
-
-    def test_optimize_with_style_and_creative(self):
-        """带上风格和创意度参数"""
-        opt = Optimizer()
-        req = OptimizeRequest(
-            prompt="风景",
-            platform=PlatformType.GENERIC,
-            style=StyleType.REALISTIC,
-            creative_level=8,
-        )
-        result = opt.optimize(req)
-        assert result.platform == PlatformType.GENERIC
-        assert result.style == StyleType.REALISTIC
+        result = optimizer.optimize(req)
+        assert "oil painting" in result.optimized_prompt

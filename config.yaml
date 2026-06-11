@@ -10,14 +10,14 @@ llm:
     model: "deepseek/deepseek-chat"
     temperature: 0.7
     max_tokens: 500
-    timeout: 15
+    timeout: 60
   xfyun:
     api_key: "d4ca37f4d0ad54353befdf6ccff82e42:MTJhNTkwNWMxNDBlYWJmMDkwNGVlNGQw"
     base_url: "https://maas-coding-api.cn-huabei-1.xf-yun.com/v2"
     model: "astron-code-latest"
     temperature: 0.7
     max_tokens: 500
-    timeout: 15
+    timeout: 60
 
 engine:
   default_platform: generic      # 默认平台

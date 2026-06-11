@@ -2,7 +2,7 @@
 from functools import lru_cache
 from fastapi import FastAPI, HTTPException
 from prompt_engine.optimizer import Optimizer
-from prompt_engine.models import OptimizeRequest, BatchOptimizeRequest, OptimizeResult
+from prompt_engine.models import OptimizeRequest, BatchOptimizeRequest, OptimizeResult, ReverseRequest, ReverseResult
 
 app = FastAPI(
     title="Prompt Engine API",
@@ -43,6 +43,21 @@ async def batch_optimize(request: BatchOptimizeRequest):
 
     results = await asyncio.gather(*[run_one(r) for r in request.requests])
     return results
+
+
+@app.post("/v1/reverse", response_model=ReverseResult)
+async def reverse_engineer(request: ReverseRequest):
+    """图片逆向工程：从图片 URL 生成提示词（需要视觉模型支持）"""
+    try:
+        optimizer = get_optimizer()
+        result = optimizer.reverse_engineer(request)
+        if result.error:
+            raise HTTPException(status_code=502, detail=result.error)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/v1/platforms")

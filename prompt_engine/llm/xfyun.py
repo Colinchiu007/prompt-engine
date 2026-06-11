@@ -16,7 +16,7 @@ class XfyunProvider(BaseLLMProvider):
         self._model = config.get("model", "astron-code-latest")
         self._temperature = config.get("temperature", 0.7)
         self._max_tokens = config.get("max_tokens", 500)
-        self._timeout = config.get("timeout", 15)
+        self._timeout = config.get("timeout", 60)
 
     def chat(self, messages: list[dict]) -> tuple[str, int]:
         """调用 LLM，返回 (响应文本, token消耗)"""

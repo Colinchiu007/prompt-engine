@@ -2,7 +2,7 @@
 import time
 from pathlib import Path
 from typing import Optional
-from prompt_engine.models import OptimizeRequest, OptimizeResult
+from prompt_engine.models import OptimizeRequest, OptimizeResult, ReverseRequest, ReverseResult
 from prompt_engine.config import load_config
 from prompt_engine.strategies import get_strategy
 from prompt_engine.llm.base import BaseLLMProvider
@@ -67,7 +67,7 @@ class Optimizer:
     def _call_llm(
         self, system_prompt: str, user_prompt: str, variant: int = 0
     ) -> tuple[str, int]:
-        """调用 LLM，支持多版本多样性"""
+        """调用 LLM"""
         system = system_prompt
         if variant > 0:
             system += f"\n\nIMPORTANT: This is variant {variant + 1}. Generate a DIFFERENT version from a different creative angle or perspective. Do NOT repeat the same structure as previous versions."
@@ -77,6 +77,68 @@ class Optimizer:
             {"role": "user", "content": user_prompt},
         ]
         return self._provider.chat(messages)
+
+    def _call_vision_llm(
+        self, system_prompt: str, image_url: str, detail: str = "auto"
+    ) -> tuple[str, int]:
+        """调用视觉 LLM 分析图片"""
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Analyze this image and generate a detailed image generation prompt for it."},
+                    {"type": "image_url", "image_url": {"url": image_url, "detail": detail}},
+                ],
+            },
+        ]
+        return self._provider.chat(messages)
+
+    def reverse_engineer(self, request: ReverseRequest) -> ReverseResult:
+        """图片逆向工程：从图片生成提示词"""
+        start_time = time.time()
+        try:
+            description_prompt = "You are an image analysis expert. Describe this image in detail including: subject, setting, colors, lighting, composition, style, mood, and any notable details. Be comprehensive."
+            raw_desc, tokens_desc = self._call_vision_llm(description_prompt, request.image_url, request.detail)
+
+            # 加载策略生成平台格式化提示词
+            strategy_cls = get_strategy(request.platform.value)
+            if not strategy_cls:
+                strategy_cls = get_strategy("generic")
+
+            platform_prompt = strategy_cls.build_system_prompt(
+                style=request.style,
+                creative_level=7,
+                max_length=800,
+            )
+            platform_prompt += "\n\nIMPORTANT: Based on the following image description, create a high-quality prompt that would regenerate this image."
+
+            msgs = [
+                {"role": "system", "content": platform_prompt},
+                {"role": "user", "content": raw_desc},
+            ]
+            optimized, tokens_opt = self._provider.chat(msgs)
+            final = strategy_cls.post_process(optimized)
+
+            elapsed = (time.time() - start_time) * 1000
+            return ReverseResult(
+                prompt=final,
+                platform=request.platform,
+                style=request.style,
+                model_used=self._provider.model_name,
+                description=raw_desc,
+                duration_ms=round(elapsed, 1),
+            )
+        except Exception as e:
+            elapsed = (time.time() - start_time) * 1000
+            return ReverseResult(
+                prompt="",
+                platform=request.platform,
+                style=request.style,
+                model_used=self._provider.model_name,
+                duration_ms=round(elapsed, 1),
+                error=str(e),
+            )
 
     def optimize(self, request: OptimizeRequest) -> OptimizeResult:
         """单条提示词优化主流程"""

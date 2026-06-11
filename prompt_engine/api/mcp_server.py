@@ -5,7 +5,7 @@ from mcp.server.models import InitializationOptions
 import mcp.server.stdio
 import mcp.types as types
 from mcp.server import NotificationOptions, Server
-from prompt_engine.models import OptimizeRequest, PlatformType, StyleType
+from prompt_engine.models import OptimizeRequest, PlatformType, StyleType, ReverseRequest
 from prompt_engine.optimizer import Optimizer
 
 server = Server("prompt-engine")
@@ -60,10 +60,34 @@ async def handle_list_tools() -> list[types.Tool]:
                         "maximum": 5,
                     },
                 },
-                "required": ["prompt"],
-            },
-        )
-    ]
+                                "required": ["prompt"],
+                            },
+                        ),
+                        types.Tool(
+                            name="reverse_prompt",
+                            description="从图片 URL 逆向生成提示词。分析图片内容，生成适用于目标平台的提示词。（需视觉模型支持）",
+                            inputSchema={
+                                "type": "object",
+                                "properties": {
+                                    "image_url": {
+                                        "type": "string",
+                                        "description": "图片 URL",
+                                    },
+                                    "platform": {
+                                        "type": "string",
+                                        "description": "目标平台: midjourney, stable_diffusion, dalle, tongyi, yizhang, jimeng, generic",
+                                        "default": "generic",
+                                    },
+                                    "style": {
+                                        "type": "string",
+                                        "description": "艺术风格（可选）",
+                                        "default": None,
+                                    },
+                                },
+                                "required": ["image_url"],
+                            },
+                        ),
+                    ]
 
 
 @server.call_tool()
