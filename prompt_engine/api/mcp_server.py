@@ -1,5 +1,5 @@
 """MCP Server — 通过 Model Context Protocol 暴露提示词优化工具"""
-import asyncio
+from functools import lru_cache
 from typing import Optional
 from mcp.server.models import InitializationOptions
 import mcp.server.stdio
@@ -9,14 +9,11 @@ from prompt_engine.models import OptimizeRequest, PlatformType, StyleType
 from prompt_engine.optimizer import Optimizer
 
 server = Server("prompt-engine")
-_optimizer: Optimizer | None = None
 
 
+@lru_cache
 def get_optimizer() -> Optimizer:
-    global _optimizer
-    if _optimizer is None:
-        _optimizer = Optimizer()
-    return _optimizer
+    return Optimizer()
 
 
 @server.list_tools()
@@ -70,7 +67,6 @@ async def handle_call_tool(
     style_str = arguments.get("style")
     creative_level = arguments.get("creative_level", 5)
 
-    # 解析枚举
     try:
         platform = PlatformType(platform_str)
     except ValueError:

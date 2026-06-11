@@ -15,7 +15,7 @@ class XfyunProvider(BaseLLMProvider):
         self._temperature = config.get("temperature", 0.7)
         self._max_tokens = config.get("max_tokens", 500)
 
-    def chat(self, messages: list[dict]) -> str:
+    def chat(self, messages: list[dict]) -> tuple[str, int]:
         # TODO: 讯飞 WebSocket API 实现
         # 当前返回占位，后续实现
         raise NotImplementedError("讯飞 Provider 尚在实现中，请使用 openai_compat")

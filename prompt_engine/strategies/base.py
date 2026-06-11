@@ -1,5 +1,4 @@
 """平台策略基类 + 注册表"""
-from typing import Optional
 from prompt_engine.models import PlatformType, StyleType
 
 # 策略注册表
@@ -14,7 +13,7 @@ def register(platform: str):
     return decorator
 
 
-def get_strategy(platform: str) -> Optional[type["BaseStrategy"]]:
+def get_strategy(platform: str) -> type["BaseStrategy"] | None:
     """获取已注册的策略类"""
     return _strategies.get(platform)
 
@@ -32,7 +31,7 @@ class BaseStrategy:
     @classmethod
     def build_system_prompt(
         cls,
-        style: Optional[StyleType] = None,
+        style: StyleType | None = None,
         creative_level: int = 5,
         max_length: int = 500,
     ) -> str:

@@ -9,8 +9,8 @@ class BaseLLMProvider:
     def __init__(self, config: dict):
         self.config = config
 
-    def chat(self, messages: list[dict]) -> str:
-        """调用 LLM 并返回响应文本"""
+    def chat(self, messages: list[dict]) -> tuple[str, int]:
+        """调用 LLM 并返回 (响应文本, token消耗)"""
         raise NotImplementedError
 
     @property
@@ -31,8 +31,3 @@ class BaseLLMProvider:
             return XfyunProvider(cfg["llm"]["xfyun"])
         else:
             raise ValueError(f"不支持的 LLM 供应商: {provider_name}")
-
-
-def get_provider(config: Optional[dict] = None) -> BaseLLMProvider:
-    """获取 LLM Provider 实例（快捷方式）"""
-    return BaseLLMProvider.from_config(config)
