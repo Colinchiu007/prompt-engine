@@ -228,6 +228,38 @@ pytest -v
 
 全部 40 个测试通过，使用 mock 隔离，无需真实 API Key。
 
+## 开发对接
+
+### 策略文件变更（v0.3.1）
+
+以下是近期策略文件重写对 011 开发会话的影响清单：
+
+| 变更 | 影响范围 | 动作 |
+|------|---------|------|
+| `strategies/midjourney.py` 全面重写 | build_system_prompt 签名不变 | ✅ 无需改动，向后兼容 |
+| `strategies/stable_diffusion.py` 全面重写 | build_system_prompt 签名不变 | ✅ 无需改动，向后兼容 |
+| `strategies/dalle.py` 全面重写 | build_system_prompt 签名不变 | ✅ 无需改动，向后兼容 |
+| `strategies/tongyi.py` 全面重写 | build_system_prompt 签名不变 | ✅ 无需改动，向后兼容 |
+| `strategies/yizhang.py` 全面重写 | build_system_prompt 签名不变 | ✅ 无需改动，向后兼容 |
+| `strategies/jimeng.py` 全面重写 | build_system_prompt 签名不变 | ✅ 无需改动，向后兼容 |
+| `strategies/generic.py` 全面重写 | build_system_prompt 签名不变 | ✅ 无需改动，向后兼容 |
+| `models.py` 新增 PORTRAIT / LANDSCAPE | OptimizeRequest 兼容 | ⚠️ 新增枚举值，老代码不会受影响 |
+| `llm/xfyun.py` timeout 15→60 | 配置已更新 | ✅ 无需改动 |
+
+**重要**：所有策略重写均保持 `build_system_prompt(style, creative_level, max_length)` 签名不变，`post_process` 签名不变。对上层 `Optimizer`、`FastAPI`、`MCP Server` **零破坏**。
+
+### 后续对接计划
+
+| 阶段 | 任务 | 负责人 |
+|------|------|--------|
+| Phase 2 | RAG 知识库集成（NBP 14,000+ prompts 做 few-shot） | COO/运营 |
+| Phase 2 | 风格模板库 `templates/styles.yaml`（基于 NBP 分类） | COO/运营 |
+
+### 数据来源
+
+- [Nano Banana Pro Prompts](https://github.com/YouMind-OpenLab/awesome-nano-banana-pro-prompts) — 14,292 条社区高质量 prompt，16 语言，42 个分类
+- 详细变更见 [CHANGELOG.md](CHANGELOG.md)
+
 ## 版本历史
 
 - **v0.1.0** — 初始版本：基础优化、多平台适配、三种集成方式
