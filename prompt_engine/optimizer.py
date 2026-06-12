@@ -102,6 +102,45 @@ def _detect_style_type_from_category(
     return None, category_result
 
 
+def _style_category_to_db_key(cat: StyleCategory) -> str:
+    """将 StyleCategory 枚举值转换为 MJ 数据库的 key（硬编码映射，保证 100% 准确）。"""
+    _CATEGORY_DB_MAP = {
+        StyleCategory.LIGHTING: "Lighting",
+        StyleCategory.MATERIAL_PROPERTIES: "Material_Properties",
+        StyleCategory.MATERIALS: "Materials",
+        StyleCategory.DIMENSIONALITY: "Dimensionality",
+        StyleCategory.COLORS_AND_PALETTES: "Colors_and_Palettes",
+        StyleCategory.COMBINATIONS: "Combinations",
+        StyleCategory.CAMERA: "Camera",
+        StyleCategory.PERSPECTIVE: "Perspective",
+        StyleCategory.STRUCTURAL_MODIFICATION: "Structural_Modification",
+        StyleCategory.NATURE_AND_ANIMALS: "Nature_and_Animals",
+        StyleCategory.OBJECTS: "Objects",
+        StyleCategory.OUTER_SPACE: "Outer_Space",
+        StyleCategory.GEOMETRY: "Geometry",
+        StyleCategory.GEOGRAPHY_AND_CULTURE: "Geography_and_Culture",
+        StyleCategory.DRAWING_AND_ART_MEDIUMS: "Drawing_and_Art_Mediums",
+        StyleCategory.SFX_AND_SHADERS: "SFX_and_Shaders",
+        StyleCategory.THEMES: "Themes",
+        StyleCategory.INTANGIBLES: "Intangibles",
+        StyleCategory.TV_AND_MOVIES: "TV_and_Movies",
+        StyleCategory.SONG_LYRICS: "Song_Lyrics",
+        StyleCategory.DESIGN_STYLES: "Design_Styles",
+        StyleCategory.DIGITAL: "Digital",
+        StyleCategory.EXPERIMENTAL: "Experimental",
+        StyleCategory.EMOJIS: "Emojis",
+        StyleCategory.MISCELLANEOUS: "Miscellaneous",
+    }
+    return _CATEGORY_DB_MAP.get(cat, cat.value.replace("_", " ").title().replace(" ", "_"))
+
+
+def _get_preferred_db_keys(category_result: Optional["StyleCategoryResult"]) -> list[str]:  # noqa: F821
+    """从分类结果中提取 MJ DB 可用的 key 列表。"""
+    if not category_result or not category_result.categories:
+        return []
+    return [_style_category_to_db_key(cat) for cat in category_result.categories]
+
+
 class Optimizer:
     """提示词优化引擎核心类"""
 
@@ -286,7 +325,12 @@ class Optimizer:
 
             for i in range(num):
                 raw_output, tokens = self._call_llm(system_prompt, request.prompt, variant=i)
-                optimized = strategy_cls.post_process(raw_output, creative_level=request.creative_level)
+                preferred_db_keys = _get_preferred_db_keys(detected_result)
+                optimized = strategy_cls.post_process(
+                    raw_output,
+                    creative_level=request.creative_level,
+                    preferred_categories=preferred_db_keys or None,
+                )
                 if len(optimized) > request.max_length:
                     optimized = optimized[:request.max_length]
                 candidates.append(optimized)

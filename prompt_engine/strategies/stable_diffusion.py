@@ -137,7 +137,8 @@ ALWAYS include this negative prompt internally:
 {negative_text}"""
 
     @classmethod
-    def post_process(cls, raw_output: str, creative_level: int = 5) -> str:
+    def post_process(cls, raw_output: str, creative_level: int = 5,
+                     preferred_categories: list[str] | None = None) -> str:
         text = raw_output.strip().strip('"').strip("'")
         # 确保不以句号结尾（SD 用逗号分割）
         if text.endswith("."):

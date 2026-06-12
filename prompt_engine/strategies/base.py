@@ -50,11 +50,13 @@ class BaseStrategy(ABC):
 
     @classmethod
     @abstractmethod
-    def post_process(cls, raw_output: str, creative_level: int = 5) -> str:
+    def post_process(cls, raw_output: str, creative_level: int = 5,
+                     preferred_categories: list[str] | None = None) -> str:
         """后处理：清理、格式化 LLM 原始输出。
-        
+
         Args:
             raw_output: LLM 原始输出
             creative_level: 创意等级 (1-10)，用于控制风格关键词注入强度
+            preferred_categories: 可选，MJ 风格类别列表（风格感知注入用）
         """
         raise NotImplementedError
