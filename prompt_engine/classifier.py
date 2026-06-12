@@ -264,25 +264,25 @@ def _build_llm_prompt(prompt: str, categories: list[StyleCategory]) -> tuple[str
 
 
 class StyleCategoryClassifier:
-    """MJ 27 维度风格分类器 — 关键词匹配 + LLM 零样本分类。
-    
-    工作流程：
-    1. 关键词匹配（快速，~0ms）
-    2. 如果关键词匹配得分低且 use_llm=True，调用 LLM 做语义分类
-    3. 返回多标签分类结果
-    
+    """MJ 27 维度风格分类器 — 关键词匹配 + 向量语义搜索 + LLM 零样本分类。
+
+    三级流水线：
+    1. 关键词匹配（快速，~0ms）— 中文+英文同义词，精确命中
+    2. 向量语义搜索（~50ms）— TF-IDF 余弦相似度，模糊匹配
+    3. LLM 零样本分类（~1s）— 语义理解，兜底
+
     不依赖 PyTorch/训练数据，零样本工作。
     """
-    
+
     def __init__(self, llm_chat_func=None):
         """初始化分类器。
-        
+
         Args:
             llm_chat_func: 可选的 LLM 聊天函数，签名 (system: str, user: str) -> str
-                           如果不提供，关键词匹配后如果没有找到类别则返回空结果
+                           如果不提供，关键词匹配 + 向量搜索后仍未找到则返回空结果
         """
         self._llm_chat = llm_chat_func
-    
+
     def classify(
         self,
         prompt: str,
@@ -290,12 +290,17 @@ class StyleCategoryClassifier:
         use_llm: bool = True,
     ) -> StyleCategoryResult:
         """对 prompt 进行风格分类。
-        
+
+        三级流水线：
+        1. 关键词匹配（精确命中）
+        2. 向量语义搜索（TF-IDF 模糊匹配，增强中文+英文泛化）
+        3. LLM 零样本分类（兜底，需提供 llm_chat_func）
+
         Args:
             prompt: 原始 prompt 文本
             max_categories: 最多返回几个类别
-            use_llm: 是否使用 LLM 做深度分类（当关键词匹配得分低时）
-        
+            use_llm: 是否使用 LLM 做深度分类（当关键词+向量搜索得分低时）
+
         Returns:
             StyleCategoryResult 分类结果
         """
@@ -303,10 +308,9 @@ class StyleCategoryClassifier:
         keywords_found: dict[str, list[str]] = {}
         categories, kw_found, confidence = _keyword_match(prompt)
         keywords_found.update(kw_found)
-        
-        # 如果关键词匹配已有结果，直接返回
-        if categories:
-            # 按置信度排序
+
+        # 如果关键词匹配已有结果且置信度高，直接返回
+        if categories and confidence >= 0.6:
             categories = sorted(categories, key=lambda c: 1.0, reverse=True)
             result = StyleCategoryResult(
                 categories=categories[:max_categories],
@@ -317,8 +321,51 @@ class StyleCategoryClassifier:
             logger.debug("Keyword match: %d categories, confidence=%.2f",
                         len(result.categories), confidence)
             return result
-        
-        # 第二步：LLM 分类（如果启用且提供了 llm 函数）
+
+        # 第二步：向量语义搜索（关键词匹配得分低时启用）
+        if not categories or confidence < 0.6:
+            try:
+                rag_scores = self._vector_search(prompt)
+                if rag_scores:
+                    # 构建 StyleCategory → score 映射
+                    cat_scores: dict[StyleCategory, float] = {}
+                    for cat in StyleCategory:
+                        db_key = _style_cat_to_db_key(cat)
+                        if db_key in rag_scores:
+                            cat_scores[cat] = rag_scores[db_key]
+
+                    if cat_scores:
+                        # 与关键词匹配结果合并（加权）
+                        kw_conf = confidence if categories else 0.0
+                        for cat in cat_scores:
+                            if cat in cat_scores:
+                                cat_scores[cat] = max(cat_scores[cat], kw_conf * 0.3)
+
+                        # 按得分排序
+                        sorted_cats = sorted(
+                            cat_scores.keys(),
+                            key=lambda c: cat_scores[c],
+                            reverse=True,
+                        )[:max_categories]
+
+                        # 如果向量搜索得分比关键词高，用向量搜索方法
+                        max_rag = max(cat_scores.values()) if cat_scores else 0
+                        method = "keyword_match" if categories and confidence >= max_rag else "vector_rag"
+                        rag_conf = max_rag
+
+                        result = StyleCategoryResult(
+                            categories=sorted_cats,
+                            keywords_found=keywords_found,
+                            method=method,
+                            confidence=rag_conf,
+                        )
+                        logger.info("RAG vector search: %d categories, confidence=%.2f, method=%s",
+                                   len(result.categories), rag_conf, method)
+                        return result
+            except Exception as e:
+                logger.debug("Vector search failed: %s", e)
+
+        # 第三步：LLM 分类（兜底）
         if use_llm and self._llm_chat:
             try:
                 all_categories = list(StyleCategory)
@@ -376,4 +423,133 @@ class StyleCategoryClassifier:
             if cat.value == name.lower().replace(" ", "_").replace("-", "_"):
                 return True
         return False
+
+    @staticmethod
+    def _build_rag_index(mj_db: dict) -> Optional[tuple]:
+        """从 MJ 关键词数据库构建 RAG 检索索引（TF-IDF + 余弦相似度）。
+
+        每个 MJ 关键词是一条文档，标签 = 所属类别。
+        用于提升分类精度：相似 prompt 的关键词类别会投票。
+
+        Returns:
+            (vectorizer, tfidf_matrix, entry_list) 三元组，或 None
+        """
+        try:
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.metrics.pairwise import cosine_similarity
+        except ImportError:
+            logger.warning("sklearn not installed, RAG index unavailable")
+            return None
+
+        documents = []
+        category_labels = []
+
+        for db_key, kws in mj_db.items():
+            # 添加每个关键词作为文档
+            for kw in kws[:20]:  # 每个类别最多取 20 个
+                if len(kw) >= 3:
+                    documents.append(kw)
+                    category_labels.append(db_key)
+            # 添加类别名本身作为文档
+            documents.append(db_key.replace("_", " "))
+            category_labels.append(db_key)
+
+        if not documents:
+            return None
+
+        vectorizer = TfidfVectorizer(
+            max_features=500,
+            stop_words=None,
+            ngram_range=(1, 2),
+            analyzer="char_wb",  # 基于字符，支持中文
+            max_df=0.8,
+        )
+        tfidf_matrix = vectorizer.fit_transform(documents)
+        return vectorizer, tfidf_matrix, category_labels
+
+    def _vector_search(self, query: str, top_k: int = 5) -> dict[str, float]:
+        """向量语义搜索：查询与 MJ 数据库中哪些关键词最相似。
+
+        返回: {db_category_key: score} 得分字典（归一化后）
+        """
+        if not self._rag_index:
+            return {}
+
+        vectorizer, tfidf_matrix, labels = self._rag_index
+        try:
+            query_vec = vectorizer.transform([query])
+            from sklearn.metrics.pairwise import cosine_similarity
+            similarities = cosine_similarity(query_vec, tfidf_matrix)[0]
+
+            # 按类别聚合得分
+            scores: dict[str, float] = {}
+            for i, cat_key in enumerate(labels):
+                sim = float(similarities[i])
+                if sim > 0.01:
+                    scores[cat_key] = scores.get(cat_key, 0.0) + sim
+
+            # 归一化
+            if scores:
+                max_score = max(scores.values())
+                if max_score > 0:
+                    scores = {k: v / max_score for k, v in scores.items()}
+            return scores
+        except Exception as e:
+            logger.debug("Vector search failed: %s", e)
+            return {}
+
+
+def _load_category_keywords_data() -> dict:
+    """加载原始 MJ 数据库（用于构建 RAG 索引）。"""
+    db_path = Path(__file__).parent / "data" / "mj_style_final.json"
+    db: dict = {}
+    if db_path.exists():
+        try:
+            with open(db_path, "r", encoding="utf-8") as f:
+                db = json.load(f)
+        except Exception:
+            pass
+    return db
+
+
+# 注册 RAG 索引到 StyleCategoryClassifier（在函数定义之后）
+StyleCategoryClassifier._rag_index = None
+StyleCategoryClassifier._rag_index = StyleCategoryClassifier._build_rag_index(
+    _load_category_keywords_data()
+)
+
+
+# StyleCategory → MJ 数据库 key 映射
+_STYLE_CAT_DB_MAP: dict[StyleCategory, str] = {
+    StyleCategory.LIGHTING: "Lighting",
+    StyleCategory.MATERIAL_PROPERTIES: "Material_Properties",
+    StyleCategory.MATERIALS: "Materials",
+    StyleCategory.DIMENSIONALITY: "Dimensionality",
+    StyleCategory.COLORS_AND_PALETTES: "Colors_and_Palettes",
+    StyleCategory.COMBINATIONS: "Combinations",
+    StyleCategory.CAMERA: "Camera",
+    StyleCategory.PERSPECTIVE: "Perspective",
+    StyleCategory.STRUCTURAL_MODIFICATION: "Structural_Modification",
+    StyleCategory.NATURE_AND_ANIMALS: "Nature_and_Animals",
+    StyleCategory.OBJECTS: "Objects",
+    StyleCategory.OUTER_SPACE: "Outer_Space",
+    StyleCategory.GEOMETRY: "Geometry",
+    StyleCategory.GEOGRAPHY_AND_CULTURE: "Geography_and_Culture",
+    StyleCategory.DRAWING_AND_ART_MEDIUMS: "Drawing_and_Art_Mediums",
+    StyleCategory.SFX_AND_SHADERS: "SFX_and_Shaders",
+    StyleCategory.THEMES: "Themes",
+    StyleCategory.INTANGIBLES: "Intangibles",
+    StyleCategory.TV_AND_MOVIES: "TV_and_Movies",
+    StyleCategory.SONG_LYRICS: "Song_Lyrics",
+    StyleCategory.DESIGN_STYLES: "Design_Styles",
+    StyleCategory.DIGITAL: "Digital",
+    StyleCategory.EXPERIMENTAL: "Experimental",
+    StyleCategory.EMOJIS: "Emojis",
+    StyleCategory.MISCELLANEOUS: "Miscellaneous",
+}
+
+
+def _style_cat_to_db_key(cat: StyleCategory) -> str:
+    """将 StyleCategory 枚举转换为 MJ 数据库的 key 字符串。"""
+    return _STYLE_CAT_DB_MAP.get(cat, cat.value.replace("_", " ").title().replace(" ", "_"))
 

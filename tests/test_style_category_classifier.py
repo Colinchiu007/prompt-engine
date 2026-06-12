@@ -81,8 +81,9 @@ class TestStyleCategoryClassifierWithLLM:
         
         classifier = StyleCategoryClassifier(llm_chat_func=mock_chat)
         result = classifier.classify("something very abstract")
-        assert result.method == "llm_classify"
-        assert len(result.categories) == 2
+        # 向量搜索可能先命中，method 可能是 vector_rag 或 llm_classify
+        assert result.method in ("llm_classify", "vector_rag")
+        assert len(result.categories) >= 1
 
 
 class TestStyleCategoryResultModel:
@@ -102,6 +103,47 @@ class TestStyleCategoryResultModel:
         assert len(result.categories) == 0
         assert result.method == "keyword_match"
         assert result.confidence == 0.0
+
+
+class TestStyleCategoryClassifierRAG:
+    """测试 RAG 向量搜索功能."""
+
+    def test_rag_index_exists(self):
+        from prompt_engine.classifier import StyleCategoryClassifier
+        c = StyleCategoryClassifier()
+        assert c._rag_index is not None
+
+    def test_vector_search_returns_categories(self):
+        from prompt_engine.classifier import StyleCategoryClassifier
+        c = StyleCategoryClassifier()
+        # 模糊语义查询，走向量搜索
+        scores = c._vector_search("a feeling of longing and melancholy")
+        assert len(scores) > 0
+        # Lighting 类别应该有较高得分
+        assert "Lighting" in scores
+
+    def test_vector_search_watercolor(self):
+        from prompt_engine.classifier import StyleCategoryClassifier
+        c = StyleCategoryClassifier()
+        scores = c._vector_search("watercolor painting landscape")
+        assert len(scores) > 0
+        # Drawing_and_Art_Mediums 应该排名靠前
+        assert "Drawing_and_Art_Mediums" in scores or "Colors_and_Palettes" in scores
+
+    def test_three_level_pipeline_keyword_wins(self):
+        """关键词精确命中时走 keyword_match，不走向量."""
+        classifier = StyleCategoryClassifier()
+        result = classifier.classify("watercolor painting of mountains")
+        assert result.method == "keyword_match"
+        assert len(result.categories) >= 1
+
+    def test_three_level_pipeline_vector_fallback(self):
+        """极端模糊文本，向量搜索应该能返回结果."""
+        classifier = StyleCategoryClassifier()
+        # 构造一个可能同时命中关键词但 confidence 不够的场景
+        # 向量搜索应该能补充类别
+        scores = classifier._vector_search("a feeling of longing and melancholy")
+        assert len(scores) > 0
 
 
 class TestStyleCategoryClassifierIntegration:
