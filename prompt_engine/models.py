@@ -33,6 +33,97 @@ class StyleType(str, Enum):
     LANDSCAPE = "landscape"      # 风景
 
 
+# ============================================================================
+# MJ Style Reference Categories
+# ============================================================================
+
+class StyleCategory(str, Enum):
+    """MJ 风格分类器维度 — 27 个风格分类
+
+    来源: github.com/willwulfken/MidJourney-Styles-and-Keywords-Reference
+    覆盖: 光照/材质/色彩/镜头/构图/自然/艺术媒介/文化风格/影视参考/特效
+    """
+    # 视觉风格
+    DESIGN_STYLES = "design_styles"          # 设计风格
+    DIGITAL = "digital"                       # 数字艺术
+    EXPERIMENTAL = "experimental"             # 实验风格
+
+    # 光影与材质
+    LIGHTING = "lighting"                    # 光照效果
+    MATERIAL_PROPERTIES = "material_properties"  # 材质属性
+    MATERIALS = "materials"                  # 材料
+    DIMENSIONALITY = "dimensionality"        # 维度感
+
+    # 色彩
+    COLORS_AND_PALETTES = "colors_and_palettes"  # 色彩与调色板
+    RAINBOW_OF_COLORS = "rainbow_of_colors"  # 彩虹色
+    COMBINATIONS = "combinations"             # 色彩组合
+
+    # 相机与镜头
+    CAMERA = "camera"                         # 相机/镜头
+    PERSPECTIVE = "perspective"               # 视角/透视
+    STRUCTURAL_MODIFICATION = "structural_modification"  # 结构变形
+
+    # 自然与生物
+    NATURE_AND_ANIMALS = "nature_and_animals"  # 自然与动物
+    OBJECTS = "objects"                       # 物体
+    OUTER_SPACE = "outer_space"               # 太空
+
+    # 几何与形态
+    GEOMETRY = "geometry"                     # 几何形状
+
+    # 文化
+    GEOGRAPHY_AND_CULTURE = "geography_and_culture"  # 地理与文化
+
+    # 艺术媒介
+    DRAWING_AND_ART_MEDIUMS = "drawing_and_art_mediums"  # 绘画与艺术媒介
+
+    # 特效
+    SFX_AND_SHADERS = "sfx_and_shaders"      # 特效与着色器
+
+    # 主题
+    THEMES = "themes"                          # 主题/氛围
+    INTANGIBLES = "intangibles"                # 抽象概念
+
+    # 影视音乐
+    TV_AND_MOVIES = "tv_and_movies"            # 影视参考
+    SONG_LYRICS = "song_lyrics"                # 歌词风格
+
+    # 杂项
+    EMOJIS = "emojis"                          # Emoji 风格
+    MISCELLANEOUS = "miscellaneous"            # 杂项
+
+
+class StyleCategoryResult(BaseModel):
+    """分类结果 — 多标签输出（一个 prompt 可能触发多个风格维度）"""
+    categories: list[StyleCategory] = Field(
+        default_factory=list,
+        description="检测到的风格类别列表"
+    )
+    keywords_found: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="每个类别中匹配的原始关键词"
+    )
+    method: str = Field(
+        default="keyword_match",
+        description="分类方法: keyword_match / llm_classify / vector_rag"
+    )
+    confidence: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="总体置信度"
+    )
+
+
+class AutoStyleRequest(BaseModel):
+    """自动风格识别请求"""
+    prompt: str = Field(..., min_length=1, max_length=2000, description="待分析的原始 prompt")
+    platform: PlatformType = Field(default=PlatformType.GENERIC, description="目标平台")
+    use_llm: bool = Field(default=True, description="是否使用 LLM 做深度分类")
+    max_categories: int = Field(default=5, ge=1, le=10, description="最多返回几个风格类别")
+
+
 class OptimizeRequest(BaseModel):
     """优化请求"""
     prompt: str = Field(..., min_length=1, max_length=2000, description="原始提示词")
