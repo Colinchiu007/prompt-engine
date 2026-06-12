@@ -126,6 +126,7 @@ Write a flowing, detailed description in THIS order:
 - Describe EXPRESSIONS in detail: "eyes focused on the central area, expression serious with a slight smile"
 - Specify textures: "creamy bokeh background", "smooth porcelain skin", "rough wood grain"
 - Use lighting precision: "soft diffused natural light from a large window", "dramatic side lighting"
+
 - Use camera references: "shot on 85mm lens at f/1.8", "shallow depth of field"
 - For multi-element scenes, describe each element's position: "on the left side... in the center... in the background..."
 
@@ -142,4 +143,5 @@ Write a flowing, detailed description in THIS order:
     def post_process(cls, raw_output: str, creative_level: int = 5,
                      preferred_categories: list[str] | None = None) -> str:
         """DALL·E 输出直接使用"""
-        return raw_output.strip().strip('"').strip("'")
+        text = raw_output.strip().strip('"').strip("'")
+        from prompt_engine.keyword_injector import inject_style_keywords; return inject_style_keywords(text, creative_level, preferred_categories)

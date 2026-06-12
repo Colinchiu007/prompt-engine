@@ -66,7 +66,9 @@ class TestStableDiffusionStrategy:
     def test_post_process_strips_quotes(self):
         from prompt_engine.strategies.stable_diffusion import StableDiffusionStrategy
         result = StableDiffusionStrategy.post_process('"a beautiful cat"')
-        assert result == "a beautiful cat"
+        # 引号被移除，关键词被注入追加
+        assert '"' not in result.split(",")[0], f"Quotes not stripped: {result}"
+        assert "a beautiful cat" in result
 
 
 class TestDalleStrategy:
@@ -112,11 +114,17 @@ class TestGenericStrategy:
 
 class TestBaseStrategyPostProcess:
     def test_strip_quotes(self):
-        # BaseStrategy 现在是抽象类，用具体策略调用
         from prompt_engine.strategies import generic
-        assert generic.GenericStrategy.post_process('"hello"') == "hello"
-        assert generic.GenericStrategy.post_process("'hello'") == "hello"
+        raw = generic.GenericStrategy.post_process('"hello"')
+        assert '"' not in raw.split(",")[0], f"Quotes not stripped: {raw}"
+        assert "hello" in raw
+        raw2 = generic.GenericStrategy.post_process("'hello'")
+        assert "'" not in raw2.split(",")[0], f"Quotes not stripped: {raw2}"
+        assert "hello" in raw2
 
     def test_strip_whitespace(self):
         from prompt_engine.strategies import generic
-        assert generic.GenericStrategy.post_process("  hello  ") == "hello"
+        raw = generic.GenericStrategy.post_process("  hello  ")
+        # 空格被移除，关键词被注入追加
+        assert not raw.startswith("  "), f"Leading space not stripped: {raw}"
+        assert "hello" in raw

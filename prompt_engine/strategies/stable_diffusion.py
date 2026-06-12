@@ -120,6 +120,7 @@ ALWAYS include this negative prompt internally:
 {style_text}
 
 ## Keyword quality rules (from community prompt patterns)
+
 - Use texture descriptors: "intricate", "detailed texture", "smooth", "rough", "shiny"
 - Use color precision: "navy blue", "mint green", "burgundy", "teal"
 - Use material words: "velvet", "leather", "metal", "glass", "wood", "marble"
@@ -142,9 +143,10 @@ ALWAYS include this negative prompt internally:
         text = raw_output.strip().strip('"').strip("'")
         # 确保不以句号结尾（SD 用逗号分割）
         if text.endswith("."):
-            text = text[:-1]
+          text = text[:-1]
         # 确保逗号分隔
         if ", " not in text and len(text) > 20:
             # 可能是句子格式，尝试逗号化
             pass
-        return text
+        # 跨平台风格注入
+        from prompt_engine.keyword_injector import inject_style_keywords; return inject_style_keywords(text, creative_level, preferred_categories)

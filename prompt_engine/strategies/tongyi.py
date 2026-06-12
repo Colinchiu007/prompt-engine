@@ -3,6 +3,7 @@ from prompt_engine.strategies.base import BaseStrategy, register
 from prompt_engine.models import PlatformType, StyleType
 
 
+
 # 通义万相支持的中文风格描述
 _STYLE_DESC = {
     StyleType.REALISTIC:
@@ -121,4 +122,6 @@ class TongyiStrategy(BaseStrategy):
     @classmethod
     def post_process(cls, raw_output: str, creative_level: int = 5,
                      preferred_categories: list[str] | None = None) -> str:
-        return raw_output.strip().strip('"').strip("'").strip("“").strip("”")
+        text = raw_output.strip().strip('"').strip("'")
+
+        from prompt_engine.keyword_injector import inject_style_keywords; return inject_style_keywords(text, creative_level, preferred_categories).strip("“").strip("”")

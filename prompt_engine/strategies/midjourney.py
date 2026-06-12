@@ -5,11 +5,7 @@ MJ Style Reference 数据库:
 - 覆盖: 光照/材质/色彩/镜头/构图/自然/艺术媒介/文化风格/影视参考
 - 来源: github.com/willwulfken/MidJourney-Styles-and-Keywords-Reference
 """
-import json
-import os
 import random
-import re
-from pathlib import Path
 
 from prompt_engine.strategies.base import BaseStrategy, register
 from prompt_engine.models import PlatformType, StyleType
@@ -271,119 +267,27 @@ Pick the most relevant ones naturally:
         text = raw_output.strip().strip('"').strip("'")
         if "--ar " not in text:
             text += " --ar 16:9 --v 6.1 --s 250"
-        # MJ Style Reference 关键词注入（带风格感知）
         return _inject_style_keywords(text, creative_level, preferred_categories)
 
 
-# ============================================================================
-# MJ Style Reference 数据库集成
-# ============================================================================
-
-# 全局缓存：加载一次，跨实例共享
-_MJ_STYLE_DB: dict | None = None
-
-
-def _load_mj_style_db() -> dict | None:
-    """加载 MJ 风格关键词数据库（懒加载）。"""
-    global _MJ_STYLE_DB
-    if _MJ_STYLE_DB is not None:
-        return _MJ_STYLE_DB
-    db_path = Path(__file__).parent.parent / "data" / "mj_style_final.json"
-    if db_path.exists():
-        try:
-            with open(db_path, "r", encoding="utf-8") as f:
-                _MJ_STYLE_DB = json.load(f)
-            return _MJ_STYLE_DB
-        except Exception:
-            pass
-    return None
-
-
+# 向前兼容包装 — 委托给 keyword_injector 共享模块
 def _inject_style_keywords(
     prompt: str,
     creative_level: int = 5,
     preferred_categories: list[str] | None = None,
 ) -> str:
-    """从 MJ 风格数据库注入风格关键词到 prompt。
-
-    如果提供了 preferred_categories（检测到的风格类别），优先从中选择关键词，
-    让注入方向与 prompt 内容对齐。否则按创意等级随机选类别。
-
-    从 27 个风格维度中根据创意等级选择维度：
-    - 低创意(1-3): 注入 1-2 个基础关键词
-    - 中创意(4-6): 注入 2-3 个关键词
-    - 高创意(7-10): 注入 3-5 个关键词
-
-    每个关键词从同义词组中随机选取，保持多样性。
-    过滤掉短噪音词（<=3字符）和技术缩写。
-    """
-    db = _load_mj_style_db()
-    if not db:
-        return prompt
-
-    # 确定注入数量
-    if creative_level <= 3:
-        num = random.randint(1, 2)
-    elif creative_level <= 6:
-        num = random.randint(2, 3)
-    else:
-        num = random.randint(3, 5)
-
-    # 确定类别来源
-    if preferred_categories:
-        # 风格感知：从检测到的类别中选（只保留数据库中存在的类别）
-        available = [c for c in preferred_categories if c in db]
-        if not available:
-            available = _DEFAULT_CATEGORIES_BY_LEVEL.get(creative_level, ["Lighting", "Material_Properties"])
-        cats_for_injection = random.sample(available, min(num, len(available)))
-    else:
-        # 回退：按创意等级随机选
-        cats_for_injection = random.sample(
-            _DEFAULT_CATEGORIES_BY_LEVEL.get(creative_level, ["Lighting", "Material_Properties"]),
-            min(num, 10),
-        )
-
-    inject_kws = []
-    for cat in cats_for_injection:
-        kws = db.get(cat, [])
-        good = _filter_noise_keywords(kws)
-        if good:
-            inject_kws.append(random.choice(good))
-
-    if inject_kws:
-        injected = ", " + ", ".join(inject_kws)
-        return prompt.rstrip(",. ") + injected + "."
-
-    return prompt
+    """包装函数，委托给 keyword_injector 模块。"""
+    from prompt_engine.keyword_injector import inject_style_keywords as _inject
+    return _inject(prompt, creative_level, preferred_categories)
 
 
-# 创意等级 → 默认类别列表
-_DEFAULT_CATEGORIES_BY_LEVEL: dict[int, list[str]] = {
-    1: ["Lighting", "Material_Properties"],
-    3: ["Lighting", "Material_Properties"],
-    5: ["Lighting", "Material_Properties", "Colors_and_Palettes", "Camera"],
-    6: ["Lighting", "Material_Properties", "Colors_and_Palettes", "Camera"],
-    7: ["Lighting", "Material_Properties", "Colors_and_Palettes", "Camera",
-        "Design_Styles", "Nature_and_Animals", "Themes",
-        "SFX_and_Shaders", "Perspective", "Drawing_and_Art_Mediums"],
-    10: ["Lighting", "Material_Properties", "Colors_and_Palettes", "Camera",
-         "Design_Styles", "Nature_and_Animals", "Themes",
-         "SFX_and_Shaders", "Perspective", "Drawing_and_Art_Mediums"],
-}
-
-
-_NOISE_WORDS = {"LED", "LCD", "UV", "CRT", "CFL", "OLED", "AMOLED", "HDR", "RGB", "CMYK"}
+def _load_mj_style_db() -> dict | None:
+    """包装函数，委托给 keyword_injector 模块。"""
+    from prompt_engine.keyword_injector import load_mj_style_db as _load
+    return _load()
 
 
 def _filter_noise_keywords(kws: list[str]) -> list[str]:
-    """过滤 MJ 关键词中的噪音词。"""
-    good = []
-    for k in kws:
-        upper = k.upper()
-        if any(nw in upper for nw in _NOISE_WORDS):
-            continue
-        if all(c.isdigit() for c in k):
-            continue
-        if len(k) >= 4 or " " in k or "-" in k or "\u00a0" in k:
-            good.append(k)
-    return good
+    """包装函数，委托给 keyword_injector 模块。"""
+    from prompt_engine.keyword_injector import filter_noise_keywords as _filter
+    return _filter(kws)

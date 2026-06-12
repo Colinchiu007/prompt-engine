@@ -35,6 +35,7 @@ Build a DETAILED FLOWING DESCRIPTION in this order:
 ## Quality patterns from the community prompt library
 - Color precision: "navy blue", "mint green", "warm amber", "crimson", "teal"
 - Lighting precision: "soft diffused natural light from a large window", "dramatic side lighting", "golden hour warm glow", "rim light", "volumetric rays"
+
 - Camera references: "85mm lens at f/1.8", "shallow depth of field", "bokeh"
 - Expression details: "eyes focused, expression serious with a slight smile"
 - Texture details: "intricate patterns", "smooth surface", "rough texture", "shiny metallic"
@@ -53,4 +54,6 @@ Build a DETAILED FLOWING DESCRIPTION in this order:
     @classmethod
     def post_process(cls, raw_output: str, creative_level: int = 5,
                      preferred_categories: list[str] | None = None) -> str:
-        return raw_output.strip().strip('"').strip("'")
+        text = raw_output.strip().strip('"').strip("'")
+
+        from prompt_engine.keyword_injector import inject_style_keywords; return inject_style_keywords(text, creative_level, preferred_categories)

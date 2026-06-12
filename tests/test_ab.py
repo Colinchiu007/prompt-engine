@@ -14,7 +14,8 @@ class TestABCandidates:
         result = optimizer.optimize(req)
         assert isinstance(result, OptimizeResult)
         assert result.candidates == []  # 单候选不返回数组
-        assert result.optimized_prompt == "A fluffy cat"
+        # post_process 可能注入 MJ 关键词
+        assert "A fluffy cat" in result.optimized_prompt
 
     @patch.object(Optimizer, "_call_llm")
     def test_optimize_multiple_candidates(self, mock_call):

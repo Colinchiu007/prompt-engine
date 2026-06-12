@@ -3,6 +3,7 @@ from prompt_engine.strategies.base import BaseStrategy, register
 from prompt_engine.models import PlatformType, StyleType
 
 
+
 # 文心一格风格词（关键词式，文心一格偏好简洁明确的标签）
 _STYLE_TAGS = {
     StyleType.REALISTIC: "写实, 真实摄影, 高清细节, 自然光影",
@@ -85,4 +86,6 @@ class YizhangStrategy(BaseStrategy):
     @classmethod
     def post_process(cls, raw_output: str, creative_level: int = 5,
                      preferred_categories: list[str] | None = None) -> str:
-        return raw_output.strip().strip('"').strip("'")
+        text = raw_output.strip().strip('"').strip("'")
+
+        from prompt_engine.keyword_injector import inject_style_keywords; return inject_style_keywords(text, creative_level, preferred_categories)
