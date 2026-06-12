@@ -331,18 +331,20 @@ def _inject_style_keywords(prompt: str, creative_level: int = 5) -> str:
     chosen_cats = random.sample(cats, min(num, len(cats)))
     for cat in chosen_cats:
         kws = db.get(cat, [])
-        # 过滤：只保留有实际美学意义的词（>=4字母或含空格/连字符）
-        # 排除纯缩写和噪音词
-        GOOD_PREFIXES = {"LED", "LCD", "UV", "CRT", "CFL", "OLED", "AMOLED", "HDR"}
+        # 过滤：只保留有实际美学意义的词
+        # 排除纯缩写/噪音/纯数字
+        NOISE_WORDS = {"LED", "LCD", "UV", "CRT", "CFL", "OLED", "AMOLED", "HDR", "RGB", "CMYK"}
         good = []
         for k in kws:
             upper = k.upper()
-            if upper in GOOD_PREFIXES:
+            # 排除含噪声缩写词
+            if any(nw in upper for nw in NOISE_WORDS):
                 continue
-            # 排除纯数字和纯标点
-            if k.isdigit() or re.fullmatch(r'[^\w]+', k):
+            # 排除纯数字（含全角数字等）
+            if all(c.isdigit() for c in k):
                 continue
-            if len(k) >= 4 or " " in k or "-" in k:
+            # 保留：>=4字符 或 含空格/连字符（多词组合）
+            if len(k) >= 4 or " " in k or "-" in k or "\u00a0" in k:
                 good.append(k)
         if good:
             inject_kws.append(random.choice(good))
