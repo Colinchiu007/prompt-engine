@@ -124,7 +124,7 @@ class Optimizer:
                 {"role": "user", "content": raw_desc},
             ]
             optimized, tokens_opt = self._provider.chat(msgs)
-            final = strategy_cls.post_process(optimized)
+            final = strategy_cls.post_process(optimized, creative_level=7)
 
             elapsed = (time.time() - start_time) * 1000
             return ReverseResult(
@@ -176,7 +176,7 @@ class Optimizer:
 
             for i in range(num):
                 raw_output, tokens = self._call_llm(system_prompt, request.prompt, variant=i)
-                optimized = strategy_cls.post_process(raw_output)
+                optimized = strategy_cls.post_process(raw_output, creative_level=request.creative_level)
                 if len(optimized) > request.max_length:
                     optimized = optimized[:request.max_length]
                 candidates.append(optimized)

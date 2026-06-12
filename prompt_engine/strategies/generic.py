@@ -51,5 +51,5 @@ Build a DETAILED FLOWING DESCRIPTION in this order:
 {negative_text}"""
 
     @classmethod
-    def post_process(cls, raw_output: str) -> str:
+    def post_process(cls, raw_output: str, creative_level: int = 5) -> str:
         return raw_output.strip().strip('"').strip("'")

@@ -1,4 +1,16 @@
-"""Midjourney 平台策略 — 从 Nano Banana Pro 库提取的提示词模式"""
+"""Midjourney 平台策略 — 从 Nano Banana Pro + MJ Style Reference 库提取的提示词模式。
+
+MJ Style Reference 数据库:
+- 27 个风格维度，2100+ 专业关键词
+- 覆盖: 光照/材质/色彩/镜头/构图/自然/艺术媒介/文化风格/影视参考
+- 来源: github.com/willwulfken/MidJourney-Styles-and-Keywords-Reference
+"""
+import json
+import os
+import random
+import re
+from pathlib import Path
+
 from prompt_engine.strategies.base import BaseStrategy, register
 from prompt_engine.models import PlatformType, StyleType
 
@@ -204,12 +216,12 @@ CRITICAL: Append `--ar {ar} --v 6.1 --s {stylize_val}{style_ver}` at the end.
 Parameter guide:
 - --ar = aspect ratio. Use {ar} for this style (16:9/4:3/1:1/3:4/9:16)
 - --v 6.1 = Midjourney version
-- --s = stylization (0-1000). Use {stylize_val} (creative_level × 50)
+- --s = stylization (0-1000). Use {stylize_val} (creative_level x 50)
 - --style raw = photographic/realistic output
 - --style expressive = artistic/illustrative output
 - NEVER use --iw or --no
 
-## Prompt structure (from 14,000+ community prompts analysis)
+## Prompt structure (from 14,000+ community prompts + MJ Style Reference analysis)
 Build as a DETAILED FLOWING DESCRIPTION in this order:
 
 1. [Subject] — age, gender, appearance, clothing, pose, expression
@@ -224,6 +236,20 @@ Build as a DETAILED FLOWING DESCRIPTION in this order:
 ## Style
 {style_block}
 
+## MJ Style Reference Categories (use freely based on creative_level {creative_level})
+You have access to 2,100+ style keywords across 27 dimensions.
+Pick the most relevant ones naturally:
+- **Lighting**: Volumetric Lighting, Cinematic Lighting, Rembrandt Lighting, Godrays, Flare, etc.
+- **Materials**: Matte, Glossy, Rough, Translucent, Metallic, Textured surfaces
+- **Colors**: Analogous Colors, High Saturation, Warm Color Palette, Complementary Colors
+- **Camera**: Award Winning Photography, Shallow DOF, Cinematic, Filmic, Portrait
+- **Design**: Minimalist, Hyperdetailed, Ornate, Flat Design, Neo, Art Deco
+- **Nature**: Natural landscapes, organic textures, organic forms
+- **Effects**: Chromatic Aberration, Ray Tracing, Barrell Distortion, Depth of Field
+- **Art Mediums**: Watercolor, Oil Painting, Digital Art, Sketch, Print
+- **Perspective**: One-Point, Isometric, Wide Shot, Closeup, Rule of Thirds
+- **Themes**: Punk, Cyberpunk, Fantasy, Retro, Futuristic, Atmospheric
+
 ## Quality rules (from community patterns)
 - Camera terms: "85mm", "f/1.8", "shallow DOF", "bokeh"
 - Lighting terms: "soft diffused", "dramatic side", "golden hour", "rim light", "volumetric"
@@ -234,14 +260,95 @@ Build as a DETAILED FLOWING DESCRIPTION in this order:
 ## Output rules
 1. Output ONLY the prompt — NO explanations, NO labels
 2. Preserve user's core semantic
-3. Match input language (Chinese→Chinese, English→English)
+3. Match input language (Chinese->Chinese, English->English)
 4. Within {max_length} characters
 5. {style_text}
 {negative_text}"""
 
     @classmethod
-    def post_process(cls, raw_output: str) -> str:
+    def post_process(cls, raw_output: str, creative_level: int = 5) -> str:
         text = raw_output.strip().strip('"').strip("'")
         if "--ar " not in text:
             text += " --ar 16:9 --v 6.1 --s 250"
-        return text
+        # MJ Style Reference 关键词注入
+        return _inject_style_keywords(text, creative_level)
+
+
+# ============================================================================
+# MJ Style Reference 数据库集成
+# ============================================================================
+
+# 全局缓存：加载一次，跨实例共享
+_MJ_STYLE_DB: dict | None = None
+
+
+def _load_mj_style_db() -> dict | None:
+    """加载 MJ 风格关键词数据库（懒加载）。"""
+    global _MJ_STYLE_DB
+    if _MJ_STYLE_DB is not None:
+        return _MJ_STYLE_DB
+    db_path = Path(__file__).parent.parent / "data" / "mj_style_final.json"
+    if db_path.exists():
+        try:
+            with open(db_path, "r", encoding="utf-8") as f:
+                _MJ_STYLE_DB = json.load(f)
+            return _MJ_STYLE_DB
+        except Exception:
+            pass
+    return None
+
+
+def _inject_style_keywords(prompt: str, creative_level: int = 5) -> str:
+    """从 MJ 风格数据库随机注入风格关键词到 prompt。
+
+    从 27 个风格维度中根据创意等级选择维度：
+    - 低创意(1-3): 注入 1-2 个基础关键词（光照/材质）
+    - 中创意(4-6): 注入 2-3 个关键词（+ 色彩/镜头）
+    - 高创意(7-10): 注入 3-5 个关键词（+ 文化/艺术媒介/影视）
+
+    每个关键词从同义词组中随机选取，保持多样性。
+    过滤掉短噪音词（<=3字符）和技术缩写。
+    """
+    db = _load_mj_style_db()
+    if not db:
+        return prompt
+
+    if creative_level <= 3:
+        cats = ["Lighting", "Material_Properties"]
+        num = random.randint(1, 2)
+    elif creative_level <= 6:
+        cats = ["Lighting", "Material_Properties", "Colors_and_Palettes", "Camera"]
+        num = random.randint(2, 3)
+    else:
+        cats = [
+            "Lighting", "Material_Properties", "Colors_and_Palettes", "Camera",
+            "Design_Styles", "Nature_and_Animals", "Themes",
+            "SFX_and_Shaders", "Perspective", "Drawing_and_Art_Mediums",
+        ]
+        num = random.randint(3, 5)
+
+    inject_kws = []
+    chosen_cats = random.sample(cats, min(num, len(cats)))
+    for cat in chosen_cats:
+        kws = db.get(cat, [])
+        # 过滤：只保留有实际美学意义的词（>=4字母或含空格/连字符）
+        # 排除纯缩写和噪音词
+        GOOD_PREFIXES = {"LED", "LCD", "UV", "CRT", "CFL", "OLED", "AMOLED", "HDR"}
+        good = []
+        for k in kws:
+            upper = k.upper()
+            if upper in GOOD_PREFIXES:
+                continue
+            # 排除纯数字和纯标点
+            if k.isdigit() or re.fullmatch(r'[^\w]+', k):
+                continue
+            if len(k) >= 4 or " " in k or "-" in k:
+                good.append(k)
+        if good:
+            inject_kws.append(random.choice(good))
+
+    if inject_kws:
+        injected = ", " + ", ".join(inject_kws)
+        return prompt.rstrip(",. ") + injected + "."
+
+    return prompt
