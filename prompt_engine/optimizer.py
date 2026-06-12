@@ -7,6 +7,8 @@ from prompt_engine.models import OptimizeRequest, OptimizeResult, ReverseRequest
 from prompt_engine.config import load_config
 from prompt_engine.strategies import get_strategy
 from prompt_engine.llm.base import BaseLLMProvider
+from prompt_engine.rewriter import PromptRewriter
+from prompt_engine.disturb import PromptDisturber
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +196,135 @@ class Optimizer:
         except Exception as e:
             elapsed = (time.time() - start_time) * 1000
             logger.error("optimize failed for prompt '%s': %s", request.prompt[:50], e)
+            return OptimizeResult(
+                optimized_prompt=request.prompt,
+                platform=request.platform,
+                style=request.style,
+                model_used=self._provider.model_name,
+                tokens_used=0,
+                duration_ms=round(elapsed, 1),
+                error=str(e),
+            )
+
+    def rewrite(self, request: OptimizeRequest) -> OptimizeResult:
+        """Prompt 扩写：将简短提示词扩展为详细图像生成描述（灵感来自 Infinity 项目）
+
+        使用 Infinity 的 PromptRewriter 模式：
+        - LLM 将短 prompt 扩写为详细、具体的描述
+        - 输出 <prompt:xxx><cfg:xxx> 格式
+        - cfg 参数自动判断（人脸类=1，其他=3）
+        """
+        start_time = time.time()
+        try:
+            rewriter = PromptRewriter(self._provider, max_retries=3)
+            result_raw = rewriter.rewrite_raw(request.prompt)
+
+            # 后处理：按 max_length 截断
+            if len(result_raw) > request.max_length:
+                result_raw = result_raw[:request.max_length]
+
+            # 尝试提取 cfg 参数
+            full_rewritten = rewriter.rewrite(request.prompt)
+            cfg_value = None
+            cfg_match = full_rewritten.find("<cfg:")
+            if cfg_match >= 0:
+                cfg_end = full_rewritten.find(">", cfg_match)
+                if cfg_end > cfg_match:
+                    cfg_value = full_rewritten[cfg_match + len("<cfg:"):cfg_end]
+
+            elapsed = (time.time() - start_time) * 1000
+
+            return OptimizeResult(
+                optimized_prompt=result_raw,
+                platform=request.platform,
+                style=request.style,
+                model_used=self._provider.model_name,
+                tokens_used=0,
+                duration_ms=round(elapsed, 1),
+                error=None,
+            )
+        except Exception as e:
+            elapsed = (time.time() - start_time) * 1000
+            logger.error("rewrite failed for prompt '%s': %s", request.prompt[:50], e)
+            return OptimizeResult(
+                optimized_prompt=request.prompt,
+                platform=request.platform,
+                style=request.style,
+                model_used=self._provider.model_name,
+                tokens_used=0,
+                duration_ms=round(elapsed, 1),
+                error=str(e),
+            )
+
+    def disturb_and_optimize(
+        self,
+        request: OptimizeRequest,
+        num_augmented: int = 3,
+        strength: float = 0.3,
+    ) -> OptimizeResult:
+        """扰动增强优化：对 prompt 做扰动后多次优化，取最佳
+
+        借鉴 Infinity BSC 的扰动思路：
+        1. 对原始 prompt 生成 N 个扰动版本
+        2. 分别优化每个版本
+        3. 返回最佳（最长、质量最高）结果
+        """
+        start_time = time.time()
+        try:
+            disturb = PromptDisturber(strength=strength)
+            perturbations = disturb.perturb(request.prompt)
+
+            all_results = []
+            # 原始 prompt 也参与
+            for p in [request.prompt] + [perturbations]:
+                try:
+                    sub_req = OptimizeRequest(
+                        prompt=p,
+                        platform=request.platform,
+                        style=request.style,
+                        creative_level=request.creative_level,
+                        max_length=request.max_length,
+                        negative_prompt=request.negative_prompt,
+                        num_candidates=request.num_candidates,
+                    )
+                    result = self.optimize(sub_req)
+                    all_results.append(result)
+                except Exception:
+                    continue
+
+            # 选择最佳结果（非错误且最长的）
+            best = None
+            for r in all_results:
+                if r.error:
+                    continue
+                if best is None or len(r.optimized_prompt) > len(best.optimized_prompt):
+                    best = r
+
+            if best is None:
+                best = all_results[0] if all_results else OptimizeResult(
+                    optimized_prompt=request.prompt,
+                    platform=request.platform,
+                    style=request.style,
+                    model_used=self._provider.model_name,
+                    error="All optimize calls failed",
+                )
+
+            elapsed = (time.time() - start_time) * 1000
+            # 合并 tokens
+            total_tokens = sum(r.tokens_used for r in all_results)
+            return OptimizeResult(
+                optimized_prompt=best.optimized_prompt,
+                platform=request.platform,
+                style=request.style,
+                model_used=self._provider.model_name,
+                tokens_used=total_tokens,
+                duration_ms=round(elapsed, 1),
+                candidates=[r.optimized_prompt for r in all_results if not r.error][:num_augmented],
+                error=best.error,
+            )
+        except Exception as e:
+            elapsed = (time.time() - start_time) * 1000
+            logger.error("disturb_and_optimize failed: %s", e)
             return OptimizeResult(
                 optimized_prompt=request.prompt,
                 platform=request.platform,
