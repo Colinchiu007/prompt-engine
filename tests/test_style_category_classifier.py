@@ -146,6 +146,38 @@ class TestStyleCategoryClassifierRAG:
         assert len(scores) > 0
 
 
+class TestRecommendCategoriesForStyle:
+    """StyleType → StyleCategory 反向推荐测试."""
+
+    def test_recommend_oil_painting(self):
+        from prompt_engine.classifier import recommend_categories_for_style
+        result = recommend_categories_for_style("oil_painting")
+        assert len(result) >= 3
+        assert any(c.value == "drawing_and_art_mediums" for c in result)
+
+    def test_recommend_cyberpunk(self):
+        from prompt_engine.classifier import recommend_categories_for_style
+        result = recommend_categories_for_style("cyberpunk")
+        assert len(result) >= 3
+        assert any(c.value == "design_styles" for c in result)
+
+    def test_recommend_landscape(self):
+        from prompt_engine.classifier import recommend_categories_for_style
+        result = recommend_categories_for_style("landscape")
+        assert any(c.value == "nature_and_animals" for c in result)
+
+    def test_recommend_unknown_style_falls_back(self):
+        from prompt_engine.classifier import recommend_categories_for_style
+        result = recommend_categories_for_style("nonexistent_style_xyz")
+        assert len(result) >= 1
+
+    def test_recommend_all_styles_have_mapping(self):
+        from prompt_engine.models import StyleType
+        from prompt_engine.classifier import recommend_categories_for_style
+        for style in StyleType:
+            result = recommend_categories_for_style(style.value)
+            assert len(result) >= 1, f"No mapping for {style.value}"
+
 class TestStyleCategoryClassifierIntegration:
     def test_comprehensive_classification(self):
         classifier = StyleCategoryClassifier()

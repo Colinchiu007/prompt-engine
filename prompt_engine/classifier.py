@@ -565,3 +565,100 @@ def _style_cat_to_db_key(cat: StyleCategory) -> str:
     """将 StyleCategory 枚举转换为 MJ 数据库的 key 字符串。"""
     return _STYLE_CAT_DB_MAP.get(cat, cat.value.replace("_", " ").title().replace(" ", "_"))
 
+
+# ================================================================
+# StyleType → StyleCategory 反向推荐映射
+# ================================================================
+# 当用户选择一种艺术风格时，推荐对应的 MJ 风格维度，用于指导关键词注入方向
+_STYLE_TYPE_CATEGORY_MAP: dict[str, list[StyleCategory]] = {
+    "realistic": [
+        StyleCategory.CAMERA, StyleCategory.LIGHTING,
+        StyleCategory.MATERIAL_PROPERTIES, StyleCategory.PERSPECTIVE,
+        StyleCategory.NATURE_AND_ANIMALS,
+    ],
+    "cartoon": [
+        StyleCategory.DRAWING_AND_ART_MEDIUMS, StyleCategory.COLORS_AND_PALETTES,
+        StyleCategory.DESIGN_STYLES,
+    ],
+    "anime": [
+        StyleCategory.DRAWING_AND_ART_MEDIUMS, StyleCategory.COLORS_AND_PALETTES,
+        StyleCategory.DESIGN_STYLES, StyleCategory.LIGHTING,
+    ],
+    "oil_painting": [
+        StyleCategory.DRAWING_AND_ART_MEDIUMS, StyleCategory.MATERIAL_PROPERTIES,
+        StyleCategory.COLORS_AND_PALETTES, StyleCategory.LIGHTING,
+    ],
+    "watercolor": [
+        StyleCategory.DRAWING_AND_ART_MEDIUMS, StyleCategory.COLORS_AND_PALETTES,
+        StyleCategory.MATERIALS, StyleCategory.NATURE_AND_ANIMALS,
+    ],
+    "pixel": [
+        StyleCategory.DIGITAL, StyleCategory.DESIGN_STYLES,
+        StyleCategory.COLORS_AND_PALETTES,
+    ],
+    "cyberpunk": [
+        StyleCategory.DESIGN_STYLES, StyleCategory.LIGHTING,
+        StyleCategory.SFX_AND_SHADERS, StyleCategory.THEMES,
+        StyleCategory.MATERIAL_PROPERTIES,
+    ],
+    "fantasy": [
+        StyleCategory.THEMES, StyleCategory.COLORS_AND_PALETTES,
+        StyleCategory.DRAWING_AND_ART_MEDIUMS, StyleCategory.LIGHTING,
+        StyleCategory.INTANGIBLES,
+    ],
+    "photography": [
+        StyleCategory.CAMERA, StyleCategory.LIGHTING,
+        StyleCategory.PERSPECTIVE, StyleCategory.MATERIAL_PROPERTIES,
+    ],
+    "3d_render": [
+        StyleCategory.DIGITAL, StyleCategory.LIGHTING,
+        StyleCategory.SFX_AND_SHADERS, StyleCategory.MATERIAL_PROPERTIES,
+        StyleCategory.COMBINATIONS, StyleCategory.GEOMETRY,
+    ],
+    "minimalist": [
+        StyleCategory.DESIGN_STYLES, StyleCategory.GEOMETRY,
+        StyleCategory.COLORS_AND_PALETTES, StyleCategory.INTANGIBLES,
+    ],
+    "abstract": [
+        StyleCategory.EXPERIMENTAL, StyleCategory.INTANGIBLES,
+        StyleCategory.COLORS_AND_PALETTES, StyleCategory.DESIGN_STYLES,
+    ],
+    "portrait": [
+        StyleCategory.CAMERA, StyleCategory.LIGHTING,
+        StyleCategory.PERSPECTIVE, StyleCategory.DRAWING_AND_ART_MEDIUMS,
+        StyleCategory.MATERIAL_PROPERTIES,
+    ],
+    "landscape": [
+        StyleCategory.NATURE_AND_ANIMALS, StyleCategory.GEOGRAPHY_AND_CULTURE,
+        StyleCategory.LIGHTING, StyleCategory.PERSPECTIVE,
+        StyleCategory.COLORS_AND_PALETTES,
+    ],
+}
+
+# 自动注册一条"default"备选
+_STYLE_TYPE_CATEGORY_MAP["default"] = [
+    StyleCategory.LIGHTING, StyleCategory.MATERIAL_PROPERTIES,
+    StyleCategory.COLORS_AND_PALETTES,
+]
+
+
+def recommend_categories_for_style(style: str, top_k: int = 5) -> list[StyleCategory]:
+    """根据用户指定的艺术风格，推荐对应的 MJ 风格维度。
+
+    Args:
+        style: StyleType 值（如 "oil_painting", "cyberpunk"）
+        top_k: 最多返回几个类别
+
+    Returns:
+        推荐的 StyleCategory 列表，按相关性降序
+    """
+    key = style.lower().replace("-", "_")
+    if key not in _STYLE_TYPE_CATEGORY_MAP:
+        # 尝试反向匹配：遍历已知风格，找到包含该 key 的
+        matched = [v for k, v in _STYLE_TYPE_CATEGORY_MAP.items()
+                   if key in k or k in key]
+        if matched:
+            return matched[0][:top_k]
+        return _STYLE_TYPE_CATEGORY_MAP["default"][:top_k]
+    return _STYLE_TYPE_CATEGORY_MAP[key][:top_k]
+

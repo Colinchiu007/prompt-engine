@@ -41,7 +41,6 @@ def _get_category_name(cat) -> str:
         "materials": "材料",
         "dimensionality": "维度感",
         "colors_and_palettes": "色彩与调色板",
-        "rainbow_of_colors": "彩虹色",
         "combinations": "组合效果",
         "camera": "摄影与镜头",
         "perspective": "视角与构图",
@@ -133,29 +132,6 @@ def _optimize(args):
             print(f"  - {cat.value} ({name})")
 
 
-
-def _recommend(args):
-    """根据艺术风格推荐 MJ 风格维度"""
-    from prompt_engine.classifier import recommend_categories_for_style
-    from prompt_engine.models import StyleCategory
-
-    cats = recommend_categories_for_style(args.style, top_k=args.max)
-
-    if args.json:
-        import json
-        output = [{'value': c.value, 'name': _get_category_name(c)} for c in cats]
-        print(json.dumps(output, indent=2, ensure_ascii=False))
-    else:
-        print(f"Style: {args.style}")
-        print()
-        if not cats:
-            print("No recommended categories.")
-            return
-        print(f"{'Category':<35} {'中文':<15}")
-        print("-" * 55)
-        for c in cats:
-            print(f"{c.value:<35} {_get_category_name(c):<15}")
-
 def main():
     parser = argparse.ArgumentParser(
         prog="prompt-engine",
@@ -198,8 +174,6 @@ def main():
         _list_categories(args)
     elif args.command == "optimize":
         _optimize(args)
-    elif args.command == "recommend":
-        _recommend(args)
     else:
         parser.print_help()
         sys.exit(0)
