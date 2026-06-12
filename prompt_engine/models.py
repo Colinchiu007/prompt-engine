@@ -78,3 +78,10 @@ class OptimizeResult(BaseModel):
     duration_ms: float = Field(default=0.0, description="优化耗时（毫秒）")
     candidates: list[str] = Field(default_factory=list, description="多候选版本（A/B 测试时返回）")
     error: Optional[str] = Field(default=None, description="出错时的错误信息")
+
+
+class RewriteRequest(BaseModel):
+    """Prompt 扩写请求（灵感: Infinity 项目）"""
+    prompt: str = Field(..., min_length=1, max_length=500, description="原始简短描述")
+    platform: PlatformType = Field(default=PlatformType.GENERIC, description="目标平台")
+    max_length: int = Field(default=500, ge=50, le=2000, description="输出最大字符数")

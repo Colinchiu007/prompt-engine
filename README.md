@@ -1,18 +1,21 @@
 # Prompt Engine — 图片生成提示词优化引擎
 
-一个轻量级的 Python 引擎模块，将用户原始提示词自动优化为适合主流 AI 图片生成平台的高质量提示词。支持正向优化和逆向工程。
+一个轻量级的 Python 引擎模块，将用户原始提示词自动优化为适合主流 AI 图片生成平台的高质量提示词。支持正向优化、逆向工程和 prompt 扩写。
 
 ## 特性
 
 - 🎯 **多平台适配**：Midjourney / Stable Diffusion / DALL·E / 通义万相 / 文心一格 / 即梦 / 通用
 - 🌐 **中英文自适应**：输入语言决定输出语言
-- 🎨 **风格化优化**：支持写实、卡通、动漫、油画、赛博朋克等 12 种风格
+- 🎨 **风格化优化**：支持写实、卡通、动漫、油画、赛博朋克等 14 种风格
 - 🔙 **逆向工程**：从图片 URL 分析生成对应平台的提示词（视觉模型）
 - 🔀 **A/B 多候选**：一次生成多个不同创意的优化版本
 - 📦 **批量优化**：一次请求处理最多 10 条提示词
 - 🔌 **三种集成方式**：Python SDK / REST API / MCP Server
 - 📚 **RAG 增强**：基于知识库检索相似优质提示词，提升生成质量
 - 🔄 **可扩展架构**：新增平台 = 一个策略文件，新增 LLM 供应商 = 一个 Provider 文件
+- ✍️ **Prompt 扩写**：借鉴 Infinity 项目，将简短描述自动扩展为详细图像生成提示词（含 CFG 参数）
+- 🎲 **扰动增强优化**：借鉴 Infinity BSC，对 prompt 做同义词替换和词序打乱，多版本择优
+- 🧠 **比特级分类器**：借鉴 Infinity IVC，大类别分类参数量降低 20 倍以上
 
 ## 快速开始
 
@@ -46,14 +49,31 @@ result = optimizer.optimize(OptimizeRequest(
 ))
 print(result.variants)  # 返回 [OptimizeResult, OptimizeResult, OptimizeResult]
 
-# 图片逆向工程
-from prompt_engine import ReverseRequest
+# 逆向工程
 result = optimizer.reverse_engineer(ReverseRequest(
     image_url="https://example.com/photo.jpg",
     platform=PlatformType.MIDJOURNEY,
 ))
 print(result.prompt)
 print(result.description)  # 图片描述文本
+
+# Prompt 扩写（灵感: Infinity 项目）— 将简短描述扩展为详细 prompt
+from prompt_engine import RewriteRequest
+result = optimizer.rewrite(RewriteRequest(
+    prompt="a tree",
+    platform=PlatformType.GENERIC,
+))
+print(result.optimized_prompt)
+# 输出: A majestic oak tree stands proudly in a sunlit meadow, its branches stretching out like welcoming arms...
+
+# 扰动增强优化 — 多版本择优
+result = optimizer.disturb_and_optimize(OptimizeRequest(
+    prompt="forest morning",
+    platform=PlatformType.MIDJOURNEY,
+    creative_level=8,
+))
+print(result.optimized_prompt)
+print(result.candidates)  # 扰动后的备选版本
 ```
 
 ### 启动 REST API
@@ -112,6 +132,27 @@ python examples/start_mcp_server.py
 ### 查询平台 `GET /v1/platforms`
 
 返回所有支持的平台及其配置。
+
+### Prompt 扩写 `POST /v1/rewrite`
+
+灵感来自 Infinity 项目，将简短描述自动扩展为详细的图像生成提示词。
+
+| 字段 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| prompt | string | ✅ | - | 原始简短描述 |
+| platform | string | ❌ | "generic" | 目标平台 |
+| max_length | int | ❌ | 500 | 输出最大长度 |
+
+### 扰动增强优化 `POST /v1/disturb-optimize`
+
+对 prompt 做扰动增强后多次优化，返回最佳结果。
+
+| 字段 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| prompt | string | ✅ | - | 原始提示词 |
+| platform | string | ❌ | "generic" | 目标平台 |
+| strength | float | ❌ | 0.3 | 扰动强度 (0.0-1.0) |
+| num_augmented | int | ❌ | 3 | 增强版本数 |
 
 ## 配置
 
@@ -177,7 +218,10 @@ platforms:
 ```
 prompt-engine/
 ├── prompt_engine/          # 核心包
-│   ├── optimizer.py        # 编排器（optimize + reverse_engineer + A/B）
+│   ├── optimizer.py        # 编排器（optimize + reverse_engineer + rewrite + disturb_optimize）
+│   ├── rewriter.py         # Prompt 扩写器（灵感: Infinity prompt_rewriter）
+│   ├── disturb.py          # Prompt 扰动增强（灵感: Infinity BSC）
+│   ├── classifier.py       # 比特级分类器（灵感: Infinity IVC）
 │   ├── config.py           # 配置加载 + 环境变量解析
 │   ├── models.py           # 数据模型
 │   ├── strategies/         # 平台策略（可扩展）
@@ -187,7 +231,7 @@ prompt-engine/
 │   ├── templates/         # 风格模板引擎
 │   ├── prompts_db/        # 优质提示词数据库
 │   └── image/             # 图片分析（逆向工程）
-├── tests/                  # 测试（40 个用例，100% mock 隔离）
+├── tests/                  # 测试（70 个用例，100% mock 隔离）
 ├── examples/               # 使用示例
 ├── config.yaml             # 默认配置文件
 └── README.md
@@ -226,7 +270,7 @@ class MyPlatformStrategy(BaseStrategy):
 pytest -v
 ```
 
-全部 40 个测试通过，使用 mock 隔离，无需真实 API Key。
+全部 70 个测试通过，使用 mock 隔离，无需真实 API Key。
 
 ## 开发对接
 
@@ -267,6 +311,7 @@ pytest -v
 - **v0.2.0** — P1 功能：negative_prompt、模板引擎 styles.yaml、批量优化
 - **v0.3.0** — P2 功能：RAG 知识库增强、A/B 多候选、图片逆向工程
 - **v0.3.1** — 策略重写：基于 Nano Banana Pro (14,000+ prompts) 社区 prompt 提取各平台最佳模式，7 个策略文件全面增强（Midjourney 参数映射/SD 权重语法/DALL·E 自然语言结构/通义万相中文描写/文心一格关键词式/即梦视觉冲击力），镜头术语/光照分类/颜色精度/构图技巧全部内化为策略规则
+- **v0.4.0** — Infinity 灵感集成：Prompt 扩写（借鉴 Infinity prompt_rewriter，支持 `<prompt:xxx><cfg:xxx>` 格式 + 自动 CFG 参数判断）、扰动增强优化（借鉴 Infinity BSC，同义词替换 + 词序打乱多版本择优）、比特级分类器（借鉴 Infinity IVC，N 分类 → d 个二分类，参数量降低 20 倍以上）
 
 ## License
 

@@ -2,12 +2,12 @@
 from functools import lru_cache
 from fastapi import FastAPI, HTTPException
 from prompt_engine.optimizer import Optimizer
-from prompt_engine.models import OptimizeRequest, BatchOptimizeRequest, OptimizeResult, ReverseRequest, ReverseResult
+from prompt_engine.models import OptimizeRequest, BatchOptimizeRequest, OptimizeResult, ReverseRequest, ReverseResult, RewriteRequest
 
 app = FastAPI(
     title="Prompt Engine API",
     description="图片生成提示词优化引擎 - REST API",
-    version="0.1.0",
+    version="0.4.0",
 )
 
 
@@ -71,4 +71,40 @@ async def list_platforms():
 @app.get("/health")
 async def health_check():
     """健康检查"""
-    return {"status": "ok", "version": "0.1.0"}
+    return {"status": "ok", "version": "0.4.0"}
+
+
+@app.post("/v1/rewrite", response_model=OptimizeResult)
+async def rewrite(request: RewriteRequest):
+    """Prompt 扩写：将简短描述扩展为详细图像生成提示词（灵感: Infinity 项目）"""
+    try:
+        optimizer = get_optimizer()
+        from prompt_engine.models import OptimizeRequest as OptReq
+        opt_req = OptReq(
+            prompt=request.prompt,
+            platform=request.platform,
+            max_length=request.max_length,
+        )
+        result = optimizer.rewrite(opt_req)
+        if result.error:
+            raise HTTPException(status_code=502, detail=result.error)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/v1/disturb-optimize", response_model=OptimizeResult)
+async def disturb_optimize(request: OptimizeRequest):
+    """扰动增强优化：对 prompt 做扰动后多次优化取最佳（灵感: Infinity BSC）"""
+    try:
+        optimizer = get_optimizer()
+        result = optimizer.disturb_and_optimize(request)
+        if result.error:
+            raise HTTPException(status_code=502, detail=result.error)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
