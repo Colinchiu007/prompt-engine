@@ -1,12 +1,14 @@
 """FastAPI REST 服务层"""
 from functools import lru_cache
 from fastapi import FastAPI, HTTPException
-from prompt_engine.optimizer import Optimizer
+from prompt_engine.classifier import StyleCategoryClassifier
 from prompt_engine.models import (
     OptimizeRequest, BatchOptimizeRequest, OptimizeResult,
     ReverseRequest, ReverseResult, RewriteRequest,
     AutoStyleRequest, StyleCategoryResult, StyleCategory,
+    FeedbackEntry, FeedbackStats,
 )
+from prompt_engine.feedback import get_feedback_store
 from prompt_engine.classifier import StyleCategoryClassifier
 
 app = FastAPI(
@@ -170,3 +172,24 @@ _CATEGORY_CN_NAMES = {
     StyleCategory.EMOJIS: "Emoji 风格",
     StyleCategory.MISCELLANEOUS: "杂项",
 }
+
+@app.post("/v1/feedback", response_model=FeedbackEntry)
+async def submit_feedback(request: FeedbackEntry):
+    """提交风格分类反馈。"""
+    store = get_feedback_store()
+    entry = store.submit(request)
+    return entry
+
+
+@app.get("/v1/feedback/stats", response_model=FeedbackStats)
+async def feedback_stats():
+    """查看反馈统计。"""
+    store = get_feedback_store()
+    return store.stats()
+
+
+@app.get("/v1/feedback/recent", response_model=list[FeedbackEntry])
+async def recent_feedback(limit: int = 10):
+    """查看最近反馈。"""
+    store = get_feedback_store()
+    return store.recent(limit)

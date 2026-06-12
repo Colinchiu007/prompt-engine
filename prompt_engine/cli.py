@@ -156,6 +156,51 @@ def _recommend(args):
         for c in cats:
             print(f"{c.value:<35} {_get_category_name(c):<15}")
 
+
+def _feedback(args):
+    """查看或提交风格分类反馈。"""
+    from prompt_engine.feedback import get_feedback_store
+    from prompt_engine.models import FeedbackEntry
+
+    store = get_feedback_store()
+
+    if args.stats:
+        stats = store.stats()
+        print(f"Total:      {stats.total}")
+        print(f"Rated:      {stats.rated}")
+        print(f"Avg Rating: {stats.avg_rating:.2f}")
+        print(f"Corrected:  {stats.corrected}")
+        print()
+        print("Method breakdown:")
+        for method, count in stats.method_breakdown.items():
+            print(f"  {method}: {count}")
+        return
+
+    if args.recent:
+        entries = store.recent(args.recent)
+        if not entries:
+            print("No feedback entries.")
+            return
+        print(f"{'ID':<10} {'Rating':<7} {'Method':<20} {'Prompt'}")
+        print("-" * 70)
+        for e in entries:
+            prompt_preview = e.prompt[:40] + ("..." if len(e.prompt) > 40 else "")
+            print(f"{e.id:<10} {e.rating:<7} {e.method:<20} {prompt_preview}")
+        return
+
+    # Submit feedback
+    entry = FeedbackEntry(
+        prompt=args.prompt,
+        detected_categories=args.detected or [],
+        corrected_categories=args.corrected or [],
+        rating=args.rating,
+        method=args.method or "",
+        confidence=args.confidence or 0.0,
+        notes=args.notes or "",
+    )
+    entry = store.submit(entry)
+    print(f"Feedback submitted: {entry.id}")
+
 def main():
     parser = argparse.ArgumentParser(
         prog="prompt-engine",
@@ -174,6 +219,24 @@ def main():
     subparsers.add_parser("categories", help="列出所有风格维度")
 
     # optimize
+    # feedback
+    p_feedback = subparsers.add_parser("feedback", help="风格分类反馈 (查看/提交)")
+    p_feedback.add_argument("--stats", action="store_true", help="查看统计")
+    p_feedback.add_argument("--recent", type=int, nargs="?", const=10, default=0,
+                           help="查看最近 N 条反馈 (default: 10)")
+    p_feedback.add_argument("prompt", nargs="?", default="", help="被分类的 prompt (提交反馈时)")
+    p_feedback.add_argument("-d", "--detected", nargs="*", default=[],
+                           help="检测到的类别 (如 lighting design_styles)")
+    p_feedback.add_argument("-c", "--corrected", nargs="*", default=[],
+                           help="纠正后的类别")
+    p_feedback.add_argument("-r", "--rating", type=int, default=0,
+                           help="评分 0-5")
+    p_feedback.add_argument("-m", "--method", default="",
+                           help="分类方法")
+    p_feedback.add_argument("--confidence", type=float, default=0.0,
+                           help="置信度")
+    p_feedback.add_argument("-n", "--notes", default="", help="备注")
+
     p_optimize = subparsers.add_parser("optimize", help="优化 prompt")
     p_optimize.add_argument("prompt", help="要优化的 prompt 文本")
     p_optimize.add_argument("-p", "--platform", default="generic",
@@ -196,6 +259,8 @@ def main():
         _classify(args)
     elif args.command == "categories":
         _list_categories(args)
+    elif args.command == "feedback":
+        _feedback(args)
     elif args.command == "optimize":
         _optimize(args)
     elif args.command == "recommend":

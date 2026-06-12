@@ -184,3 +184,25 @@ class RewriteRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=500, description="原始简短描述")
     platform: PlatformType = Field(default=PlatformType.GENERIC, description="目标平台")
     max_length: int = Field(default=500, ge=50, le=2000, description="输出最大字符数")
+
+
+class FeedbackEntry(BaseModel):
+    """风格分类反馈记录."""
+    id: str = Field(default="", description="反馈 ID（自动生成）")
+    prompt: str = Field(..., description="被分类的 prompt")
+    detected_categories: list[str] = Field(default_factory=list, description="分类器检测到的类别")
+    corrected_categories: list[str] = Field(default_factory=list, description="用户纠正的类别")
+    rating: int = Field(default=0, ge=0, le=5, description="用户评分 0-5 (0=未评分, 5=完全正确)")
+    method: str = Field(default="", description="分类方法 (keyword_match/vector_rag/llm_classify)")
+    confidence: float = Field(default=0.0, description="分类置信度")
+    timestamp: str = Field(default="", description="反馈时间 ISO 格式")
+    notes: str = Field(default="", description="用户备注")
+
+
+class FeedbackStats(BaseModel):
+    """反馈统计汇总."""
+    total: int = Field(default=0, description="总反馈数")
+    rated: int = Field(default=0, description="有评分的反馈数")
+    avg_rating: float = Field(default=0.0, description="平均评分")
+    corrected: int = Field(default=0, description="有纠正的反馈数")
+    method_breakdown: dict[str, int] = Field(default_factory=dict, description="按分类方法的分布")

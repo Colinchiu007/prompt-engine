@@ -1,0 +1,16 @@
+[
+  {
+    "id": "c1d5bde1",
+    "prompt": "a cat sitting on a windowsill",
+    "detected_categories": [
+      "lighting",
+      "nature_and_animals"
+    ],
+    "corrected_categories": [],
+    "rating": 4,
+    "method": "keyword_match",
+    "confidence": 0.8,
+    "timestamp": "2026-06-12T16:59:33.089730+00:00",
+    "notes": ""
+  }
+]
