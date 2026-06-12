@@ -16,6 +16,9 @@
 - ✍️ **Prompt 扩写**：借鉴 Infinity 项目，将简短描述自动扩展为详细图像生成提示词（含 CFG 参数）
 - 🎲 **扰动增强优化**：借鉴 Infinity BSC，对 prompt 做同义词替换和词序打乱，多版本择优
 - 🧠 **比特级分类器**：借鉴 Infinity IVC，大类别分类参数量降低 20 倍以上
+- 🏷️ **27 维风格分类**：基于 MJ Style Reference 的 26/27 维度风格分类器（关键词 + 向量语义 + LLM 三级流水线）
+- 🔍 **CLI 工具**：命令行直接运行风格分类、列出维度、优化 prompt
+- 🌍 **跨平台风格注入**：所有 7 个平台策略均支持 MJ 风格关键词注入
 
 ## 快速开始
 
@@ -76,6 +79,22 @@ print(result.optimized_prompt)
 print(result.candidates)  # 扰动后的备选版本
 ```
 
+### 命令行工具
+
+```bash
+# 风格分类
+prompt-engine classify "A serene landscape bathed in golden light" -m 5
+
+# JSON 格式输出
+prompt-engine classify "cyberpunk city neon lights" --json
+
+# 列出所有 26 个风格维度
+prompt-engine categories
+
+# 优化 prompt
+prompt-engine optimize "a cat" -p midjourney -c 7
+```
+
 ### 启动 REST API
 
 ```bash
@@ -129,11 +148,25 @@ python examples/start_mcp_server.py
 
 一次请求最多 10 条优化任务，返回结果数组。
 
-### 查询平台 `GET /v1/platforms`
+### Query platforms `GET /v1/platforms`
 
-返回所有支持的平台及其配置。
+Returns all supported platforms and their config.
 
-### Prompt 扩写 `POST /v1/rewrite`
+### Style classification `POST /v1/classify`
+
+Analyze a prompt and return its MJ style dimensions.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| prompt | string | ✅ | - | Prompt to classify |
+| max_categories | int | ❌ | 5 | Max categories to return |
+| use_llm | bool | ❌ | true | Use LLM if keyword match is low |
+
+### List style categories `GET /v1/styles/categories`
+
+Return all 26 MJ style dimensions with Chinese names.
+
+### Prompt rewrite `POST /v1/rewrite`
 
 灵感来自 Infinity 项目，将简短描述自动扩展为详细的图像生成提示词。
 
@@ -228,10 +261,12 @@ prompt-engine/
 │   ├── llm/               # LLM 供应商抽象层
 │   ├── api/               # 服务层（REST + MCP）
 │   ├── knowledge/         # RAG 知识库
+│   ├── keyword_injector.py # MJ 风格关键词注入（跨平台共享）
+│   ├── cli.py             # 命令行工具
 │   ├── templates/         # 风格模板引擎
 │   ├── prompts_db/        # 优质提示词数据库
 │   └── image/             # 图片分析（逆向工程）
-├── tests/                  # 测试（70 个用例，100% mock 隔离）
+├── tests/                  # 测试（112 个用例，mock 隔离）
 ├── examples/               # 使用示例
 ├── config.yaml             # 默认配置文件
 └── README.md
@@ -270,7 +305,7 @@ class MyPlatformStrategy(BaseStrategy):
 pytest -v
 ```
 
-全部 70 个测试通过，使用 mock 隔离，无需真实 API Key。
+全部 112 个测试通过，使用 mock 隔离，无需真实 API Key。
 
 ## 开发对接
 
@@ -311,7 +346,7 @@ pytest -v
 - **v0.2.0** — P1 功能：negative_prompt、模板引擎 styles.yaml、批量优化
 - **v0.3.0** — P2 功能：RAG 知识库增强、A/B 多候选、图片逆向工程
 - **v0.3.1** — 策略重写：基于 Nano Banana Pro (14,000+ prompts) 社区 prompt 提取各平台最佳模式，7 个策略文件全面增强（Midjourney 参数映射/SD 权重语法/DALL·E 自然语言结构/通义万相中文描写/文心一格关键词式/即梦视觉冲击力），镜头术语/光照分类/颜色精度/构图技巧全部内化为策略规则
-- **v0.4.0** — Infinity 灵感集成：Prompt 扩写（借鉴 Infinity prompt_rewriter，支持 `<prompt:xxx><cfg:xxx>` 格式 + 自动 CFG 参数判断）、扰动增强优化（借鉴 Infinity BSC，同义词替换 + 词序打乱多版本择优）、比特级分类器（借鉴 Infinity IVC，N 分类 → d 个二分类，参数量降低 20 倍以上）
+- **v0.5.0** — P3 功能：27 维 MJ 风格分类器（关键词 + 向量语义 + LLM 三级流水线）、跨平台风格关键词注入、CLI 命令行工具（classify/categories/optimize）、RAG 增强分类器
 
 ## License
 

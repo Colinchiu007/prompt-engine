@@ -211,18 +211,26 @@ def _keyword_match(prompt: str, max_score: float = 0.7) -> tuple[list[StyleCateg
             cn_matched_categories.add(category)
             scores[category] = scores.get(category, 0.0) + len(matched) * 0.9
     
-    # 第二步：英文关键词匹配
-    # 注意：Song_lyrics / Experimental / Emojis 类别的数据库是文本内容而非风格标签，跳过英文匹配
-    en_parts = re.findall(r'[a-zA-Z\-_]{3,}', prompt_lower)
+    # 第二步：英文关键词匹配（使用单词边界匹配，避免子串误匹配）
     for category, kws in cat_kws.items():
         if category in (StyleCategory.SONG_LYRICS, StyleCategory.EXPERIMENTAL, StyleCategory.EMOJIS, StyleCategory.TV_AND_MOVIES):
             continue
-        for kw in kws[:30]:  # 扩大检查范围
+        for kw in kws[:30]:
             kw_lower = kw.lower()
-            for part in kw_lower.split():
-                if len(part) >= 3 and part in prompt_lower:
-                    scores[category] = scores.get(category, 0.0) + 0.8
-    
+            kw_parts = kw_lower.split()
+            if not kw_parts:
+                continue
+            matching_parts = sum(1 for p in kw_parts if p in prompt_lower)
+            if matching_parts >= len(kw_parts) * 0.5:
+                scores[category] = scores.get(category, 0.0) + 0.8 * (matching_parts / max(len(kw_parts), 1))
+
+    # 第三步：使用 CN_SYNONYMS 中的英文词进行补充匹配（cyberpunk, steampunk, gothic 等）
+    for category, syns in CN_SYNONYMS.items():
+        for syn in syns:
+            syn_lower = syn.lower()
+            if len(syn_lower) >= 3 and syn_lower in prompt_lower:
+                scores[category] = scores.get(category, 0.0) + 0.5
+
     # 合并结果
     if scores:
         max_score_val = max(scores.values())
@@ -231,12 +239,16 @@ def _keyword_match(prompt: str, max_score: float = 0.7) -> tuple[list[StyleCateg
             categories = [k for k, v in normalized.items() if v >= max_score * 0.3]
             conf = max(normalized.values())
             
-            # 收集每个类别匹配的关键词
+            # 收集每个类别匹配的关键词（要求 70% 的子单词匹配）
             for cat in categories:
-                matched_kws = [
-                    kw for kw in cat_kws.get(cat, [])
-                    if any(pw.lower() in prompt_lower for pw in kw.lower().split() if len(pw) >= 3)
-                ]
+                matched_kws = []
+                for kw in cat_kws.get(cat, []):
+                    kw_parts = kw.lower().split()
+                    matching_parts = sum(1 for p in kw_parts if p in prompt_lower)
+                    if matching_parts >= len(kw_parts) * 0.7:
+                        matched_kws.append(kw)
+                        if len(matched_kws) >= 5:
+                            break
                 keywords_found[cat.value] = list(set(matched_kws))[:5]
             return categories, keywords_found, conf
     

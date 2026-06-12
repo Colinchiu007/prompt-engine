@@ -27,5 +27,8 @@ dev = [
     "pytest-asyncio>=0.23.0",
 ]
 
+[project.scripts]
+prompt-engine = "prompt_engine.cli:main"
+
 [tool.setuptools.packages.find]
 include = ["prompt_engine*"]

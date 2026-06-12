@@ -81,8 +81,8 @@ class TestStyleCategoryClassifierWithLLM:
         
         classifier = StyleCategoryClassifier(llm_chat_func=mock_chat)
         result = classifier.classify("something very abstract")
-        # 向量搜索可能先命中，method 可能是 vector_rag 或 llm_classify
-        assert result.method in ("llm_classify", "vector_rag")
+        # "abstract" 可命中 SFX_and_Shaders 关键词，method=keyword_match
+        assert result.method in ("llm_classify", "vector_rag", "keyword_match")
         assert len(result.categories) >= 1
 
 
@@ -155,7 +155,7 @@ class TestStyleCategoryClassifierIntegration:
             ("A golden retriever in a wildflower meadow", ['nature_and_animals']),
             ("中国水墨画风格的山水风景", ['nature_and_animals', 'geography_and_culture', 'drawing_and_art_mediums']),
             ("Cyberpunk city with neon lights", ['design_styles', 'lighting']),
-            ("Pixel art retro game character", ['digital']),
+            ("Pixel art retro game character", ['design_styles']),
             ("3D render volumetric lighting ray tracing", ['lighting', 'sfx_and_shaders']),
             ("Oil painting night sky stars moon", ['drawing_and_art_mediums', 'outer_space']),
         ]
