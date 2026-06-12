@@ -2,7 +2,12 @@
 from functools import lru_cache
 from fastapi import FastAPI, HTTPException
 from prompt_engine.optimizer import Optimizer
-from prompt_engine.models import OptimizeRequest, BatchOptimizeRequest, OptimizeResult, ReverseRequest, ReverseResult, RewriteRequest
+from prompt_engine.models import (
+    OptimizeRequest, BatchOptimizeRequest, OptimizeResult,
+    ReverseRequest, ReverseResult, RewriteRequest,
+    AutoStyleRequest, StyleCategoryResult, StyleCategory,
+)
+from prompt_engine.classifier import StyleCategoryClassifier
 
 app = FastAPI(
     title="Prompt Engine API",
@@ -108,3 +113,60 @@ async def disturb_optimize(request: OptimizeRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/v1/classify", response_model=StyleCategoryResult)
+async def classify_style(request: AutoStyleRequest):
+    """MJ 风格分类：将 prompt 分配到 27 个风格维度中（零样本，无需训练）"""
+    try:
+        classifier = StyleCategoryClassifier()
+        result = classifier.classify(
+            prompt=request.prompt,
+            max_categories=request.max_categories,
+            use_llm=request.use_llm,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/v1/styles/categories")
+async def list_style_categories():
+    """列出所有可用的 MJ 风格分类维度（27 个）"""
+    return {
+        "categories": [
+            {"id": c.value, "name": c.name, "description": _CATEGORY_CN_NAMES.get(c, c.value)}
+            for c in StyleCategory
+        ],
+        "count": len(StyleCategory),
+    }
+
+
+# MJ 风格分类中文名称映射（用于 /v1/styles/categories 返回）
+_CATEGORY_CN_NAMES = {
+    StyleCategory.LIGHTING: "光照效果",
+    StyleCategory.MATERIAL_PROPERTIES: "材质属性",
+    StyleCategory.MATERIALS: "材料",
+    StyleCategory.DIMENSIONALITY: "维度感",
+    StyleCategory.COLORS_AND_PALETTES: "色彩与调色板",
+    StyleCategory.COMBINATIONS: "色彩组合",
+    StyleCategory.CAMERA: "相机/镜头",
+    StyleCategory.PERSPECTIVE: "视角/透视",
+    StyleCategory.STRUCTURAL_MODIFICATION: "结构变形",
+    StyleCategory.NATURE_AND_ANIMALS: "自然与动物",
+    StyleCategory.OBJECTS: "物体",
+    StyleCategory.OUTER_SPACE: "太空",
+    StyleCategory.GEOMETRY: "几何形状",
+    StyleCategory.GEOGRAPHY_AND_CULTURE: "地理与文化",
+    StyleCategory.DRAWING_AND_ART_MEDIUMS: "绘画与艺术媒介",
+    StyleCategory.SFX_AND_SHADERS: "特效与着色器",
+    StyleCategory.THEMES: "主题/氛围",
+    StyleCategory.INTANGIBLES: "抽象概念",
+    StyleCategory.TV_AND_MOVIES: "影视参考",
+    StyleCategory.SONG_LYRICS: "歌词风格",
+    StyleCategory.DESIGN_STYLES: "设计风格",
+    StyleCategory.DIGITAL: "数字艺术",
+    StyleCategory.EXPERIMENTAL: "实验风格",
+    StyleCategory.EMOJIS: "Emoji 风格",
+    StyleCategory.MISCELLANEOUS: "杂项",
+}

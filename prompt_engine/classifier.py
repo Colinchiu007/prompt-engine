@@ -5,11 +5,11 @@ import math
 import re
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+if TYPE_CHECKING:
+    import torch
+    import torch.nn as nn
 
 from prompt_engine.models import StyleCategory, StyleCategoryResult
 
@@ -20,9 +20,14 @@ logger = logging.getLogger(__name__)
 # Bitwise Classifier
 # ================================================================
 
-class BitwiseClassifier(nn.Module):
+class BitwiseClassifier:
+    """比特级分类器：将 N 分类拆解为 d 个二分类（需要 torch 可选安装）。"""
     def __init__(self, embed_dim: int, num_classes: int, hidden_dim: Optional[int] = None):
-        super().__init__()
+        import torch
+        import torch.nn as nn
+        self._torch = torch
+        self._nn = nn
+        
         self.num_classes = num_classes
         self.num_bits = max(1, math.ceil(math.log2(num_classes))) if num_classes > 1 else 1
         self.bit_mask = (1 << self.num_bits) - 1
@@ -33,21 +38,28 @@ class BitwiseClassifier(nn.Module):
             embed_dim = hidden_dim
         self.bit_heads = nn.ModuleList([nn.Linear(embed_dim, 2) for _ in range(self.num_bits)])
         logger.info("BitwiseClassifier: %d classes -> %d bits", num_classes, self.num_bits)
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def __call__(self, x):
+        return self.forward(x)
+    def forward(self, x) -> "torch.Tensor":
+        import torch.nn.functional as F
+        torch = self._torch
         if hasattr(self, "project"):
             x = self.dropout(self.act(self.project(x)))
         return torch.stack([head(x) for head in self.bit_heads], dim=1)
-    def decode(self, bit_logits: torch.Tensor) -> torch.Tensor:
+    def decode(self, bit_logits) -> "torch.Tensor":
+        torch = self._torch
         bit_preds = bit_logits.argmax(dim=-1)
         result = torch.zeros(bit_logits.shape[0], dtype=torch.long, device=bit_logits.device)
         for i in range(self.num_bits):
             result += bit_preds[:, i] * (1 << i)
         return result.clamp(max=self.bit_mask)
-    def loss(self, bit_logits: torch.Tensor, target_classes: torch.Tensor) -> torch.Tensor:
+    def loss(self, bit_logits, target_classes) -> "torch.Tensor":
+        import torch.nn.functional as F
         bit_targets = self._classes_to_bits(target_classes)
         return sum(F.cross_entropy(bit_logits[:, i], bit_targets[:, i])
                    for i in range(self.num_bits)) / self.num_bits
-    def _classes_to_bits(self, classes: torch.Tensor) -> torch.Tensor:
+    def _classes_to_bits(self, classes) -> "torch.Tensor":
+        torch = self._torch
         bits = torch.zeros(classes.shape[0], self.num_bits, dtype=torch.long, device=classes.device)
         val = classes.clamp(max=self.bit_mask)
         for i in range(self.num_bits):
