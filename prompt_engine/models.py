@@ -133,6 +133,10 @@ class OptimizeRequest(BaseModel):
     max_length: int = Field(default=500, ge=50, le=2000, description="优化结果最大字符数")
     negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词，避免的元素")
     num_candidates: int = Field(default=1, ge=1, le=5, description="候选版本数量，用于 A/B 测试")
+    auto_detect_style: bool = Field(
+        default=True,
+        description="如果 style=None 且此项为 True，自动从 prompt 检测风格类别"
+    )
 
 
 class BatchOptimizeRequest(BaseModel):
@@ -169,6 +173,10 @@ class OptimizeResult(BaseModel):
     duration_ms: float = Field(default=0.0, description="优化耗时（毫秒）")
     candidates: list[str] = Field(default_factory=list, description="多候选版本（A/B 测试时返回）")
     error: Optional[str] = Field(default=None, description="出错时的错误信息")
+    detected_categories: Optional[StyleCategoryResult] = Field(
+        default=None,
+        description="自动检测到的 MJ 风格类别（当 auto_detect_style=True 时填充）"
+    )
 
 
 class RewriteRequest(BaseModel):

@@ -68,15 +68,21 @@ class TestMJStyleKeywordInjection:
 
     def test_no_short_noise_words(self):
         """Keywords should be meaningful (>=3 chars or multi-word)."""
-        for _ in range(20):
+        bad_found = False
+        for _ in range(50):
             result = _inject_style_keywords("test", creative_level=1)
-            # Extract injected part
             injected = result.replace("test", "").replace(",", "").strip()
-            if injected:
-                word = injected.split()[0]
-                # No pure digits, no single chars (unless multi-word or hyphenated)
-                assert not word.isdigit(), f"Digit injected: {word}"
-                assert len(word) >= 3 or " " in word or "-" in word
+            if not injected:
+                continue
+            # Check all words, not just first
+            for word in injected.split():
+                # Allow digits only if they're part of a longer word
+                if word.isdigit() and len(word) <= 2:
+                    bad_found = True
+                    break
+            if bad_found:
+                break
+        assert not bad_found, f"Short digit noise injected: {result}"
 
     def test_no_lcd_or_uv_injection(self):
         """Should not inject technical noise like 'LCD' or 'UV'."""

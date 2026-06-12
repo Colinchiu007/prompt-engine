@@ -3,14 +3,103 @@ import logging
 import time
 from pathlib import Path
 from typing import Optional
-from prompt_engine.models import OptimizeRequest, OptimizeResult, ReverseRequest, ReverseResult
+from prompt_engine.models import OptimizeRequest, OptimizeResult, ReverseRequest, ReverseResult, StyleCategory, StyleType
 from prompt_engine.config import load_config
 from prompt_engine.strategies import get_strategy
 from prompt_engine.llm.base import BaseLLMProvider
 from prompt_engine.rewriter import PromptRewriter
 from prompt_engine.disturb import PromptDisturber
+from prompt_engine.classifier import StyleCategoryClassifier
 
 logger = logging.getLogger(__name__)
+
+
+# StyleCategory → StyleType 自动映射
+# 当自动检测到某些 MJ 风格类别时，映射到平台可用的 StyleType
+_STYLE_CATEGORY_TO_TYPE: dict[StyleCategory, StyleType] = {
+    StyleCategory.DRAWING_AND_ART_MEDIUMS: None,  # 由具体媒介词汇决定
+    StyleCategory.THEMES: None,  # 由具体主题词汇决定
+}
+# 反向映射：关键词 → StyleType
+_STYLE_TYPE_KEYWORDS: dict[StyleType, list[str]] = {
+    # 具体媒介排前面（更高优先级）
+    StyleType.WATERCOLOR: ["watercolor", "water colour", "water-colour",
+                           "水彩", "水彩画"],
+    StyleType.OIL_PAINTING: ["oil painting", "oil paint",
+                             "油画"],
+    StyleType.PIXEL: ["pixel art", "8-bit", "retro game", "pixel",
+                      "像素", "像素画", "点阵"],
+    StyleType.ANIME: ["anime", "manga", "cel shaded", "cell shade", "japanese animation",
+                      "动漫", "动画", "二次元"],
+    StyleType.CARTOON: ["cartoon", "comic", "toon",
+                        "卡通", "漫画风格", "美式卡通"],
+    # 设计风格
+    StyleType.CYBERPUNK: ["cyberpunk", "neon", "dystopian", "cyber",
+                          "赛博朋克", "赛博", "霓虹"],
+    StyleType.MINIMALIST: ["minimalist", "minimal", "clean", "simple",
+                           "极简", "简约", "极简主义"],
+    StyleType.FANTASY: ["fantasy", "magical", "mythical", "medieval", "dragon", "elf",
+                        "奇幻", "魔法", "神话"],
+    StyleType.ABSTRACT: ["abstract", "abstract art",
+                         "抽象", "抽象画"],
+    # 摄影与写实
+    StyleType.PHOTOGRAPHY: ["photography", "photo", "camera", "lens", "photograph", "portrait", "shot on",
+                            "摄影", "相机", "镜头", "照片"],
+    StyleType.PORTRAIT: ["portrait", "headshot", "close-up", "face",
+                         "人像", "肖像", "特写"],
+    StyleType.REALISTIC: ["realistic", "photorealistic", "realism", "hyperrealistic",
+                          "写实", "逼真"],
+    # 技术类
+    StyleType._3D_RENDER: ["3d render", "cgi", "pbr", "render", "3d model", "vray",
+                           "3D渲染", "渲染", "三维"],
+    StyleType.LANDSCAPE: ["landscape", "mountain", "sea", "ocean", "nature", "scenery", "vista",
+                          "风景", "山水", "自然", "景观", "风光"],
+}
+
+
+def _detect_style_type_from_category(
+    category_result: "StyleCategoryResult",  # noqa: F821
+    prompt: str,
+) -> tuple[Optional[StyleType], Optional["StyleCategoryResult"]]:  # noqa: F821
+    """从 MJ 风格分类结果自动推断 StyleType。
+
+    1. 优先匹配 StyleType 关键词
+    2. 如果没匹配到，回退到 StyleCategory → StyleType 映射
+    """
+    prompt_lower = prompt.lower()
+
+    # 第一轮：关键词匹配 StyleType
+    for st, keywords in _STYLE_TYPE_KEYWORDS.items():
+        for kw in keywords:
+            if kw in prompt_lower:
+                return st, category_result
+
+    # 第二轮：StyleCategory 映射
+    if category_result and category_result.categories:
+        # 媒体类别直接映射
+        if StyleCategory.DRAWING_AND_ART_MEDIUMS in category_result.categories:
+            # 从 prompt 中找具体绘画媒介
+            if any(kw in prompt_lower for kw in ["watercolor", "water colour", "水彩"]):
+                return StyleType.WATERCOLOR, category_result
+            if any(kw in prompt_lower for kw in ["oil painting", "oil paint", "油画"]):
+                return StyleType.OIL_PAINTING, category_result
+            if any(kw in prompt_lower for kw in ["pixel art", "pixel", "像素"]):
+                return StyleType.PIXEL, category_result
+
+        if StyleCategory.DIGITAL in category_result.categories:
+            if any(kw in prompt_lower for kw in ["pixel", "retro game", "8-bit"]):
+                return StyleType.PIXEL, category_result
+            return StyleType._3D_RENDER, category_result
+
+        if StyleCategory.CAMERA in category_result.categories:
+            return StyleType.PHOTOGRAPHY, category_result
+
+        if StyleCategory.NATURE_AND_ANIMALS in category_result.categories:
+            if any(kw in prompt_lower for kw in ["portrait", "close-up", "face", "人像", "肖像"]):
+                return StyleType.PORTRAIT, category_result
+            return StyleType.LANDSCAPE, category_result
+
+    return None, category_result
 
 
 class Optimizer:
@@ -21,6 +110,7 @@ class Optimizer:
         self._provider = BaseLLMProvider.from_config(self.config)
         self._embedder = None
         self._vector_store = None
+        self._cat_classifier = StyleCategoryClassifier()
         self._init_knowledge()
 
     def _init_knowledge(self):
@@ -151,6 +241,26 @@ class Optimizer:
         """单条提示词优化主流程"""
         start_time = time.time()
         try:
+            detected_result: Optional["StyleCategoryResult"] = None
+            
+            # 0. 自动风格检测（当 style 未指定时）
+            effective_style = request.style
+            if request.auto_detect_style and request.style is None:
+                detected_result = self._cat_classifier.classify(
+                    request.prompt, max_categories=5, use_llm=False
+                )
+                if detected_result and detected_result.categories:
+                    detected_style, detected_result = _detect_style_type_from_category(
+                        detected_result, request.prompt
+                    )
+                    if detected_style:
+                        effective_style = detected_style
+                        logger.info(
+                            "Auto-detected style: %s from MJ categories: %s",
+                            detected_style.value,
+                            [c.value for c in detected_result.categories],
+                        )
+
             # 1. 加载平台策略
             strategy_cls = get_strategy(request.platform.value)
             if not strategy_cls:
@@ -158,7 +268,7 @@ class Optimizer:
 
             # 2. 构建系统提示词
             system_prompt = strategy_cls.build_system_prompt(
-                style=request.style,
+                style=effective_style,
                 creative_level=request.creative_level,
                 max_length=request.max_length,
                 negative_prompt=request.negative_prompt,
@@ -187,11 +297,12 @@ class Optimizer:
             return OptimizeResult(
                 optimized_prompt=candidates[0],
                 platform=request.platform,
-                style=request.style,
+                style=effective_style if effective_style != request.style else request.style,
                 model_used=self._provider.model_name,
                 tokens_used=total_tokens,
                 duration_ms=round(elapsed, 1),
                 candidates=candidates if num > 1 else [],
+                detected_categories=detected_result,
             )
         except Exception as e:
             elapsed = (time.time() - start_time) * 1000
