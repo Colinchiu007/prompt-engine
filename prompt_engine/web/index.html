@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prompt Engine 看板</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+</head>
+<body>
+<div id="app">
+  <el-container style="min-height:100vh">
+    <el-header style="background:#fff;border-bottom:1px solid #e4e7ed;display:flex;align-items:center;padding:0 20px">
+      <h2 style="margin:0;font-size:18px">🎨 Prompt Engine</h2>
+      <el-menu mode="horizontal" :ellipsis="false" style="margin-left:40px;border-bottom:none" :default-active="tab" @select="tab=$event">
+        <el-menu-item index="workbench">Prompt 工作台</el-menu-item>
+        <el-menu-item index="dashboard">数据看板</el-menu-item>
+        <el-menu-item index="settings">配置</el-menu-item>
+      </el-menu>
+    </el-header>
+    <el-main style="background:#f5f7fa;padding:20px">
+      <Workbench v-if="tab==='workbench'" />
+      <Dashboard v-if="tab==='dashboard'" />
+      <Settings v-if="tab==='settings'" />
+    </el-main>
+  </el-container>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+
+// ── API 层 ──────────────────────────────────────
+const api = {
+  base: '',
+  async post(path, body) {
+    const r = await fetch(this.base + path, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    return r.json();
+  },
+  async get(path) {
+    const r = await fetch(this.base + path);
+    return r.json();
+  }
+};
+
+// ── Workbench 组件 ──────────────────────────────
+const Workbench = {
+  template: `
+    <el-card shadow="never">
+      <template #header><span>Prompt 工作台</span></template>
+      <el-input v-model="input" type="textarea" :rows="3" placeholder="输入描述，如：a majestic cat" />
+      <div style="margin:12px 0;display:flex;gap:12px;flex-wrap:wrap">
+        <el-select v-model="platform" style="width:160px">
+          <el-option v-for="p in platforms" :key="p" :label="p" :value="p" />
+        </el-select>
+        <el-button type="primary" @click="optimize" :loading="loading">优化</el-button>
+        <el-button @click="classify" :loading="classifying">分类</el-button>
+        <el-button @click="evaluate" :loading="evaluating">评估</el-button>
+        <el-button @click="clear">清空</el-button>
+      </div>
+
+      <el-alert v-if="error" :title="error" type="error" show-icon closable style="margin-bottom:12px" />
+
+      <el-tabs v-if="result" type="border-card">
+        <el-tab-pane label="优化结果">
+          <pre style="background:#f5f7fa;padding:12px;border-radius:4px;white-space:pre-wrap">{{ result.prompt }}</pre>
+          <el-tag v-if="result.platform">{{ result.platform }}</el-tag>
+          <el-tag v-if="result.creative_level" type="success" style="margin-left:8px">创意 {{ result.creative_level }}/10</el-tag>
+        </el-tab-pane>
+        <el-tab-pane label="分类结果" v-if="classResult">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="分类">{{ classResult.category }}</el-descriptions-item>
+            <el-descriptions-item label="置信度">{{ (classResult.confidence * 100).toFixed(1) }}%</el-descriptions-item>
+            <el-descriptions-item label="方法">{{ classResult.method }}</el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
+        <el-tab-pane label="评估对比" v-if="evalResult">
+          <el-table :data="evalResult.scores" stripe size="small">
+            <el-table-column prop="dimension" label="维度" />
+            <el-table-column prop="before" label="原始" width="80" />
+            <el-table-column prop="after" label="优化后" width="80" />
+            <el-table-column label="提升" width="100">
+              <template #default="{row}">
+                <el-tag :type="row.improvement>0?'success':row.improvement<0?'danger':'info'" size="small">
+                  {{ row.improvement > 0 ? '+' : '' }}{{ row.improvement }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
+  `,
+  setup() {
+    const input = ref('');
+    const platform = ref('midjourney');
+    const platforms = ref(['midjourney','stable-diffusion','dall-e','tongyi-wanxiang','wenyi-xinyi','jimeng']);
+    const loading = ref(false);
+    const classifying = ref(false);
+    const evaluating = ref(false);
+    const result = ref(null);
+    const classResult = ref(null);
+    const evalResult = ref(null);
+    const error = ref('');
+
+    async function optimize() {
+      if (!input.value) return;
+      loading.value = true; result.value = null; classResult.value = null; evalResult.value = null; error.value = '';
+      try {
+        const d = await api.post('/v1/optimize', {prompt: input.value, platform: platform.value});
+        if (d.error) { error.value = d.error; return; }
+        result.value = d;
+      } catch(e) { error.value = String(e); }
+      finally { loading.value = false; }
+    }
+    async function classify() {
+      if (!input.value) return;
+      classifying.value = true;
+      try {
+        classResult.value = await api.post('/v1/classify', {prompt: input.value});
+      } catch(e) { error.value = String(e); }
+      finally { classifying.value = false; }
+    }
+    async function evaluate() {
+      if (!result.value?.original || !result.value?.prompt) {
+        error.value = '请先优化 prompt';
+        return;
+      }
+      evaluating.value = true;
+      try {
+        const d = await api.post('/v1/evaluate', {original: result.value.original, optimized: result.value.prompt});
+        if (d.scores) {
+          evalResult.value = {scores: Object.entries(d.scores).map(([k,v]) => ({dimension: k, ...v}))};
+        }
+      } catch(e) { error.value = String(e); }
+      finally { evaluating.value = false; }
+    }
+    function clear() { input.value = ''; result.value = null; classResult.value = null; evalResult.value = null; error.value = ''; }
+
+    return { input, platform, platforms, loading, classifying, evaluating, result, classResult, evalResult, error,
+             optimize, classify, evaluate, clear };
+  }
+};
+
+// ── Dashboard 组件 ──────────────────────────────
+const Dashboard = {
+  template: `
+    <el-row :gutter="16">
+      <el-col :span="6" v-for="s in stats" :key="s.label">
+        <el-card shadow="never">
+          <div style="font-size:28px;font-weight:bold;color:#409eff">{{ s.value }}</div>
+          <div style="color:#909399;font-size:13px">{{ s.label }}</div>
+        </el-card>
+      </el-col>
+    </el-row>
+    <el-row :gutter="16" style="margin-top:16px">
+      <el-col :span="12">
+        <el-card shadow="never">
+          <template #header><span>分类分布</span></template>
+          <div ref="catChart" style="height:260px"></div>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card shadow="never">
+          <template #header><span>平台分布</span></template>
+          <div ref="platChart" style="height:260px"></div>
+        </el-card>
+      </el-col>
+    </el-row>
+  `,
+  setup() {
+    const stats = reactive([]);
+    const catChart = ref(null);
+    const platChart = ref(null);
+
+    onMounted(async () => {
+      try {
+        const overview = await api.get('/v1/stats/overview');
+        stats.length = 0;
+        stats.push({label:'总请求', value:overview.total_requests},
+                   {label:'成功率', value:overview.success_rate+'%'},
+                   {label:'平均耗时', value:overview.avg_time_ms+'ms'},
+                   {label:'错误', value:overview.error_count});
+
+        const cats = await api.get('/v1/stats/categories');
+        const plats = await api.get('/v1/stats/platforms');
+
+        // ECharts via CDN
+        if (window.echarts) {
+          const chartTheme = {backgroundColor:'transparent'};
+          const catOpt = {
+            ...chartTheme, tooltip:{trigger:'item'},
+            series:[{type:'pie',radius:['30%','70%'],data:cats.map(c=>({name:c.name,value:c.count})),label:{fontSize:11}}]
+          };
+          const ec1 = echarts.init(catChart.value);
+          ec1.setOption(catOpt);
+
+          const platOpt = {
+            ...chartTheme, tooltip:{trigger:'axis'}, xAxis:{type:'category',data:plats.map(p=>p.platform),axisLabel:{fontSize:11}},
+            yAxis:{type:'value'}, series:[{type:'bar',data:plats.map(p=>p.count)}]
+          };
+          const ec2 = echarts.init(platChart.value);
+          ec2.setOption(platOpt);
+        }
+      } catch(e) {}
+    });
+
+    return { stats, catChart, platChart };
+  }
+};
+
+// ── Settings 组件 ───────────────────────────────
+const Settings = {
+  template: `
+    <el-row :gutter="16">
+      <el-col :span="12">
+        <el-card shadow="never">
+          <template #header><span>LLM 供应商</span></template>
+          <el-select v-model="provider" style="width:100%">
+            <el-option label="OpenAI" value="openai" />
+            <el-option label="讯飞星火" value="xfyun" />
+            <el-option label="Gemini" value="gemini" />
+          </el-select>
+          <div style="margin-top:12px;color:#909399;font-size:13px">切换供应商后重启服务生效</div>
+        </el-card>
+        <el-card shadow="never" style="margin-top:16px">
+          <template #header><span>DSL 通配符池</span></template>
+          <el-table :data="wildcards" stripe size="small">
+            <el-table-column prop="name" label="名称" />
+            <el-table-column prop="count" label="值数量" width="100" />
+          </el-table>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card shadow="never">
+          <template #header><span>平台策略</span></template>
+          <el-table :data="platforms" stripe size="small">
+            <el-table-column prop="name" label="平台" />
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="{row}"><el-tag size="small" :type="row.status==='就绪'?'success':'warning'">{{row.status}}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="desc" label="说明" />
+          </el-table>
+        </el-card>
+      </el-col>
+    </el-row>
+  `,
+  setup() {
+    const provider = ref('openai');
+    const wildcards = reactive([]);
+    const platforms = reactive([
+      {name:'midjourney',status:'就绪',desc:'MJ 参数映射 + 风格注入'},
+      {name:'stable-diffusion',status:'就绪',desc:'权重语法 + 负面提示'},
+      {name:'dall-e',status:'就绪',desc:'自然语言风格'},
+      {name:'tongyi-wanxiang',status:'就绪',desc:'中文描写优化'},
+      {name:'wenyi-xinyi',status:'就绪',desc:'关键词式策略'},
+      {name:'jimeng',status:'就绪',desc:'视觉冲击力优化'},
+    ]);
+    onMounted(async () => {
+      try {
+        const cats = await api.get('/v1/stats/categories');
+        if (cats.length > 0) wildcards.push(...[{name:'colors',count:10},{name:'animals',count:10},{name:'lighting',count:10}]);
+      } catch(e) {}
+    });
+    return { provider, wildcards, platforms };
+  }
+};
+
+const app = createApp({
+  components: { Workbench, Dashboard, Settings },
+  setup() {
+    const tab = ref('workbench');
+    return { tab };
+  }
+});
+app.use(ElementPlus);
+app.mount('#app');
+</script>
+</body>
+</html>

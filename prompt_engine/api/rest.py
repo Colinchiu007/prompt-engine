@@ -10,7 +10,8 @@ from prompt_engine.models import (
 )
 from prompt_engine.evaluator import evaluate as evaluate_prompt, EvaluationResult
 from prompt_engine.feedback import get_feedback_store
-
+from prompt_engine.optimizer import Optimizer
+from typing import TYPE_CHECKING
 app = FastAPI(
     title="Prompt Engine API",
     description="图片生成提示词优化引擎 - REST API",
@@ -222,3 +223,72 @@ async def evaluate(request: dict):
         },
         "overall_improvement": result.overall_improvement,
     }
+
+
+# ── 看板统计端点 ──────────────────────────────────
+
+STATS_STORE: dict = {
+    "total_requests": 0,
+    "success_count": 0,
+    "error_count": 0,
+    "total_time_ms": 0,
+    "platforms": {},
+    "categories": {},
+}
+
+
+def _record_request(platform: str, success: bool, time_ms: float, category: str = ""):
+    STATS_STORE["total_requests"] += 1
+    if success:
+        STATS_STORE["success_count"] += 1
+    else:
+        STATS_STORE["error_count"] += 1
+    STATS_STORE["total_time_ms"] += time_ms
+    if platform:
+        STATS_STORE["platforms"][platform] = STATS_STORE["platforms"].get(platform, 0) + 1
+    if category:
+        STATS_STORE["categories"][category] = STATS_STORE["categories"].get(category, 0) + 1
+
+
+@app.get("/v1/stats/overview")
+async def stats_overview():
+    t = STATS_STORE["total_requests"]
+    rate = (STATS_STORE["success_count"] / t * 100) if t > 0 else 100.0
+    avg_time = (STATS_STORE["total_time_ms"] / t) if t > 0 else 0
+    return {
+        "total_requests": t,
+        "success_rate": round(rate, 1),
+        "avg_time_ms": round(avg_time, 1),
+        "error_count": STATS_STORE["error_count"],
+    }
+
+
+@app.get("/v1/stats/categories")
+async def stats_categories():
+    cats = STATS_STORE["categories"]
+    total = sum(cats.values()) or 1
+    return [
+        {"name": k, "count": v, "percentage": round(v / total * 100, 1)}
+        for k, v in sorted(cats.items(), key=lambda x: -x[1])
+    ]
+
+
+@app.get("/v1/stats/platforms")
+async def stats_platforms():
+    plats = STATS_STORE["platforms"]
+    total = sum(plats.values()) or 1
+    return [
+        {"platform": k, "count": v, "percentage": round(v / total * 100, 1)}
+        for k, v in sorted(plats.items(), key=lambda x: -x[1])
+    ]
+
+
+# ── 静态文件服务 ──────────────────────────────────
+
+import os
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+_web_dir = Path(__file__).parent.parent / "web"
+if _web_dir.exists():
+    app.mount("/", StaticFiles(directory=str(_web_dir), html=True), name="web")
