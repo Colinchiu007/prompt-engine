@@ -21,7 +21,12 @@ logger = logging.getLogger(__name__)
 # ================================================================
 
 class BitwiseClassifier:
-    """比特级分类器：将 N 分类拆解为 d 个二分类（需要 torch 可选安装）。"""
+    """比特级分类器：将 N 分类拆解为 d 个二分类（需要 torch 可选安装）。
+
+    注意：实验性功能，未集成到主分类管线。
+    当前分类管线使用 keyword_match → vector_rag → llm_classify 三级流水线，
+    无需 PyTorch。
+    """
     def __init__(self, embed_dim: int, num_classes: int, hidden_dim: Optional[int] = None):
         import torch
         import torch.nn as nn
@@ -72,7 +77,7 @@ class BitwiseClassifier:
 
 
 # ================================================================
-# Style Category Classifier — MJ 27 维度零样本分类
+# Style Category Classifier — MJ 26 维度零样本分类
 # ================================================================
 
 # 每个 StyleCategory → MJ 数据库关键词（取前 N 个作为匹配种子）
@@ -85,7 +90,6 @@ _CATEGORY_DESCRIPTIONS: dict[StyleCategory, str] = {
     StyleCategory.MATERIALS: "建筑材料、物体材质、塑料、金属、织物、木材、石材",
     StyleCategory.DIMENSIONALITY: "维度表现、2D/3D/2.5D、立体感、空间深度",
     StyleCategory.COLORS_AND_PALETTES: "色彩方案、色调、调色板、互补色、类似色",
-    StyleCategory.RAINBOW_OF_COLORS: "彩虹色、全色谱、丰富色彩、渐变色彩",
     StyleCategory.COMBINATIONS: "色彩组合、特殊色彩效果、发光材质、珍珠色",
     StyleCategory.CAMERA: "相机类型、镜头、摄影技法、光圈、焦距、拍摄手法",
     StyleCategory.PERSPECTIVE: "透视角度、视角、构图方式、仰视、俯视、鱼眼",
@@ -263,7 +267,7 @@ def _build_llm_prompt(prompt: str, categories: list[StyleCategory]) -> tuple[str
         f"- {c.value}: {_CATEGORY_DESCRIPTIONS.get(c, '')}"
         for c in categories
     )
-    system = f"""你是一个风格分类专家。将用户的描述分配到 MJ Style Reference 的 27 个风格维度中。
+    system = f"""你是一个风格分类专家。将用户的描述分配到 MJ Style Reference 的 26 个风格维度中。
 
 {cat_list}
 
@@ -278,7 +282,7 @@ def _build_llm_prompt(prompt: str, categories: list[StyleCategory]) -> tuple[str
 
 
 class StyleCategoryClassifier:
-    """MJ 27 维度风格分类器 — 关键词匹配 + 向量语义搜索 + LLM 零样本分类。
+    """MJ 26 维度风格分类器 — 关键词匹配 + 向量语义搜索 + LLM 零样本分类。
 
     三级流水线：
     1. 关键词匹配（快速，~0ms）— 中文+英文同义词，精确命中

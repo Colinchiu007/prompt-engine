@@ -88,10 +88,10 @@ def _print_table(result, max_categories=5):
 
 
 def _list_categories(args):
-    """列出所有 27 个风格维度"""
+    """列出所有 25 个风格维度"""
     from prompt_engine.models import StyleCategory
 
-    print("MJ 27 风格维度:")
+    print("MJ 25 风格维度:")
     print(f"{'ID':<3} {'English':<35} {'中文'}")
     print("-" * 80)
     for i, cat in enumerate(StyleCategory, 1):

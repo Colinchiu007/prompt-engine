@@ -38,7 +38,7 @@ class StyleType(str, Enum):
 # ============================================================================
 
 class StyleCategory(str, Enum):
-    """MJ 风格分类器维度 — 27 个风格分类
+    """MJ 风格分类器维度 — 26 个风格分类
 
     来源: github.com/willwulfken/MidJourney-Styles-and-Keywords-Reference
     覆盖: 光照/材质/色彩/镜头/构图/自然/艺术媒介/文化风格/影视参考/特效
@@ -56,8 +56,7 @@ class StyleCategory(str, Enum):
 
     # 色彩
     COLORS_AND_PALETTES = "colors_and_palettes"  # 色彩与调色板
-    RAINBOW_OF_COLORS = "rainbow_of_colors"  # 彩虹色
-    COMBINATIONS = "combinations"             # 色彩组合
+    COMBINATIONS = "combinations"                 # 色彩组合
 
     # 相机与镜头
     CAMERA = "camera"                         # 相机/镜头

@@ -16,9 +16,41 @@
 - ✍️ **Prompt 扩写**：借鉴 Infinity 项目，将简短描述自动扩展为详细图像生成提示词（含 CFG 参数）
 - 🎲 **扰动增强优化**：借鉴 Infinity BSC，对 prompt 做同义词替换和词序打乱，多版本择优
 - 🧠 **比特级分类器**：借鉴 Infinity IVC，大类别分类参数量降低 20 倍以上
-- 🏷️ **27 维风格分类**：基于 MJ Style Reference 的 26/27 维度风格分类器（关键词 + 向量语义 + LLM 三级流水线）
+- 🏷️ **25 维风格分类**：基于 MJ Style Reference 的 25 维度风格分类器（关键词 + 向量语义 + LLM 三级流水线）
 - 🔍 **CLI 工具**：命令行直接运行风格分类、列出维度、优化 prompt
 - 🌍 **跨平台风格注入**：所有 7 个平台策略均支持 MJ 风格关键词注入
+
+## 25 维 MJ 风格分类体系
+
+基于 MidJourney Styles Reference 的 25 个风格维度，覆盖光照/材质/色彩/镜头/构图/自然/艺术媒介/文化风格/影视参考/特效：
+
+| 维度 | 中文名 | 说明 | 示例关键词 |
+|------|--------|------|-----------|
+| `lighting` | 光照效果 | 光线类型、照明方式、阴影 | Volumetric Lighting, Rembrandt, God Rays |
+| `material_properties` | 材质属性 | 表面质感、透明度、反射 | Glossy, Translucent, Refractive |
+| `materials` | 材料 | 具体材质的视觉呈现 | Concrete, Metal, Wood, Marble |
+| `dimensionality` | 维度感 | 2D/3D/2.5D 空间深度 | Isometric, Flat, Parallax |
+| `colors_and_palettes` | 色彩与调色板 | 色调方案、色彩搭配 | Pastel, Monochrome, Vibrant |
+| `combinations` | 组合效果 | 特殊色彩组合、发光材质 | Iridescent, Pearl, Neon |
+| `camera` | 摄影与镜头 | 相机类型、焦段、拍摄技法 | Macro, Wide Angle, Tilt-Shift |
+| `perspective` | 视角与构图 | 透视角度、构图方式 | Bird's Eye, Worm's Eye, Dutch Angle |
+| `structural_modification` | 结构修改 | 变形、扭曲、抽象 | Warped, Spiral, Möbius |
+| `nature_and_animals` | 自然与动物 | 风景、植物、动物、生态 | Golden Retriever, Aurora, Meadow |
+| `objects` | 物体与道具 | 日常物品、机械、电子 | Vaporwave Cassette, Tesla Coil |
+| `outer_space` | 太空与宇宙 | 星空、星球、星云 | Nebula, Galaxy, Solar Eclipse |
+| `geometry` | 几何形状 | 图案、多面体、对称 | Sacred Geometry, Fractal, Tessellation |
+| `geography_and_culture` | 地理与文化 | 地域风格、民族特色、历史 | Chinese Ink, Japanese, Egyptian |
+| `drawing_and_art_mediums` | 绘画与艺术媒介 | 画种、技法、艺术形式 | Watercolor, Oil, Charcoal, Ink |
+| `sfx_and_shaders` | 特效与着色器 | 视觉特效、后期处理 | Ray Tracing, Bloom, Chromatic Aberration |
+| `themes` | 主题与氛围 | 情绪概念、美学运动 | Cyberpunk, Steampunk, Gothic |
+| `intangibles` | 抽象概念 | 不可见的事物、能量 | Consciousness, Quantum, Aura |
+| `tv_and_movies` | 影视参考 | 电影/动画风格 | Studio Ghibli, Noir, IMAX |
+| `song_lyrics` | 音乐与歌词 | 音乐风格视觉化 | Synthwave, Lo-fi, Ambient |
+| `design_styles` | 设计风格 | 艺术运动、设计流派 | Art Deco, Bauhaus, Minimalism |
+| `digital` | 数字艺术 | CG、像素、电子游戏 | Pixel Art, Low Poly, Voxel |
+| `experimental` | 实验性 | 前卫、概念艺术 | Glitch, Datamosh, Generative |
+| `emojis` | Emoji 表情 | 符号、图标风格 | Emoji, Sticker, Icon |
+| `miscellaneous` | 杂项 | 特殊渲染效果 | 500x Magnification, X-Ray |
 
 ## 快速开始
 

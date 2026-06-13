@@ -1,46 +1,106 @@
-"""使用示例：作为 Python SDK 调用"""
+"""Prompt Engine SDK 使用示例"""
 from prompt_engine import Optimizer, OptimizeRequest, PlatformType, StyleType
+from prompt_engine import StyleCategoryClassifier
 
 
-def main():
+def demo_optimize():
+    """正向优化"""
+    print("=" * 50)
+    print("1. 正向优化")
+    print("=" * 50)
     optimizer = Optimizer()
 
-    # 示例 1：通用优化（中文）
-    req1 = OptimizeRequest(prompt="一只猫在窗台上晒太阳", platform=PlatformType.GENERIC)
-    result1 = optimizer.optimize(req1)
-    print("=== 通用优化（中文）===")
-    print(f"输入: 一只猫在窗台上晒太阳")
-    print(f"输出: {result1.optimized_prompt}")
-    print(f"平台: {result1.platform.value}")
-    print(f"模型: {result1.model_used}")
-    if result1.error:
-        print(f"[注意] {result1.error}（请配置有效的 API Key）")
-    print()
-
-    # 示例 2：Midjourney 优化
-    req2 = OptimizeRequest(
-        prompt="cyberpunk city street at night",
+    req = OptimizeRequest(
+        prompt="一只猫在窗台上晒太阳",
         platform=PlatformType.MIDJOURNEY,
-        style=StyleType.CYBERPUNK,
-        creative_level=8,
+        style=StyleType.REALISTIC,
     )
-    result2 = optimizer.optimize(req2)
-    print("=== Midjourney 优化 ===")
-    print(f"输入: cyberpunk city street at night")
-    print(f"输出: {result2.optimized_prompt}")
-    if result2.error:
-        print(f"[注意] {result2.error}（请配置有效的 API Key）")
+    result = optimizer.optimize(req)
+    print(f"  输入: {req.prompt}")
+    print(f"  输出: {result.optimized_prompt}")
+    if result.error:
+        print(f"  [注意] {result.error}（请配置 API Key）")
     print()
 
-    # 示例 3：中英文自适应
-    req3 = OptimizeRequest(prompt="a cute puppy", platform=PlatformType.DALLE)
-    result3 = optimizer.optimize(req3)
-    print("=== DALL·E 优化 ===")
-    print(f"输入: a cute puppy")
-    print(f"输出: {result3.optimized_prompt}")
-    if result3.error:
-        print(f"[注意] {result3.error}（请配置有效的 API Key）")
+
+def demo_classify():
+    """风格分类"""
+    print("=" * 50)
+    print("2. 风格分类（26 维 MJ 风格维度）")
+    print("=" * 50)
+    classifier = StyleCategoryClassifier()
+
+    prompts = [
+        "A serene watercolor painting of mountains at sunset",
+        "Cyberpunk city with neon lights and rain",
+        "Golden retriever in a wildflower meadow",
+    ]
+    for prompt in prompts:
+        result = classifier.classify(prompt, max_categories=3)
+        cats = [c.value for c in result.categories]
+        print(f"  输入: {prompt}")
+        print(f"  方法: {result.method}  置信度: {result.confidence:.2f}")
+        print(f"  类别: {cats}")
+        print()
+
+
+def demo_recommend():
+    """风格 → 类别推荐"""
+    print("=" * 50)
+    print("3. StyleType → StyleCategory 反向推荐")
+    print("=" * 50)
+    from prompt_engine.classifier import recommend_categories_for_style
+
+    for style in ["oil_painting", "cyberpunk", "landscape"]:
+        cats = recommend_categories_for_style(style)
+        cat_names = [c.value for c in cats]
+        print(f"  {style:15s} → {cat_names}")
+    print()
+
+
+def demo_reverse():
+    """逆向工程（需配置视觉模型 API）"""
+    print("=" * 50)
+    print("4. 逆向工程")
+    print("=" * 50)
+    from prompt_engine.models import ReverseRequest
+
+    optimizer = Optimizer()
+    req = ReverseRequest(
+        image_url="https://example.com/photo.jpg",
+        platform=PlatformType.GENERIC,
+    )
+    # 需要配置视觉模型 API Key 才能实际运行
+    print("  （需要配置 Vision API Key）")
+    print()
+
+
+def demo_feedback():
+    """反馈收集"""
+    print("=" * 50)
+    print("5. 风格分类反馈")
+    print("=" * 50)
+    from prompt_engine.feedback import FeedbackStore
+    from prompt_engine.models import FeedbackEntry
+
+    store = FeedbackStore()
+    entry = FeedbackEntry(
+        prompt="a cat sitting on a windowsill",
+        detected_categories=["lighting", "nature_and_animals"],
+        corrected_categories=["lighting", "nature_and_animals"],
+        rating=5,
+        method="keyword_match",
+        confidence=0.85,
+    )
+    result = store.submit(entry)
+    print(f"  反馈已提交: {result.id}")
+    stats = store.stats()
+    print(f"  总反馈: {stats.total}, 平均评分: {stats.avg_rating}")
+    print()
 
 
 if __name__ == "__main__":
-    main()
+    demo_optimize()
+    demo_classify()
+    demo_recommend()
+    demo_feedback()

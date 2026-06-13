@@ -1,78 +1,93 @@
 # 风格模板库 — 集中管理所有风格提示
-# 每个风格包含：名称、英文提示词、中文提示词、关键词列表
+# 每个风格包含：名称、英文提示词、中文提示词、关键词列表、推荐 StyleCategory
 #
 # 文件结构：
 #   style_name:
 #     en: 英文风格描述（用于英文策略如 Midjourney/SD/DALL·E）
 #     zh: 中文风格描述（用于中文策略如通义万相/文心一格/即梦）
 #     keywords: 推荐关键词列表
+#     categories: [推荐的 StyleCategory 值列表]  # 与分类器联动
 
 photography:
   en: "Ultra-realistic photographic style. Professional photography with precise lighting, natural skin texture, and authentic depth of field."
   zh: "摄影风格。真实照片感，精确曝光，自然景深，专业摄影质感。"
   keywords: ["photorealistic", "professional photo", "sharp focus", "natural lighting", "depth of field"]
+  categories: ["camera", "lighting", "perspective", "material_properties"]
 
 realistic:
   en: "Hyper-realistic style. True-to-life textures, accurate proportions, natural lighting that mimics real-world physics."
   zh: "写实风格。真实感强，光影自然，细节清晰，材质真实。"
   keywords: ["hyperrealistic", "photorealistic", "true-to-life", "natural textures"]
+  categories: ["camera", "lighting", "material_properties", "perspective"]
 
 anime:
   en: "Japanese anime illustration style. Clean linework, vibrant cel shading, expressive character design with large expressive eyes and dynamic poses."
   zh: "动漫插画风格。线条干净，色彩鲜明，角色造型精致，日系动画质感。"
   keywords: ["anime", "manga", "cel shading", "vibrant colors", "clean lines"]
+  categories: ["drawing_and_art_mediums", "colors_and_palettes", "design_styles"]
 
 cartoon:
   en: "Playful cartoon illustration style. Bold outlines, bright colors, exaggerated proportions, whimsical and fun atmosphere."
   zh: "卡通风格。轮廓清晰，色彩明快，造型夸张可爱，轻松活泼氛围。"
   keywords: ["cartoon", "bold outlines", "flat colors", "exaggerated", "whimsical"]
+  categories: ["drawing_and_art_mediums", "colors_and_palettes", "design_styles"]
 
 oil_painting:
   en: "Classical oil painting style. Rich impasto texture, visible brushwork, warm color palette, museum-quality fine art appearance."
   zh: "油画风格。可见笔触，色彩浓郁，画面有厚重感和肌理质感。"
   keywords: ["oil painting", "impasto", "brushstrokes", "painterly", "rich texture"]
+  categories: ["drawing_and_art_mediums", "material_properties", "colors_and_palettes", "lighting"]
 
 watercolor:
   en: "Soft watercolor painting style. Gentle color washes, paper texture, flowing pigment bleeding, delicate and atmospheric."
   zh: "水彩风格。颜色自然晕染，边缘柔和，纸张纹理可见，清透淡雅。"
   keywords: ["watercolor", "soft washes", "paper texture", "translucent", "delicate"]
+  categories: ["drawing_and_art_mediums", "colors_and_palettes", "materials", "nature_and_animals"]
 
 pixel:
   en: "Retro pixel art style. Blocky low-resolution graphics, limited color palette, nostalgic 8-bit video game aesthetic."
   zh: "像素风格。块状低分辨率图形，有限颜色板，怀旧复古游戏视觉。"
   keywords: ["pixel art", "8-bit", "retro game", "blocky", "limited palette"]
+  categories: ["digital", "design_styles", "colors_and_palettes"]
 
 cyberpunk:
   en: "Cyberpunk dystopian aesthetic. Neon-drenched cityscape, rain-slicked streets, holographic advertisements, futuristic technology amid urban decay."
   zh: "赛博朋克风格。霓虹灯光（青/紫/粉），雨夜街道，高科技低生活氛围。"
   keywords: ["cyberpunk", "neon", "sci-fi", "dystopian", "holographic", "rain"]
+  categories: ["design_styles", "lighting", "sfx_and_shaders", "themes", "material_properties"]
 
 fantasy:
   en: "Epic fantasy art style. Magical glowing elements, mythical creatures, grandiose landscapes, ethereal atmosphere and dramatic scale."
   zh: "奇幻风格。魔法光芒，神秘氛围，宏大场景，幻想生物和元素。"
   keywords: ["fantasy", "magical", "ethereal", "mythical", "epic", "dramatic"]
+  categories: ["themes", "colors_and_palettes", "drawing_and_art_mediums", "lighting", "intangibles"]
 
 3d_render:
   en: "3D computer graphics render. Smooth polygon surfaces, realistic materials, ray-traced reflections, Pixar-like quality."
   zh: "3D 渲染风格。材质真实，光影精确，模型精致，PBR 材质质感。"
   keywords: ["3d render", "octane render", "ray tracing", "PBR", "CGI"]
+  categories: ["digital", "lighting", "sfx_and_shaders", "material_properties", "combinations", "geometry"]
 
 minimalist:
   en: "Clean minimalist style. Simple geometric forms, ample negative space, restrained color palette, zen-like simplicity."
   zh: "极简风格。简洁线条，大量留白，色彩克制，干净构图，禅意简约。"
   keywords: ["minimalist", "clean", "simple", "geometric", "negative space"]
+  categories: ["design_styles", "geometry", "colors_and_palettes", "intangibles"]
 
 abstract:
   en: "Abstract expressive art. Flowing organic shapes, bold color combinations, non-representational forms evoking emotion."
   zh: "抽象艺术风格。几何或流动形态，色彩组合富有表现力，非具象表达。"
   keywords: ["abstract", "geometric", "fluid", "expressive", "non-representational"]
+  categories: ["experimental", "intangibles", "colors_and_palettes", "design_styles"]
 
 portrait:
   en: "Professional portrait style. Flattering lighting on the subject, clear facial features, soft background blur, magazine-quality composition."
   zh: "人像摄影风格。突出人物，背景虚化，光线柔和，皮肤质感自然。"
   keywords: ["portrait", "headshot", "bokeh", "soft lighting", "professional"]
+  categories: ["camera", "lighting", "perspective", "drawing_and_art_mediums", "material_properties"]
 
 landscape:
   en: "Breathtaking landscape view. Wide sweeping vista, rich natural details, atmospheric perspective, immersive environmental storytelling."
   zh: "风景景观风格。宏大开阔的视野，丰富的自然细节，沉浸感强。"
   keywords: ["landscape", "scenic", "wide angle", "vista", "nature", "panoramic"]
+  categories: ["nature_and_animals", "geography_and_culture", "lighting", "perspective", "colors_and_palettes"]
