@@ -13,6 +13,53 @@ from prompt_engine.classifier import StyleCategoryClassifier
 
 logger = logging.getLogger(__name__)
 
+# ── 内存缓存池（优化结果缓存）
+_PromptCacheKey = tuple[str, str]  # (prompt, platform)
+_PromptCache: dict[_PromptCacheKey, OptimizeResult] = {}
+
+# Simple fuzzy string matching (preprocessing only)
+def _similarity(a: str, b: str) -> float:
+    """Return similarity score 0.0-1.0 (lower is more similar)"""
+    a = a.strip().lower()
+    b = b.strip().lower()
+    
+    # Fast path: exact match
+    if a == b:
+        return 1.0
+    
+    # Check for set inclusion
+    a_words = set(a.split())
+    b_words = set(b.split())
+    if a_words & b_words:
+        return 0.8  # At least one word in common
+    
+    return 0.5  # Default
+
+def fuzzy_match_prompt(prompt: str, platform: str, similarity_threshold: float = 0.7) -> Optional[OptimizeResult]:
+    """模糊匹配相似 prompt，命中缓存后返回"""
+
+    normalized = prompt.strip().lower()
+    best_result = None
+    best_score = 0.0
+    
+    for (cached_p, cached_plat), cached_res in _PromptCache.items():
+        if cached_plat != platform:
+            continue
+        
+        # 相似度匹配
+        score = 1.0 - (len(original_a) + len(original_b) - 2 * sum(1 for a,b in zip(a,b) if a==b) / max(len(normalized), len(cached_p)))
+        if score > best_score:
+            best_score = score
+            best_result = cached_res
+    
+    if best_score >= similarity_threshold:
+        logger.info("Cache hit: %s @ %s (similarity: %.3f)", normalized, platform, best_score)
+        return best_result
+    
+    return None
+
+
+
 
 # StyleCategory → StyleType 自动映射
 # 当自动检测到某些 MJ 风格类别时，映射到平台可用的 StyleType
