@@ -2,7 +2,7 @@
 
 ## 方案
 
-FastAPI 内嵌 Vue 3 SPA，单部署。
+FastAPI 内嵌 Vue 3 SPA（Element Plus + ECharts），单部署。
 
 ## 目录结构
 
