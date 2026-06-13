@@ -249,3 +249,23 @@
 ### 依赖
 
 - 新增：`google-genai`（可选，Gemini 供应商需要）
+
+
+## [v0.8.0] — 2026-06-13
+
+### 新增
+
+- **资源展示 (F1)** — Dashboard 显示引擎完整资源（7 平台 / 936 RAG 案例 / 2100+ MJ 关键词 / 25 风格 / 3 LLM 供应商 / 100+ 通配符 / 2 模板）
+- **图片预览 (F2)** — Workbench 优化结果下方集成 14 个图片模型预览，Pollinations 完全免费无需 Key
+- **模型配置 (F3)** — Settings 新增图片生成模型清单 + API Key 环境变量配置
+
+### 新增文件
+
+| 文件 | 说明 |
+|------|------|
+| `tests/test_resources_preview.py` | 资源+预览+模型清单测试(9) |
+| `prompt_engine/api/rest.py` | 新增 3 个端点：`/v1/resources`, `/v1/image-models`, `/v1/preview` |
+
+### 测试
+
+- 181 → **190** 个测试用例

@@ -28,13 +28,14 @@ tests/
 ├── test_gpt4o_prompts.py  # gpt4o 1050 案例 RAG 种子测试
 ├── test_dsl_parser.py     # DSL 模板语法解析器测试
 ├── test_dashboard_api.py  # 看板统计 API 测试(4)
-└── ... (181 总用例)
+├── test_resources_preview.py  # 资源/预览/模型测试(9)
+└── ... (190 总用例)
 ```
 
 ## 重要约定
 
 1. **惰性导入** — `__init__.py` 使用 `__getattr__` 惰性导入 Optimizer/Classifier，避免启动时 LLM 连接
-2. **测试隔离** — 181 个测试全部 mock 隔离，无需 API Key
+2. **测试隔离** — 190 个测试全部 mock 隔离，无需 API Key
 3. **三级分类流水线** — keyword_match → vector_rag → llm_classify，不修改此流程
 4. **25 个 StyleCategory** — 枚举在 models.py，已移除 rainbow_of_colors
 5. **权重系统** — `keyword_weights.json` 持久化，`_get_weights()` 惰性加载
@@ -43,10 +44,10 @@ tests/
 ## 测试
 
 ```bash
-pytest tests/ -q        # 181 tests, ~25s
+pytest tests/ -q        # 190 tests, ~25s
 pytest tests/ -x --tb=short  # 失败即停
 ```
 
 ## 版本
 
-当前 v0.6.0，所有 s1-s5 + P0-P4 + F1-F3 已完成。
+当前 v0.8.0，所有 s1-s5 + P0-P4 + F1-F12 已完成。

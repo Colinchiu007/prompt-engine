@@ -1,7 +1,7 @@
 # Prompt Engine — PRD v0.7.0
 
 > 项目 011 / 图片生成提示词优化引擎
-> 状态：已交付 | 迭代周期：s1-s5 + P0-P4 + F1-F9
+> 状态：已交付 | 迭代周期：s1-s5 + P0-P4 + F1-F12
 
 ---
 
@@ -317,8 +317,9 @@ FeedbackEntry
 | 评估 | 8 | 评估维度/结果/函数 |
 | DSL 解析器 | 12 | 变体/通配符/数量限定/嵌套 |
 | 看板 API | 4 | 统计端点测试 |
-| gpt4o 数据 | 4 | 1050 案例解析+注入 |
-| **合计** | **181** | 全部 mock 隔离, ~25s |
+| gpt4o 数据 | 4 |
+| 资源/预览/模型 | 9 | 资源展示+图片预览+模型清单 | 1050 案例解析+注入 |
+| **合计** | **190** | 全部 mock 隔离, ~25s |
 
 ---
 
@@ -345,6 +346,9 @@ FeedbackEntry
 | F7 | 外部 RAG 种子 | awesome-gpt-image-2 (506) + gpt4o-image-prompts (1050) |
 | F8 | DSL 模板语法 | `dsl_parser.py`, `{a|b}`, `__wild__`, `{N$$opt}` |
 | F9 | Web 看板 | Vue 3 + Element Plus, `web/index.html`, 统计 API |
+| F10 | 资源展示 | `/v1/resources` 端点, 引擎资产全展示 |
+| F11 | 图片预览 | `/v1/preview` + `/v1/image-models`, Pollinations 免费 |
+| F12 | 模型 API 配置 | Settings 面板, 6 供应商环境变量 |
 
 ---
 

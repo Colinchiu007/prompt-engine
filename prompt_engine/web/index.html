@@ -13,6 +13,11 @@
     .example-btn { cursor:pointer; margin:2px; }
     .example-btn:hover { color:#409eff; }
     .section-desc { color:#909399; font-size:13px; margin-bottom:12px; line-height:1.6; }
+    .resource-block { padding:8px 0; }
+    .resource-label { font-size:13px;color:#909399;margin-bottom:4px; }
+    .resource-value { font-size:24px;font-weight:bold;color:#67c23a;margin-bottom:4px; }
+    .resource-value small { font-size:12px;color:#909399;font-weight:normal; }
+    .preview-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-top:12px; }
   </style>
 </head>
 <body>
@@ -105,8 +110,34 @@ const Workbench = {
               <pre style="background:#f0f5ff;padding:16px;border-radius:6px;white-space:pre-wrap;font-size:14px;line-height:1.6;border-left:4px solid #409eff">{{ result.optimized_prompt }}</pre>
               <div style="margin-top:8px">
                 <el-tag v-if="result.platform" effect="plain">{{ result.platform }}</el-tag>
-                <el-tag v-if="result.duration_ms" type="success" effect="plain" style="margin-left:8px">创意等级 {{ result.duration_ms || "-" }}ms/10</el-tag>
+                <el-tag v-if="result.duration_ms" type="success" effect="plain" style="margin-left:8px">耗时 {{ result.duration_ms }}ms</el-tag>
               </div>
+
+              <el-divider style="margin:20px 0"><span style="font-size:13px;color:#909399">🖼️ 图片预览</span></el-divider>
+              <div class="section-desc">
+                选定模型，实时生成预览图。
+                <b style="color:#67c23a">Pollinations 完全免费</b>无需 Key，其余模型需先到「配置」页填 API Key。
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+                <el-select v-model="previewModel" style="width:200px" placeholder="选择模型">
+                  <el-option v-for="m in imageModels" :key="m.id" :label="m.name + (m.requires_key?' 🔑':' 🆓')" :value="m.id" />
+                </el-select>
+                <el-button type="success" @click="generatePreview" :loading="previewing">
+                  生成预览
+                </el-button>
+                <el-button v-if="previewUrl" @click="previewUrl=''">清除</el-button>
+              </div>
+
+              <div v-if="previewUrl" class="preview-grid">
+                <div style="border:1px solid #ebeef5;border-radius:6px;overflow:hidden;background:#f5f7fa">
+                  <img :src="previewUrl" style="width:100%;height:200px;object-fit:cover" :alt="result.optimized_prompt.slice(0,50)" />
+                  <div style="padding:6px 8px;font-size:11px;color:#909399">
+                    <el-tag size="small">{{ previewModel }}</el-tag>
+                    <span style="margin-left:6px">1024×1024</span>
+                  </div>
+                </div>
+              </div>
+              <el-empty v-else-if="!previewing" description="点击「生成预览」查看效果" :image-size="60" />
             </el-tab-pane>
 
             <el-tab-pane label="🏷️ 分类结果" v-if="classResult">
@@ -243,6 +274,10 @@ const Workbench = {
     const evalResult = ref(null);
     const error = ref('');
     const activeHelps = ref(['basic']);
+    const previewModel = ref('pollinations');
+    const imageModels = ref([]);
+    const previewUrl = ref('');
+    const previewing = ref(false);
     const dimHints = {clarity:'清晰度',specificity:'具体性',creativity:'创意性',actionability:'可操作性',platform_best:'平台适配'};
 
     const examples = [
@@ -297,8 +332,25 @@ const Workbench = {
     }
     function clear() { input.value = ''; result.value = null; classResult.value = null; evalResult.value = null; error.value = ''; }
 
+    // 加载图片模型清单
+    api.get('/v1/image-models').then(m => { imageModels.value = m; });
+    // 默认 pollinations 在前
+    setTimeout(() => { if (!imageModels.value.length) imageModels.value = [{id:'pollinations',name:'Pollinations',requires_key:false}]; }, 1000);
+
+    async function generatePreview() {
+      if (!result.value?.optimized_prompt) return;
+      previewing.value = true; previewUrl.value = '';
+      try {
+        const d = await api.post('/v1/preview', {prompt: result.value.optimized_prompt, model: previewModel.value});
+        if (d.url) previewUrl.value = d.url;
+        else if (d.note) error.value = d.note;
+      } catch(e) { error.value = String(e); }
+      finally { previewing.value = false; }
+    }
+
     return { input, inputText, platform, platforms, loading, classifying, evaluating, result, classResult, evalResult, error,
-             activeHelps, dimHints, examples, exampleGroups, optimize, classify, evaluate, clear };
+             activeHelps, dimHints, examples, exampleGroups, optimize, classify, evaluate, clear,
+             previewModel, imageModels, previewUrl, previewing, generatePreview };
   }
 };
 
@@ -314,6 +366,55 @@ const Dashboard = {
         </el-card>
       </el-col>
     </el-row>
+
+    <el-card shadow="never" style="margin-top:16px">
+      <template #header>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>📚 引擎资源</span>
+          <span style="font-size:12px;color:#909399">提示词引擎内嵌的全部资产</span>
+        </div>
+      </template>
+      <el-row :gutter="16">
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">🎨 平台策略</div>
+            <div class="resource-value">{{ resources.platforms || 0 }} <small>个</small></div>
+            <el-tag v-for="p in (resources.platform_list || [])" :key="p" size="small" style="margin:2px">{{ p }}</el-tag>
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">📚 RAG 案例库</div>
+            <div class="resource-value">{{ resources.rag_cases || 0 }} <small>条</small></div>
+            <div style="font-size:12px;color:#909399">prompts_db (918) + seed_prompts (18)</div>
+          </div>
+          <div class="resource-block" style="margin-top:12px">
+            <div class="resource-label">🏷️ MJ 关键词库</div>
+            <div class="resource-value">{{ resources.mj_keywords || 0 }} <small>个</small></div>
+            <div style="font-size:12px;color:#909399">25 维风格维度</div>
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">🤖 LLM 供应商</div>
+            <div class="resource-value">{{ resources.llm_providers || 0 }} <small>个</small></div>
+            <el-tag size="small" style="margin:2px">OpenAI</el-tag>
+            <el-tag size="small" style="margin:2px">讯飞星火</el-tag>
+            <el-tag size="small" style="margin:2px">Gemini</el-tag>
+          </div>
+          <div class="resource-block" style="margin-top:12px">
+            <div class="resource-label">🔤 DSL 通配符池</div>
+            <div class="resource-value">{{ resources.wildcards || 0 }} <small>个值</small></div>
+            <div style="font-size:12px;color:#909399">10 类：colors/animals/styles/lighting...</div>
+          </div>
+          <div class="resource-block" style="margin-top:12px">
+            <div class="resource-label">📋 模板</div>
+            <div class="resource-value">{{ resources.templates || 0 }} <small>个</small></div>
+            <div style="font-size:12px;color:#909399">midjourney (EN/ZH) + generic</div>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
 
     <el-row :gutter="16" style="margin-top:16px">
       <el-col :span="12">
@@ -348,6 +449,7 @@ const Dashboard = {
   `,
   setup() {
     const statCards = reactive([]);
+    const resources = reactive({});
     const catChart = ref(null);
     const platChart = ref(null);
     const noData = ref(false);
@@ -355,6 +457,8 @@ const Dashboard = {
     onMounted(async () => {
       try {
         const overview = await api.get('/v1/stats/overview');
+        const res = await api.get('/v1/resources');
+        Object.assign(resources, res);
         statCards.length = 0;
         statCards.push(
           {label:'总请求数', value:overview.total_requests, hint:'所有平台累计调用次数'},
@@ -398,7 +502,7 @@ const Dashboard = {
         }
       } catch(e) {}
     });
-    return { statCards, catChart, platChart, noData };
+    return { statCards, resources, catChart, platChart, noData };
   }
 };
 
@@ -472,6 +576,46 @@ const Settings = {
         <el-card shadow="never" style="margin-top:16px">
           <template #header>
             <div style="display:flex;justify-content:space-between">
+              <span>🖼️ 图片生成模型</span>
+              <span style="font-size:12px;color:#909399">点击展开，配置 API Key</span>
+            </div>
+          </template>
+          <div class="section-desc">
+            prompt-engine 内置 14+ 主流图片生成模型。
+            <b>Pollinations</b> 完全免费无需 Key，开箱即用。
+            其他模型需在下方填写对应 API Key（重启服务生效）。
+          </div>
+          <el-table :data="imageModels" stripe size="small" :show-header="true">
+            <el-table-column prop="name" label="模型" width="140" />
+            <el-table-column prop="provider" label="供应商" width="100">
+              <template #default="{row}"><el-tag size="small" effect="plain">{{row.provider}}</el-tag></template>
+            </el-table-column>
+            <el-table-column label="费用" width="100">
+              <template #default="{row}">
+                <el-tag size="small" :type="row.requires_key?'warning':'success'" effect="plain">
+                  {{row.requires_key?'需 API Key':'免费'}}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="description" label="说明" min-width="200" />
+          </el-table>
+          <el-collapse style="margin-top:12px">
+            <el-collapse-item title="🔑 配置 API Key（环境变量）" name="apikey">
+              <el-table :data="apiKeyConfigs" stripe size="small" border>
+                <el-table-column prop="provider" label="供应商" width="100" />
+                <el-table-column prop="env_var" label="环境变量" />
+                <el-table-column prop="description" label="说明" />
+              </el-table>
+              <div style="margin-top:8px;font-size:12px;color:#909399">
+                💡 在系统环境变量或 .env 文件中设置上述变量，重启后端服务即可使用
+              </div>
+            </el-collapse-item>
+          </el-collapse>
+        </el-card>
+
+        <el-card shadow="never" style="margin-top:16px">
+          <template #header>
+            <div style="display:flex;justify-content:space-between">
               <span>ℹ️ 系统信息</span>
               <span style="font-size:12px;color:#909399">引擎版本和依赖</span>
             </div>
@@ -490,6 +634,18 @@ const Settings = {
   `,
   setup() {
     const provider = ref('openai');
+    const imageModels = ref([]);
+    const apiKeyConfigs = reactive([
+      {provider:'Pollinations',env_var:'(无需 Key)',description:'免费图片生成，开箱即用'},
+      {provider:'OpenAI',env_var:'OPENAI_API_KEY',description:'用于 DALL-E 3 / DALL-E 2 / GPT-Image-1'},
+      {provider:'Replicate',env_var:'REPLICATE_API_KEY',description:'用于 Flux Pro / Schnell / Midjourney v6 / Kandinsky'},
+      {provider:'Stability',env_var:'STABILITY_API_KEY',description:'用于 Stable Diffusion XL / SD3.5'},
+      {provider:'Together',env_var:'TOGETHER_API_KEY',description:'用于 Ideogram v2 / Playground / Imagen 3'},
+      {provider:'xAI',env_var:'XAI_API_KEY',description:'用于 Grok Aurora 图像生成'},
+    ]);
+    onMounted(async () => {
+      try { imageModels.value = await api.get('/v1/image-models'); } catch(e) {}
+    });
     const wildcards = reactive([
       {name:'colors', count:10, sample:'red, green, golden...'},
       {name:'animals', count:10, sample:'cat, dog, dragon...'},
@@ -506,7 +662,7 @@ const Settings = {
       {name:'即梦', status:'就绪', desc:'视觉冲击力 + 氛围描写'},
       {name:'Nano Banana Pro', status:'就绪', desc:'风格直描 + 推荐分辨率'},
     ]);
-    return { provider, wildcards, platforms };
+    return { provider, imageModels, apiKeyConfigs, wildcards, platforms };
   }
 };
 

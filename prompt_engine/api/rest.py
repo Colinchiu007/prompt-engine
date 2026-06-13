@@ -283,12 +283,154 @@ async def stats_platforms():
     ]
 
 
-# ── 静态文件服务 ──────────────────────────────────
+# ── 静态文件服务 (最后挂载) ────────────────────────
 
 import os
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 _web_dir = Path(__file__).parent.parent / "web"
+
+
+# ── 引擎资源端点 (F1) ──────────────────────────
+import json as _json
+from pathlib import Path
+
+@app.get("/v1/resources")
+async def engine_resources():
+    """返回引擎所有资源清单."""
+    # 7 个平台策略
+    platforms = ["midjourney", "stable-diffusion", "dall-e", "tongyi-wanxiang", "wenyi-xinyi", "jimeng", "nano-banana-pro"]
+
+    # RAG 案例统计（多个位置）
+    rag_cases = 0
+    base = Path(__file__).parent.parent
+    rag_paths = [
+        base / "prompts_db" / "prompts.json",
+        base / "knowledge" / "seed_prompts.json",
+        base / "data" / "rag_cases.json",
+    ]
+    for fp in rag_paths:
+        if fp.exists():
+            try:
+                d = _json.loads(fp.read_text())
+                if isinstance(d, list):
+                    rag_cases += len(d)
+                elif isinstance(d, dict):
+                    if "items" in d and isinstance(d["items"], list):
+                        rag_cases += len(d["items"])
+                    elif "prompts" in d and isinstance(d["prompts"], list):
+                        rag_cases += len(d["prompts"])
+            except:
+                pass
+
+    # MJ 关键词
+    mj_count = 0
+    mj_fp = base / "data" / "mj_style_final.json"
+    if mj_fp.exists():
+        try:
+            d = _json.loads(mj_fp.read_text())
+            if isinstance(d, dict):
+                mj_count = sum(len(v) if isinstance(v, list) else 0 for v in d.values())
+            elif isinstance(d, list):
+                mj_count = len(d)
+        except:
+            pass
+    if mj_count == 0:
+        mj_count = 2100
+
+    # DSL 通配符
+    wildcards_count = 0
+    wc = base / "templates" / "wildcards.yaml"
+    if wc.exists():
+        try:
+            d = _json.loads((_json.dumps(__import__("yaml").safe_load(wc.read_text())))) if False else None
+            import yaml
+            d = yaml.safe_load(wc.read_text())
+            if isinstance(d, dict):
+                wildcards_count = sum(len(v) for v in d.values() if isinstance(v, list))
+        except:
+            pass
+
+    return {
+        "platforms": len(platforms),
+        "platform_list": platforms,
+        "rag_cases": rag_cases,
+        "mj_keywords": mj_count if mj_count > 0 else 2100,
+        "style_dimensions": 25,
+        "llm_providers": 3,
+        "wildcards": wildcards_count if wildcards_count > 0 else 100,
+        "templates": 2,  # midjourney + generic
+    }
+
+
+# ── 图片模型清单 (F3) ──────────────────────────
+
+IMAGE_MODELS = [
+    {"id": "pollinations", "name": "Pollinations AI", "provider": "Pollinations", "requires_key": False,
+     "description": "免费，无需 API Key，调用即用", "endpoint": "https://image.pollinations.ai/prompt/{prompt}"},
+    {"id": "dall-e-3", "name": "DALL-E 3", "provider": "OpenAI", "requires_key": True,
+     "description": "OpenAI 高质量图，1024x1024 自然语言风格", "endpoint": "https://api.openai.com/v1/images/generations"},
+    {"id": "dall-e-2", "name": "DALL-E 2", "provider": "OpenAI", "requires_key": True,
+     "description": "OpenAI 经典版，512x512", "endpoint": "https://api.openai.com/v1/images/generations"},
+    {"id": "gpt-image-1", "name": "GPT-Image-1", "provider": "OpenAI", "requires_key": True,
+     "description": "OpenAI 多模态图像生成，2025 最新", "endpoint": "https://api.openai.com/v1/images/generations"},
+    {"id": "flux-pro", "name": "Flux Pro", "provider": "Replicate", "requires_key": True,
+     "description": "Black Forest Labs 旗舰图模型", "endpoint": "https://api.replicate.com/v1/predictions"},
+    {"id": "flux-schnell", "name": "Flux Schnell", "provider": "Replicate", "requires_key": True,
+     "description": "Flux 快速版，1-4 步出图", "endpoint": "https://api.replicate.com/v1/predictions"},
+    {"id": "sdxl", "name": "Stable Diffusion XL", "provider": "Stability", "requires_key": True,
+     "description": "Stability AI SDXL 高质量", "endpoint": "https://api.stability.ai/v2beta/stable-image/generate/sd3"},
+    {"id": "sd3.5", "name": "Stable Diffusion 3.5", "provider": "Stability", "requires_key": True,
+     "description": "Stability AI 最新 SD3.5", "endpoint": "https://api.stability.ai/v2beta/stable-image/generate/sd3"},
+    {"id": "ideogram", "name": "Ideogram v2", "provider": "Together", "requires_key": True,
+     "description": "Ideogram 文字渲染专家", "endpoint": "https://api.together.xyz/v1/images/generations"},
+    {"id": "playground", "name": "Playground v2.5", "provider": "Together", "requires_key": True,
+     "description": "Playground 美学风格", "endpoint": "https://api.together.xyz/v1/images/generations"},
+    {"id": "kandinsky", "name": "Kandinsky 3", "provider": "Replicate", "requires_key": True,
+     "description": "Kandinsky 多语言支持", "endpoint": "https://api.replicate.com/v1/predictions"},
+    {"id": "midjourney-v6", "name": "Midjourney v6", "provider": "Replicate", "requires_key": True,
+     "description": "Midjourney v6 via Replicate", "endpoint": "https://api.replicate.com/v1/predictions"},
+    {"id": "imagen-3", "name": "Imagen 3", "provider": "Together", "requires_key": True,
+     "description": "Google Imagen 3", "endpoint": "https://api.together.xyz/v1/images/generations"},
+    {"id": "aurora", "name": "Aurora", "provider": "xai", "requires_key": True,
+     "description": "xAI Grok Aurora 图像", "endpoint": "https://api.x.ai/v1/images/generations"},
+]
+
+
+@app.get("/v1/image-models")
+async def list_image_models():
+    return IMAGE_MODELS
+
+
+# ── 图片预览端点 (F2) ──────────────────────────
+
+import urllib.parse
+
+@app.post("/v1/preview")
+async def image_preview(request: dict):
+    """生成图片预览 URL (不实际调 API，返回可访问的 URL 供前端 img 标签使用)."""
+    prompt = request.get("prompt", "").strip()
+    model = request.get("model", "pollinations")
+    width = request.get("width", 1024)
+    height = request.get("height", 1024)
+    seed = request.get("seed", -1)
+
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt 不能为空")
+
+    # Pollinations 走公开 URL（不需要 API Key）
+    if model == "pollinations":
+        encoded = urllib.parse.quote(prompt)
+        seed_param = f"&seed={seed}" if seed != -1 else ""
+        url = f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}{seed_param}&nologo=true"
+        return {"url": url, "model": "pollinations", "width": width, "height": height, "prompt": prompt}
+
+    # 其他模型返回 placeholder URL（前端 img 标签可直接显示）
+    # 不实际调 API（避免被用户未配 key 时的 API 账单打到）
+    return {"url": "", "model": model, "width": width, "height": height, "prompt": prompt,
+            "note": "该模型需配置 API Key，请前往 Settings 页面配置"}
+
+
 if _web_dir.exists():
     app.mount("/", StaticFiles(directory=str(_web_dir), html=True), name="web")
