@@ -175,3 +175,34 @@
 ### 依赖
 
 - 新增 scikit-learn>=1.3.0（RAG TF-IDF 向量搜索）
+
+
+## [v0.6.0] — 2026-06-13
+
+### 新增
+
+- **Agent Skill 分发模式 (F1)** — 从 awesome-gpt-image-2 复用的 Claude Agent Skill 设计。`agents/skills/prompt-engine/SKILL.md` + 安装脚本（`npm run install:skill`），支持 Claude Code / Cursor / Hermes 自动识别安装
+- **RAG 种子注入 (F2)** — 导入 awesome-gpt-image-2 的 506 个 GPT-Image2 案例到向量库，作为分类器的 RAG 种子数据
+- **Prompt-as-Code 模板引擎 (F3)** — `prompt_engine/template_engine.py`，原子化 PromptBlock + 组合 PromptTemplate，低创意等级(1-3)可纯模板渲染不调 LLM
+
+### 新增文件
+
+| 文件 | 说明 |
+|------|------|
+| `agents/skills/prompt-engine/SKILL.md` | Agent Skill 主文件 |
+| `agents/skills/prompt-engine/bin/install.mjs` | 安装脚本 |
+| `agents/skills/prompt-engine/package.json` | NPM 发布配置 |
+| `agents/skills/prompt-engine/references/api-reference.md` | API 参考 |
+| `examples/seed_rag_from_gptimage2.py` | RAG 种子注入脚本 |
+| `prompt_engine/template_engine.py` | Prompt-as-Code 模板引擎 |
+| `tests/test_rag_seed.py` | RAG 种子测试(4) |
+| `tests/test_prompt_template.py` | 模板引擎测试(10) |
+
+### 测试
+
+- 127 → **141** 个测试用例
+
+### 依赖
+
+- 新增：无（模板引擎纯 Python 标准库）
+- RAG 种子脚本依赖已有 sklearn

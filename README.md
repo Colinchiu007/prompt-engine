@@ -19,6 +19,8 @@
 - 🏷️ **25 维风格分类**：基于 MJ Style Reference 的 25 维度风格分类器（关键词 + 向量语义 + LLM 三级流水线）
 - 🔍 **CLI 工具**：命令行直接运行风格分类、列出维度、优化 prompt
 - 🌍 **跨平台风格注入**：所有 7 个平台策略均支持 MJ 风格关键词注入
+- 🤖 **Agent Skill 分发**：导出为 Claude / Cursor / Hermes 可安装的 Agent Skill（`npm run install:skill`）
+- 🧩 **Prompt-as-Code 模板**：原子化 PromptBlock + 组合模板引擎，低创意等级纯模板渲染不调 LLM
 
 ## 25 维 MJ 风格分类体系
 
@@ -338,11 +340,12 @@ prompt-engine/
 │   ├── api/               # 服务层（REST + MCP）
 │   ├── knowledge/         # RAG 知识库
 │   ├── keyword_injector.py # MJ 风格关键词注入（跨平台共享）
+│   ├── template_engine.py  # Prompt-as-Code 模板引擎
 │   ├── cli.py             # 命令行工具
 │   ├── templates/         # 风格模板引擎
 │   ├── prompts_db/        # 优质提示词数据库
 │   └── image/             # 图片分析（逆向工程）
-├── tests/                  # 测试（127 个用例，mock 隔离）
+├── tests/                  # 测试（141 个用例，mock 隔离）
 ├── examples/               # 使用示例
 ├── config.yaml             # 默认配置文件
 └── README.md
@@ -381,7 +384,7 @@ class MyPlatformStrategy(BaseStrategy):
 pytest -v
 ```
 
-全部 127 个测试通过，使用 mock 隔离，无需真实 API Key。
+全部 141 个测试通过，使用 mock 隔离，无需真实 API Key。
 
 ## 开发对接
 
@@ -415,6 +418,7 @@ pytest -v
 - **v0.3.0** — P2 功能：RAG 知识库增强、A/B 多候选、图片逆向工程
 - **v0.3.1** — 策略重写：基于 Nano Banana Pro (14,000+ prompts) 社区 prompt 提取各平台最佳模式，7 个策略文件全面增强（Midjourney 参数映射/SD 权重语法/DALL·E 自然语言结构/通义万相中文描写/文心一格关键词式/即梦视觉冲击力），镜头术语/光照分类/颜色精度/构图技巧全部内化为策略规则
 - **v0.5.0** — 25 维 MJ 风格分类器（关键词 + 向量语义 + LLM 三级流水线）、跨平台风格关键词注入、CLI 工具、RAG 增强分类器、反馈闭环、反馈驱动权重调整
+- **v0.6.0** — Agent Skill 分发（`agents/skills/prompt-engine`）、RAG 种子注入（506 GPT-Image2 案例）、Prompt-as-Code 模板引擎（`template_engine.py`）
 
 ## License
 
