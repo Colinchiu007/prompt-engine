@@ -351,6 +351,9 @@ prompt-engine/
 │   └── image/             # 图片分析（逆向工程）
 ├── tests/                  # 测试（165 个用例，mock 隔离）
 ├── examples/               # 使用示例
+│   ├── sdk_usage.py
+│   ├── seed_rag_from_gptimage2.py
+│   └── seed_rag_from_gpt4o_prompts.py
 ├── config.yaml             # 默认配置文件
 └── README.md
 ```

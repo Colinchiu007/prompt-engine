@@ -1,7 +1,7 @@
-# Prompt Engine — PRD v0.6.0
+# Prompt Engine — PRD v0.7.0
 
 > 项目 011 / 图片生成提示词优化引擎
-> 状态：已交付 | 迭代周期：s1-s5 + P0-P4 + F1-F3
+> 状态：已交付 | 迭代周期：s1-s5 + P0-P4 + F1-F7
 
 ---
 
@@ -87,6 +87,7 @@
 │  prompts_db/chroma.sqlite3 (RAG 知识库)                       │
 │  templates/styles.yaml  (14 种风格的模板)
 │  agents/skills/prompt-engine (Agent Skill 分发)            │
+│  research/gpt4o-image-prompts/src/data/prompts.json (1050 条 RAG 种子) │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -309,7 +310,11 @@ FeedbackEntry
 | MJ 风格注入 | 3 | 关键词注入 |
 | 反馈 | 6 | 存储/统计/持久化 |
 | 权重 | 4 | 权重加载/保存/应用 |
-| **合计** | **141** | 全部 mock 隔离, ~25s |
+| 模板加载 | 6 | 模板加载/回退/变量 |
+| 供应商 | 6 | Gemini provider + 注册表 |
+| 评估 | 8 | 评估维度/结果/函数 |
+| gpt4o 数据 | 4 | 1050 案例解析+注入 |
+| **合计** | **165** | 全部 mock 隔离, ~25s |
 
 ---
 
@@ -328,8 +333,12 @@ FeedbackEntry
 | F1 | Agent Skill 分发 | `agents/skills/prompt-engine/` |
 | F2 | RAG 种子注入 | 506 GPT-Image2 案例 → 向量库 |
 | F3 | Prompt-as-Code 模板 | `template_engine.py` |
+| F4 | 模板驱动优化 | `templates/prompts/` YAML 模板系统 |
+| F5 | 多模型供应商 | `llm/gemini.py`, `list_providers()` |
+| F6 | 评估对比 | `evaluator.py`, `POST /v1/evaluate` |
 | P3 | 反馈循环 | `FeedbackStore`, API, CLI |
 | P4 | 权重系统 | `keyword_weights.json`, `_apply_feedback_to_weights()` |
+| F7 | 外部 RAG 种子 | awesome-gpt-image-2 (506) + gpt4o-image-prompts (1050) |
 
 ---
 
