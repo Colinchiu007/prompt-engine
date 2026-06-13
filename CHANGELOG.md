@@ -206,3 +206,33 @@
 
 - 新增：无（模板引擎纯 Python 标准库）
 - RAG 种子脚本依赖已有 sklearn
+
+
+## [v0.7.0] — 2026-06-13
+
+### 新增
+
+- **模板驱动优化 (F1)** — 借鉴 prompt-optimizer，将策略 LLM 指令抽取为独立 YAML 模板文件（`templates/prompts/`），EN/ZH 双语支持，自动回退
+- **多模型供应商 (F2)** — 新增 Gemini provider（`llm/gemini.py`），供应商注册表 `list_providers()` / `create_provider()`
+- **评估对比 (F3)** — `prompt_engine/evaluator.py`，5 维度 LLM 评估（clarity/specificity/creativity/actionability/platform_best），`POST /v1/evaluate` 端点
+
+### 新增文件
+
+| 文件 | 说明 |
+|------|------|
+| `prompt_engine/templates/prompts/midjourney/en.yaml` | MJ 模板（EN） |
+| `prompt_engine/templates/prompts/generic/en.yaml` | 通用模板（EN） |
+| `prompt_engine/llm/gemini.py` | Gemini 供应商 |
+| `prompt_engine/llm/__init__.py` | 重写：供应商注册表 |
+| `prompt_engine/evaluator.py` | 评估对比引擎 |
+| `tests/test_template_loader.py` | 模板加载测试(6) |
+| `tests/test_providers.py` | 供应商测试(6) |
+| `tests/test_evaluator.py` | 评估测试(8) |
+
+### 测试
+
+- 141 → **161** 个测试用例
+
+### 依赖
+
+- 新增：`google-genai`（可选，Gemini 供应商需要）

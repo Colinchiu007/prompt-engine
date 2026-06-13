@@ -8,8 +8,8 @@ from prompt_engine.models import (
     AutoStyleRequest, StyleCategoryResult, StyleCategory,
     FeedbackEntry, FeedbackStats,
 )
+from prompt_engine.evaluator import evaluate as evaluate_prompt, EvaluationResult
 from prompt_engine.feedback import get_feedback_store
-from prompt_engine.classifier import StyleCategoryClassifier
 
 app = FastAPI(
     title="Prompt Engine API",
@@ -203,3 +203,22 @@ async def apply_feedback(persist_path: str = "./feedback_db.json"):
     count = _apply_feedback_to_weights(persist_path)
     _invalidate_weight_cache()  # 让权重缓存失效，下次分类时重新加载
     return {"applied_count": count, "message": f"Applied {count} feedback entries to keyword weights"}
+
+
+@app.post("/v1/evaluate")
+async def evaluate(request: dict):
+    """评估 prompt 优化效果。"""
+    result = evaluate_prompt(
+        original=request.get("original", ""),
+        optimized=request.get("optimized", ""),
+        platform=request.get("platform", "generic"),
+    )
+    return {
+        "original": result.original,
+        "optimized": result.optimized,
+        "scores": {
+            dim: {"before": s.before, "after": s.after, "improvement": s.improvement}
+            for dim, s in result.scores.items()
+        },
+        "overall_improvement": result.overall_improvement,
+    }

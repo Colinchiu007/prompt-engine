@@ -21,6 +21,9 @@
 - 🌍 **跨平台风格注入**：所有 7 个平台策略均支持 MJ 风格关键词注入
 - 🤖 **Agent Skill 分发**：导出为 Claude / Cursor / Hermes 可安装的 Agent Skill（`npm run install:skill`）
 - 🧩 **Prompt-as-Code 模板**：原子化 PromptBlock + 组合模板引擎，低创意等级纯模板渲染不调 LLM
+- 📋 **模板驱动优化**：策略 LLM 指令抽取为独立 YAML 模板，EN/ZH 双语支持
+- 🏢 **多模型供应商**：支持 OpenAI / 讯飞 / Gemini 等供应商，统一注册表
+- 📊 **评估对比**：5 维度 LLM 评估优化效果（clarity/specificity/creativity/actionability/platform_best）
 
 ## 25 维 MJ 风格分类体系
 
@@ -419,6 +422,7 @@ pytest -v
 - **v0.3.1** — 策略重写：基于 Nano Banana Pro (14,000+ prompts) 社区 prompt 提取各平台最佳模式，7 个策略文件全面增强（Midjourney 参数映射/SD 权重语法/DALL·E 自然语言结构/通义万相中文描写/文心一格关键词式/即梦视觉冲击力），镜头术语/光照分类/颜色精度/构图技巧全部内化为策略规则
 - **v0.5.0** — 25 维 MJ 风格分类器（关键词 + 向量语义 + LLM 三级流水线）、跨平台风格关键词注入、CLI 工具、RAG 增强分类器、反馈闭环、反馈驱动权重调整
 - **v0.6.0** — Agent Skill 分发（`agents/skills/prompt-engine`）、RAG 种子注入（506 GPT-Image2 案例）、Prompt-as-Code 模板引擎（`template_engine.py`）
+- **v0.7.0** — 模板驱动优化（YAML 模板）、多模型供应商（Gemini）、评估对比模式（`POST /v1/evaluate`）
 
 ## License
 

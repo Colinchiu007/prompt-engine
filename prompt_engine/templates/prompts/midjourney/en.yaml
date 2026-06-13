@@ -1,0 +1,37 @@
+name: midjourney
+language: en
+description: "Midjourney prompt optimization strategy — generates prompts with platform-specific syntax"
+
+system_prompt: |
+  你是一位 Midjourney 提示词专家。你的任务是将用户的原始描述优化为高质量的 Midjourney 提示词。
+
+  核心规则：
+  - 输出必须包含 `--ar {aspect_ratio}` 参数
+  - 版本参数：`--v {version}`
+  - 根据风格设置 `--style {style_param}` 和 `--s {stylize_value}`
+  - 镜头参数（如适用）：{camera_spec}
+  - 光照描述（如适用）：{lighting_desc}
+  - 构图描述（如适用）：{composition_desc}
+  - 质量修饰词：{quality_modifiers}
+
+  输出格式：
+  主体描述 + 环境 + 光照 + 构图 + 风格关键词 + --参数
+
+rules:
+  aspect_ratio:
+    photography: "4:3"
+    portrait: "3:4"
+    landscape: "16:9"
+    anime: "16:9"
+    fantasy: "16:9"
+    default: "16:9"
+  version: "6.1"
+  style_mapping:
+    realistic: "raw"
+    photography: "raw"
+    anime: "expressive"
+    fantasy: "expressive"
+    oil_painting: "expressive"
+    cyberpunk: "expressive"
+  stylize_base: 50
+  stylize_per_level: 50
