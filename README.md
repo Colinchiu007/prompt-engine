@@ -180,6 +180,25 @@ python examples/start_mcp_server.py
 
 一次请求最多 10 条优化任务，返回结果数组。
 
+### 风格分类反馈 `POST /v1/feedback`
+
+| 字段 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| prompt | string | ✅ | - | 被分类的 prompt |
+| detected_categories | string[] | ❌ | [] | 检测到的类别 |
+| corrected_categories | string[] | ❌ | [] | 纠正后的类别 |
+| rating | int | ❌ | 0 | 评分 0-5 |
+| method | string | ❌ | "" | 分类方法 |
+| confidence | float | ❌ | 0.0 | 置信度 |
+
+### 反馈统计 `GET /v1/feedback/stats`
+
+返回总反馈数、平均评分、方法分布等统计。
+
+### 应用反馈权重 `POST /v1/feedback/apply`
+
+应用所有未处理的反馈数据，调整关键词权重。后续分类自动使用新权重。
+
 ### Query platforms `GET /v1/platforms`
 
 Returns all supported platforms and their config.

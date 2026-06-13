@@ -14,7 +14,7 @@ from prompt_engine.classifier import StyleCategoryClassifier
 app = FastAPI(
     title="Prompt Engine API",
     description="图片生成提示词优化引擎 - REST API",
-    version="0.4.0",
+    version="0.5.0",
 )
 
 

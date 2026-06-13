@@ -119,3 +119,59 @@
 
 - [ ] 将 NBP prompt 库作为 RAG 知识库，提供 few-shot 增强（Phase 2）
 - [ ] 基于 NBP 社区分类数据构建风格模板库 `templates/styles.yaml`
+
+
+## [v0.5.0] — 2026-06-13
+
+### 新增 (s1-s5 + P0-P4)
+
+#### 核心功能
+
+- **MJ 风格数据库集成 (s2)** — 从 MidJourney-Styles-and-Keywords-Reference 提取 25 维度 2000+ 风格关键词，注入到优化后的 prompt
+- **风格分类器 (s3)** — StyleCategoryClassifier 三级流水线：关键词匹配(~0ms) → 向量语义搜索(~50ms) → LLM 零样本(~1s)，25 个 MJ 风格维度多标签
+- **风格感知关键词注入 (s5)** — 根据检测到的风格维度定向注入关键词
+- **跨平台风格注入 (P0)** — 共享 keyword_injector.py，全部 7 个策略支持风格注入
+- **RAG 增强分类器 (P1)** — TF-IDF 向量索引，模糊语义匹配作为分类第二级
+- **StyleType 反向推荐 (P1)** — 14 种艺术风格到 25 维 MJ 类别的映射
+- **CLI 工具 (P2)** — classify/categories/optimize/recommend/feedback 子命令
+- **用户反馈循环 (P3)** — FeedbackStore JSON 持久化，提交/统计/查看
+- **反馈驱动权重 (P4)** — keyword_weights.json，分类器自动调整关键词权重
+
+#### API 新增
+
+| 端点 | 说明 |
+|------|------|
+| POST /v1/classify | 风格分类 |
+| GET /v1/styles/categories | 列出所有维度 |
+| POST /v1/feedback | 提交反馈 |
+| GET /v1/feedback/stats | 反馈统计 |
+| GET /v1/feedback/recent | 最近反馈 |
+| POST /v1/feedback/apply | 应用反馈到权重 |
+
+### 变更
+
+- models.py — StyleCategory 调整为 25 维（移除 rainbow_of_colors）；新增 FeedbackEntry、FeedbackStats
+- __init__.py — 惰性导入；新增导出 FeedbackStore、recommend_categories_for_style
+- classifier.py — 三级流水线重写；新增 RAG 索引、向量搜索、权重系统
+- strategies/*.py — 所有策略 post_process 新增 preferred_categories 参数
+- optimizer.py — 自动风格检测→注入全链路打通
+- templates/styles.yaml — 新增 categories 字段，对接 StyleCategory 分类体系
+
+### 新增文件
+
+| 文件 | 说明 |
+|------|------|
+| keyword_injector.py | 跨平台风格关键词注入 |
+| cli.py | 命令行工具 |
+| feedback.py | 反馈存储引擎 |
+| tests/test_feedback.py | 反馈系统测试(6) |
+| tests/test_feedback_weights.py | 权重系统测试(4) |
+
+### 测试
+
+- 70 → **127** 个测试用例
+- 运行时间 ~93s → **~25s**（惰性导入优化）
+
+### 依赖
+
+- 新增 scikit-learn>=1.3.0（RAG TF-IDF 向量搜索）
