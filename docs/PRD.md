@@ -1,4 +1,4 @@
-# Prompt Engine — PRD v0.7.0
+# Prompt Engine — PRD v0.8.0
 
 > 项目 011 / 图片生成提示词优化引擎
 > 状态：已交付 | 迭代周期：s1-s5 + P0-P4 + F1-F12

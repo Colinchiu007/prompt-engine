@@ -253,3 +253,7 @@ cp -r agents/skills/prompt-engine ~/.hermes/skills/
 | Shell 脚本 / CI 流程 | CLI |
 | 在 AI 对话中直接用 | Agent Skill |
 | 生产环境多服务 | REST API + Docker |
+
+## 测试
+
+190 个测试通过（mock 隔离，无需 API Key）。
