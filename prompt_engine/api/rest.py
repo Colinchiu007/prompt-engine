@@ -417,8 +417,10 @@ async def engine_resources():
 # ── 图片模型清单 (F3) ──────────────────────────
 
 IMAGE_MODELS = [
-    {"id": "pollinations", "name": "Pollinations AI", "provider": "Pollinations", "requires_key": False,
-     "description": "免费，无需 API Key，调用即用", "endpoint": "https://image.pollinations.ai/prompt/{prompt}"},
+    {"id": "picsum", "name": "Picsum Photos (推荐)", "provider": "Picsum", "requires_key": False,
+     "description": "✅ 免费真实图片，基于 prompt hash 产生确定性图片（同一 prompt 同一图）", "endpoint": "https://picsum.photos/seed/{prompt_hash}/{width}/{height}"},
+    {"id": "pollinations", "name": "Pollinations AI (已失效)", "provider": "Pollinations", "requires_key": False,
+     "description": "⚠️ Pollinations 自 2026-06-13 起 402 Payment Required，免费服务已终止", "endpoint": "https://image.pollinations.ai/prompt/{prompt}"},
     {"id": "dall-e-3", "name": "DALL-E 3", "provider": "OpenAI", "requires_key": True,
      "description": "OpenAI 高质量图，1024x1024 自然语言风格", "endpoint": "https://api.openai.com/v1/images/generations"},
     {"id": "dall-e-2", "name": "DALL-E 2", "provider": "OpenAI", "requires_key": True,
@@ -472,9 +474,19 @@ async def image_preview(request: dict):
     # Pollinations 走公开 URL（不需要 API Key）
     if model == "pollinations":
         encoded = urllib.parse.quote(prompt)
+    if model == "picsum":
+        # Picsum Photos 免费图片生成（基于 prompt hash 确定性）
+        import hashlib
+        prompt_hash = hashlib.md5(prompt.encode()).hexdigest()[:16]
+        url = f"https://picsum.photos/seed/{prompt_hash}/{width}/{height}"
+        return {"url": url, "model": "picsum", "width": width, "height": height, "prompt": prompt}
+
+    if model == "pollinations":
+        # Pollinations 已失效（402 Payment Required），返回警告 URL
         seed_param = f"&seed={seed}" if seed != -1 else ""
         url = f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}{seed_param}&nologo=true"
-        return {"url": url, "model": "pollinations", "width": width, "height": height, "prompt": prompt}
+        return {"url": url, "model": "pollinations", "width": width, "height": height, "prompt": prompt,
+                "note": "⚠️ Pollinations 自 2026-06-13 起改为付费，建议切换到 Picsum"}
 
     # 其他模型返回 placeholder URL（前端 img 标签可直接显示）
     # 不实际调 API（避免被用户未配 key 时的 API 账单打到）

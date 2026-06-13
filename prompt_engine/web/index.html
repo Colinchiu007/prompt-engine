@@ -117,11 +117,12 @@ const Workbench = {
               <el-divider style="margin:20px 0"><span style="font-size:13px;color:#909399">🖼️ 图片预览</span></el-divider>
               <div class="section-desc">
                 选定模型，实时生成预览图。
-                <b style="color:#67c23a">Pollinations 完全免费</b>无需 Key，其余模型需先到「配置」页填 API Key。
+                <b style="color:#67c23a">Picsum Photos 免费真实图</b>开箱即用。
+                <span style="color:#e6a23c">⚠️ Pollinations 已失效（改付费）</span>，其余 13 模型需先到「配置」页填 API Key。
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
                 <el-select v-model="previewModel" style="width:200px" placeholder="选择模型">
-                  <el-option v-for="m in imageModels" :key="m.id" :label="m.name + (m.requires_key?' 🔑':' 🆓')" :value="m.id" />
+                  <el-option v-for="m in imageModelsData" :key="m.id" :label="m.name + (m.requires_key?' 🔑':' 🆓')" :value="m.id" />
                 </el-select>
                 <el-button type="success" @click="generatePreview" :loading="previewing">
                   生成预览
