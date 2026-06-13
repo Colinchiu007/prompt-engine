@@ -1,7 +1,7 @@
-# Prompt Engine — PRD v0.5.0
+# Prompt Engine — PRD v0.6.0
 
 > 项目 011 / 图片生成提示词优化引擎
-> 状态：已交付 | 迭代周期：s1-s5 + P0-P4
+> 状态：已交付 | 迭代周期：s1-s5 + P0-P4 + F1-F3
 
 ---
 
@@ -17,8 +17,9 @@
 |------|------|------|
 | AI 绘画创作者 | 跨平台发图 | 一次输入 → 所有平台最优 prompt |
 | 内容团队 | 统一视觉风格 | 品牌风格 → 自动分类+注入关键词 |
-| Prompt 工程师 | 批量分类优化 | CLI/API 批量处理 |
+| **Prompt 工程师** | 批量分类优化 | CLI/API 批量处理 |
 | 开发者 | 集成到自家工具 | Python SDK / REST / MCP |
+| **AI Agent** | 安装 Skill 直接调用 | Claude Code / Cursor / Hermes 一键安装 SKILL.md |
 
 ### 1.3 核心竞争力（为什么用户选我们）
 
@@ -30,8 +31,10 @@
 跨平台一致                 ❌            ❌           ❌          ✅
 三级流水线                 ❌            ❌           ❌          ✅
 25 维风格维度              ❌            ❌           ❌          ✅
-CLI 工具                  ❌            ❌           ❌          ✅
-开源                      ❌            ❌           ✅          ✅
+| CLI 工具                  ❌            ❌           ❌          ✅                      |
+| Agent Skill 分发           ❌            ❌           ❌          ✅                      |
+| Prompt-as-Code 模板        ❌            ❌           ❌          ✅                      |
+| 开源                      ❌            ❌           ✅          ✅                      |
 ```
 
 ### 1.4 依赖的开源项目
@@ -82,7 +85,8 @@ CLI 工具                  ❌            ❌           ❌          ✅
 │  keyword_weights.json   (反馈驱动的权重)                       │
 │  feedback_db.json       (用户反馈持久化)                       │
 │  prompts_db/chroma.sqlite3 (RAG 知识库)                       │
-│  templates/styles.yaml  (14 种风格的模板)                     │
+│  templates/styles.yaml  (14 种风格的模板)
+│  agents/skills/prompt-engine (Agent Skill 分发)            │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -199,6 +203,16 @@ optimizer.optimize()
 ### 3.3 数据模型
 
 ```
+PromptBlock (模板引擎)
+  ├── name, template (f-string)
+  ├── params (参数池, 随机选择)
+  └── weight: float
+
+PromptTemplate (组合模板)
+  ├── blocks: list[PromptBlock]
+  ├── separator, style_categories
+  └── render(creative_level=1-10)
+
 StyleCategory (枚举, 25 维)
   ├── Group 视觉风格: design_styles, digital, experimental
   ├── Group 材质: lighting, material_properties, materials, dimensionality
@@ -295,7 +309,7 @@ FeedbackEntry
 | MJ 风格注入 | 3 | 关键词注入 |
 | 反馈 | 6 | 存储/统计/持久化 |
 | 权重 | 4 | 权重加载/保存/应用 |
-| **合计** | **127** | 全部 mock 隔离, ~25s |
+| **合计** | **141** | 全部 mock 隔离, ~25s |
 
 ---
 
@@ -311,6 +325,9 @@ FeedbackEntry
 | P0 | 跨平台 | `keyword_injector.py` 共享模块 |
 | P1 | RAG + 反向推荐 | `_vector_search()`, `recommend_categories_for_style()` |
 | P2 | CLI + README | `cli.py`, 文档 |
+| F1 | Agent Skill 分发 | `agents/skills/prompt-engine/` |
+| F2 | RAG 种子注入 | 506 GPT-Image2 案例 → 向量库 |
+| F3 | Prompt-as-Code 模板 | `template_engine.py` |
 | P3 | 反馈循环 | `FeedbackStore`, API, CLI |
 | P4 | 权重系统 | `keyword_weights.json`, `_apply_feedback_to_weights()` |
 
