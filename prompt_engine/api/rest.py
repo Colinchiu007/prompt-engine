@@ -419,8 +419,11 @@ async def engine_resources():
 IMAGE_MODELS = [
     {"id": "picsum", "name": "Picsum Photos (推荐)", "provider": "Picsum", "requires_key": False,
      "description": "✅ 免费真实图片，基于 prompt hash 产生确定性图片（同一 prompt 同一图）", "endpoint": "https://picsum.photos/seed/{prompt_hash}/{width}/{height}"},
-    {"id": "pollinations", "name": "Pollinations AI (已失效)", "provider": "Pollinations", "requires_key": False,
-     "description": "⚠️ Pollinations 自 2026-06-13 起 402 Payment Required，免费服务已终止", "endpoint": "https://image.pollinations.ai/prompt/{prompt}"},
+    {"id": "MiniMax", "name": "MiniMax image-01", "provider": "MiniMax", "requires_key": True,
+     "description": "MiniMax image-01 图像生成（高质量，国内可直连）", "endpoint": "https://api.MiniMax.chat/v1/image/generation"},
+    {"id": "vidu", "name": "Vidu", "provider": "Vidu", "requires_key": True,
+     "description": "Vidu 视频/图像生成（生数科技，支持文生图）", "endpoint": "https://api.vidu.studio/v1/image/generations"},
+
     {"id": "dall-e-3", "name": "DALL-E 3", "provider": "OpenAI", "requires_key": True,
      "description": "OpenAI 高质量图，1024x1024 自然语言风格", "endpoint": "https://api.openai.com/v1/images/generations"},
     {"id": "dall-e-2", "name": "DALL-E 2", "provider": "OpenAI", "requires_key": True,
@@ -480,13 +483,6 @@ async def image_preview(request: dict):
         prompt_hash = hashlib.md5(prompt.encode()).hexdigest()[:16]
         url = f"https://picsum.photos/seed/{prompt_hash}/{width}/{height}"
         return {"url": url, "model": "picsum", "width": width, "height": height, "prompt": prompt}
-
-    if model == "pollinations":
-        # Pollinations 已失效（402 Payment Required），返回警告 URL
-        seed_param = f"&seed={seed}" if seed != -1 else ""
-        url = f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}{seed_param}&nologo=true"
-        return {"url": url, "model": "pollinations", "width": width, "height": height, "prompt": prompt,
-                "note": "⚠️ Pollinations 自 2026-06-13 起改为付费，建议切换到 Picsum"}
 
     # 其他模型返回 placeholder URL（前端 img 标签可直接显示）
     # 不实际调 API（避免被用户未配 key 时的 API 账单打到）

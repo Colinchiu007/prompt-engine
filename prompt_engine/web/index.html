@@ -118,7 +118,7 @@ const Workbench = {
               <div class="section-desc">
                 选定模型，实时生成预览图。
                 <b style="color:#67c23a">Picsum Photos 免费真实图</b>开箱即用。
-                <span style="color:#e6a23c">⚠️ Pollinations 已失效（改付费）</span>，其余 13 模型需先到「配置」页填 API Key。
+                其余 15 个模型（MiniMax/Vidu/DALL-E/Flux/SD等）需先到「配置」页填 API Key。
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
                 <el-select v-model="previewModel" style="width:200px" placeholder="选择模型">
@@ -588,7 +588,7 @@ const Settings = {
             </div>
           </template>
           <div class="section-desc">
-            prompt-engine 内置 14+ 主流图片生成模型。
+            prompt-engine 内置 16+ 主流图片生成模型。
             <b>Pollinations</b> 完全免费无需 Key，开箱即用。
             其他模型需在下方填写对应 API Key（重启服务生效）。
           </div>
@@ -643,7 +643,9 @@ const Settings = {
     const provider = ref('openai');
     const imageModels = ref([]);
     const apiKeyConfigs = reactive([
-      {provider:'Pollinations',env_var:'(无需 Key)',description:'免费图片生成，开箱即用'},
+      {provider:'Picsum Photos',env_var:'(无需 Key)',description:'免费真实图片，开箱即用'},
+      {provider:'MiniMax',env_var:'MiniMax_API_KEY',description:'用于 image-01（国内可直连）'},
+      {provider:'Vidu',env_var:'VIDU_API_KEY',description:'用于 Vidu 文生图（生数科技）'},
       {provider:'OpenAI',env_var:'OPENAI_API_KEY',description:'用于 DALL-E 3 / DALL-E 2 / GPT-Image-1'},
       {provider:'Replicate',env_var:'REPLICATE_API_KEY',description:'用于 Flux Pro / Schnell / Midjourney v6 / Kandinsky'},
       {provider:'Stability',env_var:'STABILITY_API_KEY',description:'用于 Stable Diffusion XL / SD3.5'},

@@ -40,19 +40,11 @@ class TestImagePreview:
         from prompt_engine.api.rest import app
         from fastapi.testclient import TestClient
         client = TestClient(app)
-        resp = client.post("/v1/preview", json={"prompt": "a cat", "model": "pollinations"})
+        resp = client.post("/v1/preview", json={"prompt": "a cat", "model": "picsum"})
         assert resp.status_code == 200
         data = resp.json()
         assert "url" in data
         assert "model" in data
-
-    def test_preview_pollinations_url(self):
-        from prompt_engine.api.rest import app
-        from fastapi.testclient import TestClient
-        client = TestClient(app)
-        resp = client.post("/v1/preview", json={"prompt": "a cat", "model": "pollinations"})
-        data = resp.json()
-        assert "image.pollinations.ai" in data["url"] or "pollinations" in data["url"]
 
     def test_preview_default_model(self):
         from prompt_engine.api.rest import app
@@ -66,7 +58,7 @@ class TestImagePreview:
         from prompt_engine.api.rest import app
         from fastapi.testclient import TestClient
         client = TestClient(app)
-        resp = client.post("/v1/preview", json={"prompt": "", "model": "pollinations"})
+        resp = client.post("/v1/preview", json={"prompt": "", "model": "picsum"})
         assert resp.status_code == 400
 
 
@@ -95,12 +87,3 @@ class TestImageModels:
             assert "provider" in m
             assert "requires_key" in m
 
-    def test_pollinations_no_key_required(self):
-        from prompt_engine.api.rest import app
-        from fastapi.testclient import TestClient
-        client = TestClient(app)
-        resp = client.get("/v1/image-models")
-        models = resp.json()
-        pollinations = [m for m in models if "pollinations" in m["id"]]
-        assert len(pollinations) >= 1
-        assert pollinations[0]["requires_key"] is False
