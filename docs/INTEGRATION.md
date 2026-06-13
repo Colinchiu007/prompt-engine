@@ -257,3 +257,9 @@ cp -r agents/skills/prompt-engine ~/.hermes/skills/
 ## 测试
 
 190 个测试通过（mock 隔离，无需 API Key）。
+
+
+## 测试
+
+- 全部 191 个测试通过（mock 隔离，无需 API Key）
+- 优化器缓存（v0.9.0）：191 = 190 + 1 cache test
