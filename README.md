@@ -431,7 +431,7 @@ pytest -v
 - **v0.5.0** — 25 维 MJ 风格分类器（关键词 + 向量语义 + LLM 三级流水线）、跨平台风格关键词注入、CLI 工具、RAG 增强分类器、反馈闭环、反馈驱动权重调整
 - **v0.6.0** — Agent Skill 分发（`agents/skills/prompt-engine`）、RAG 种子注入（506 GPT-Image2 案例）、Prompt-as-Code 模板引擎（`template_engine.py`）
 - **v0.7.0** — 模板驱动优化（YAML 模板）、多模型供应商（Gemini）、Web 看板（Vue 3 + Element Plus）
-- **v0.9.0** — Dashboard 资源展示、Workbench 图片预览（14 模型）、Settings 图片模型 API 配置、评估对比模式（`POST /v1/evaluate`）、DSL 模板语法（`{a|b}` / `__wild__` / `{N$$opt}`）
+- **v0.9.1** — Dashboard 资源展示、Workbench 图片预览（14 模型）、Settings 图片模型 API 配置、评估对比模式（`POST /v1/evaluate`）、DSL 模板语法（`{a|b}` / `__wild__` / `{N$$opt}`）
 
 ## License
 

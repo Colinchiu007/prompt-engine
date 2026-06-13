@@ -99,9 +99,9 @@ class TestOptimizerErrorPaths:
         result = optimizer.optimize(req)
         assert len(result.optimized_prompt) <= 100
 
-    @patch.object(Optimizer, "_call_llm")
-    def test_reverse_fallback_on_error(self, mock_call):
-        mock_call.side_effect = RuntimeError("Vision model error")
+    @patch.object(Optimizer, "_call_vision_llm")
+    def test_reverse_fallback_on_error(self, mock_vision):
+        mock_vision.side_effect = RuntimeError("Vision model error")
         optimizer = Optimizer()
         req = ReverseRequest(image_url="https://example.com/test.jpg")
         result = optimizer.reverse_engineer(req)

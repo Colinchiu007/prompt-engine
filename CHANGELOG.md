@@ -257,6 +257,25 @@
 
 
 ## [v0.8.0] — 2026-06-13
+
+## [v0.9.1] — 2026-06-13
+
+### 新增
+
+- **Dashboard 测试数据填充** - 启动时自动注入 50 条模拟数据到 stats_store
+- **缓存键扩展** - 包含 (creative_level, max_length, negative_prompt, num_candidates) 避免参数变更时的误命中
+
+### 修复
+
+- `optimizer.py` UnboundLocalError (OptimizeResult 局部变量)
+- 缓存 hit/miss 不同 platform 区分
+- `_PromptCache` 写入时机修正
+
+### 测试
+
+- 全量测试 196/196 通过
+- test_seed.py 新增 4 个种子数据测试
+
 ## [v0.9.0] — 2026-06-13
 
 ### 新增

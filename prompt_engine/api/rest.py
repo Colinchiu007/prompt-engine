@@ -19,6 +19,9 @@ app = FastAPI(
 )
 
 
+
+
+
 @lru_cache
 def get_optimizer() -> Optimizer:
     """线程安全的单例 — lru_cache 保证只构造一次"""
@@ -236,6 +239,52 @@ STATS_STORE: dict = {
     "categories": {},
 }
 
+import random
+from prompt_engine.models import StyleCategory
+
+_platforms = ["midjourney", "stable-diffusion", "dall-e", "tongyi-wanxiang", "wenyi-xinyi", "jimeng", "nano-banana-pro"]
+_example_prompts = [
+    "a majestic cat sitting on a velvet throne",
+    "cyberpunk city at night with neon lights",
+    "一只金色的凤凰在夕阳下展翅飞翔",
+    "水彩风格的樱花树下少女",
+    "an astronaut riding a horse on Mars with dramatic lighting",
+]
+
+
+def get_stats_store() -> dict:
+    return STATS_STORE
+
+
+def seed_demo_data(reset_first: bool = False):
+    """启动时自动注入 50 条模拟数据到 stats_store"""
+    if reset_first:
+        STATS_STORE.clear()
+        STATS_STORE.update(total_requests=0, success_count=0, error_count=0, total_time_ms=0, platforms={}, categories={})
+    import random
+    # 清除之前缓存的优化结果
+    from prompt_engine.optimizer import _PromptCache
+    _PromptCache.clear()
+    for _ in range(50):
+        plat = random.choice(_platforms)
+        cats = random.sample(list(StyleCategory), k=random.randint(1, 3))
+        duration = max(100, int(random.gauss(1500, 800)))
+        success = random.random() < 0.95
+
+        _record_request(
+            platform=plat,
+            success=success,
+            time_ms=duration,
+            category=cats[0].value if cats else "",
+        )
+
+
+
+
+def get_categories() -> dict:
+    return STATS_STORE.get("categories", {})
+
+
 
 def _record_request(platform: str, success: bool, time_ms: float, category: str = ""):
     STATS_STORE["total_requests"] += 1
@@ -248,6 +297,7 @@ def _record_request(platform: str, success: bool, time_ms: float, category: str 
         STATS_STORE["platforms"][platform] = STATS_STORE["platforms"].get(platform, 0) + 1
     if category:
         STATS_STORE["categories"][category] = STATS_STORE["categories"].get(category, 0) + 1
+
 
 
 @app.get("/v1/stats/overview")
@@ -434,3 +484,8 @@ async def image_preview(request: dict):
 
 if _web_dir.exists():
     app.mount("/", StaticFiles(directory=str(_web_dir), html=True), name="web")
+
+
+# ── 自动 seed 演示数据（在所有函数定义完成后调用）───
+seed_demo_data()
+

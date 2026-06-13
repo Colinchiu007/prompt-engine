@@ -14,7 +14,7 @@ from prompt_engine.classifier import StyleCategoryClassifier
 logger = logging.getLogger(__name__)
 
 # ── 内存缓存池（优化结果缓存）
-_PromptCacheKey = tuple[str, str]  # (prompt, platform)
+_PromptCacheKey = tuple[str, str, int, int, str, int]  # (prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
 _PromptCache: dict[_PromptCacheKey, OptimizeResult] = {}
 
 # Simple fuzzy string matching (preprocessing only)
@@ -35,19 +35,21 @@ def _similarity(a: str, b: str) -> float:
     
     return 0.5  # Default
 
-def fuzzy_match_prompt(prompt: str, platform: str, similarity_threshold: float = 0.7) -> Optional[OptimizeResult]:
+def fuzzy_match_prompt(prompt: str, platform: str, creative_level: int = 7, max_length: int = 500, negative_prompt: str = "", num_candidates: int = 1, similarity_threshold: float = 0.7) -> Optional[OptimizeResult]:
     """模糊匹配相似 prompt，命中缓存后返回"""
 
     normalized = prompt.strip().lower()
     best_result = None
     best_score = 0.0
     
-    for (cached_p, cached_plat), cached_res in _PromptCache.items():
+    for (cached_p, cached_plat, cached_cl, cached_ml, cached_np, cached_nc), cached_res in _PromptCache.items():
         if cached_plat != platform:
             continue
         
-        # 相似度匹配
-        score = 1.0 - (len(original_a) + len(original_b) - 2 * sum(1 for a,b in zip(a,b) if a==b) / max(len(normalized), len(cached_p)))
+        # 匹配（prompt + 配置参数必须完全一致）
+        if cached_cl != creative_level or cached_ml != max_length or cached_np != negative_prompt or cached_nc != num_candidates:
+            continue
+        score = _similarity(normalized, cached_p.lower())
         if score > best_score:
             best_score = score
             best_result = cached_res
@@ -327,6 +329,22 @@ class Optimizer:
         """单条提示词优化主流程"""
         start_time = time.time()
         try:
+            # ✨ 内存缓存池检查（降低成本 + 提升速度）
+            from prompt_engine.models import OptimizeResult as _OptRes
+            cached = fuzzy_match_prompt(request.prompt, request.platform.value, request.creative_level, request.max_length, request.negative_prompt or "", request.num_candidates)
+            if cached:
+                logger.info("Cache hit: %s @ %s", request.prompt[:50], request.platform.value)
+                return _OptRes(
+                    optimized_prompt=cached.optimized_prompt,
+                    platform=cached.platform,
+                    style=cached.style,
+                    model_used=cached.model_used,
+                    tokens_used=0,
+                    duration_ms=0,
+                    candidates=[],
+                    detected_categories=None,
+                )
+
             detected_result: Optional["StyleCategoryResult"] = None
             
             # 0. 自动风格检测（当 style 未指定时）
@@ -384,8 +402,9 @@ class Optimizer:
                 total_tokens += tokens
 
             elapsed = (time.time() - start_time) * 1000
-
-            return OptimizeResult(
+            
+            # 存入缓存以便下次命中
+            result = _OptRes(
                 optimized_prompt=candidates[0],
                 platform=request.platform,
                 style=effective_style if effective_style != request.style else request.style,
@@ -395,6 +414,10 @@ class Optimizer:
                 candidates=candidates if num > 1 else [],
                 detected_categories=detected_result,
             )
+            _PromptCache[(request.prompt.strip().lower(), request.platform.value, request.creative_level, request.max_length, request.negative_prompt or "", request.num_candidates)] = result
+            return result
+
+            result = None  # Only for type checker
         except Exception as e:
             elapsed = (time.time() - start_time) * 1000
             logger.error("optimize failed for prompt '%s': %s", request.prompt[:50], e)

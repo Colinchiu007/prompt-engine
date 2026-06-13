@@ -35,7 +35,7 @@ tests/
 ## 重要约定
 
 1. **惰性导入** — `__init__.py` 使用 `__getattr__` 惰性导入 Optimizer/Classifier，避免启动时 LLM 连接
-2. **测试隔离** — 191 个测试全部 mock 隔离，无需 API Key
+2. **测试隔离** — 196 个测试全部 mock 隔离，无需 API Key
 3. **三级分类流水线** — keyword_match → vector_rag → llm_classify，不修改此流程
 4. **25 个 StyleCategory** — 枚举在 models.py，已移除 rainbow_of_colors
 5. **权重系统** — `keyword_weights.json` 持久化，`_get_weights()` 惰性加载
@@ -44,10 +44,10 @@ tests/
 ## 测试
 
 ```bash
-pytest tests/ -q        # 191 tests, ~25s
+pytest tests/ -q        # 196 tests, ~25s
 pytest tests/ -x --tb=short  # 失败即停
 ```
 
 ## 版本
 
-当前 v0.9.0，所有 s1-s5 + P0-P4 + F1-F12 已完成。
+当前 v0.9.1，所有 s1-s5 + P0-P4 + F1-F12 已完成。
