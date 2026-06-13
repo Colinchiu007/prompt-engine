@@ -24,7 +24,8 @@ prompt_engine/
 tests/
 ├── test_rag_seed.py      # 506 案例 RAG 种子测试
 ├── test_prompt_template.py  # Prompt-as-Code 模板测试
-└── ... (141 总用例)
+├── tests/test_gpt4o_prompts.py  # gpt4o 1050 案例 RAG 种子测试
+└── ... (165 总用例)
 ```
 
 ## 重要约定
@@ -39,7 +40,7 @@ tests/
 ## 测试
 
 ```bash
-pytest tests/ -q        # 141 tests, ~25s
+pytest tests/ -q        # 165 tests, ~25s
 pytest tests/ -x --tb=short  # 失败即停
 ```
 

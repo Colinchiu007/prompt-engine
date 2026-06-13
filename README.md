@@ -24,6 +24,7 @@
 - 📋 **模板驱动优化**：策略 LLM 指令抽取为独立 YAML 模板，EN/ZH 双语支持
 - 🏢 **多模型供应商**：支持 OpenAI / 讯飞 / Gemini 等供应商，统一注册表
 - 📊 **评估对比**：5 维度 LLM 评估优化效果（clarity/specificity/creativity/actionability/platform_best）
+- 🗂️ **多源 RAG 种子**：集成 awesome-gpt-image-2 (506)、gpt4o-image-prompts (1050) 等外部案例库
 
 ## 25 维 MJ 风格分类体系
 
@@ -348,7 +349,7 @@ prompt-engine/
 │   ├── templates/         # 风格模板引擎
 │   ├── prompts_db/        # 优质提示词数据库
 │   └── image/             # 图片分析（逆向工程）
-├── tests/                  # 测试（141 个用例，mock 隔离）
+├── tests/                  # 测试（165 个用例，mock 隔离）
 ├── examples/               # 使用示例
 ├── config.yaml             # 默认配置文件
 └── README.md
@@ -387,7 +388,7 @@ class MyPlatformStrategy(BaseStrategy):
 pytest -v
 ```
 
-全部 141 个测试通过，使用 mock 隔离，无需真实 API Key。
+全部 165 个测试通过，使用 mock 隔离，无需真实 API Key。
 
 ## 开发对接
 

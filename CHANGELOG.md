@@ -228,10 +228,12 @@
 | `tests/test_template_loader.py` | 模板加载测试(6) |
 | `tests/test_providers.py` | 供应商测试(6) |
 | `tests/test_evaluator.py` | 评估测试(8) |
+| `examples/seed_rag_from_gpt4o_prompts.py` | gpt4o-image-prompts 1050 案例 RAG 种子 |
+| `tests/test_gpt4o_prompts.py` | gpt4o 数据解析测试(4) |
 
 ### 测试
 
-- 141 → **161** 个测试用例
+- 141 → **165** 个测试用例
 
 ### 依赖
 
