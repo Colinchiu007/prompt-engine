@@ -80,6 +80,15 @@ python -m uvicorn prompt_engine.api.rest:app --host 0.0.0.0 --port 8000
 | POST | `/v1/disturb-optimize` | 扰动增强 |
 | POST | `/v1/feedback` | 提交反馈 |
 | GET | `/v1/platforms` | 列出平台 |
+| GET | `/v1/feedback/stats` | 反馈统计 |
+| GET | `/v1/feedback/recent` | 最近反馈 |
+| POST | `/v1/feedback/apply` | 应用反馈到权重 |
+| GET | `/v1/stats/overview` | 看板概览统计 |
+| GET | `/v1/stats/categories` | 看板分类分布 |
+| GET | `/v1/stats/platforms` | 看板平台分布 |
+| GET | `/v1/resources` | 引擎资源清单（v0.8.0） |
+| GET | `/v1/image-models` | 图片模型清单（v0.8.0） |
+| POST | `/v1/preview` | AI 图片预览（v0.8.0） |
 | GET | `/health` | 健康检查 |
 
 ### curl 示例
