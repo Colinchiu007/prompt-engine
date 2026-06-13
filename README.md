@@ -25,6 +25,31 @@
 基于 MidJourney Styles Reference 的 25 个风格维度，覆盖光照/材质/色彩/镜头/构图/自然/艺术媒介/文化风格/影视参考/特效：
 
 | 维度 | 中文名 | 说明 | 示例关键词 |
+
+### 分类三级流水线
+
+```
+prompt → keyword_match (0ms, 精确命中)
+          ↓ (置信度 < 0.6)
+       vector_rag (50ms, TF-IDF 语义搜索)
+          ↓ (无结果)
+       llm_classify (1s, 零样本分类)
+```
+
+90%+ 请求在 **50ms 内**返回结果，仅兜底路径需要 LLM 调用。
+
+### 反馈闭环
+
+```
+用户提交纠正 → feedback_db.json → prompt-engine feedback --apply
+                                      ↓
+                               keyword_weights.json 更新
+                                      ↓
+                               下次分类自动使用新权重
+```
+
+越用越准——用户只需提交评分和纠正即可。
+
 |------|--------|------|-----------|
 | `lighting` | 光照效果 | 光线类型、照明方式、阴影 | Volumetric Lighting, Rembrandt, God Rays |
 | `material_properties` | 材质属性 | 表面质感、透明度、反射 | Glossy, Translucent, Refractive |
@@ -120,7 +145,7 @@ prompt-engine classify "A serene landscape bathed in golden light" -m 5
 # JSON 格式输出
 prompt-engine classify "cyberpunk city neon lights" --json
 
-# 列出所有 26 个风格维度
+# 列出所有 25 个风格维度
 prompt-engine categories
 
 # 优化 prompt
@@ -215,7 +240,7 @@ Analyze a prompt and return its MJ style dimensions.
 
 ### List style categories `GET /v1/styles/categories`
 
-Return all 26 MJ style dimensions with Chinese names.
+Return all 25 MJ style dimensions with Chinese names.
 
 ### Prompt rewrite `POST /v1/rewrite`
 
@@ -317,7 +342,7 @@ prompt-engine/
 │   ├── templates/         # 风格模板引擎
 │   ├── prompts_db/        # 优质提示词数据库
 │   └── image/             # 图片分析（逆向工程）
-├── tests/                  # 测试（112 个用例，mock 隔离）
+├── tests/                  # 测试（127 个用例，mock 隔离）
 ├── examples/               # 使用示例
 ├── config.yaml             # 默认配置文件
 └── README.md
@@ -356,7 +381,7 @@ class MyPlatformStrategy(BaseStrategy):
 pytest -v
 ```
 
-全部 112 个测试通过，使用 mock 隔离，无需真实 API Key。
+全部 127 个测试通过，使用 mock 隔离，无需真实 API Key。
 
 ## 开发对接
 
@@ -378,14 +403,6 @@ pytest -v
 
 **重要**：所有策略重写均保持 `build_system_prompt(style, creative_level, max_length)` 签名不变，`post_process` 签名不变。对上层 `Optimizer`、`FastAPI`、`MCP Server` **零破坏**。
 
-### 后续对接计划
-
-| 阶段 | 任务 | 负责人 |
-|------|------|--------|
-| Phase 2 | **RAG 基础设施**（ChromaDB/嵌入/检索API集成到optimizer） | **开发会话** |
-| Phase 2 | RAG 质量调优（top_k/阈值/混合检索策略） | COO/运营 |
-| Phase 2 | 风格模板库 seeds.yaml（基于 NBP 分类提取） | COO/运营 |
-
 ### 数据来源
 
 - [Nano Banana Pro Prompts](https://github.com/YouMind-OpenLab/awesome-nano-banana-pro-prompts) — 14,292 条社区高质量 prompt，16 语言，42 个分类
@@ -397,7 +414,7 @@ pytest -v
 - **v0.2.0** — P1 功能：negative_prompt、模板引擎 styles.yaml、批量优化
 - **v0.3.0** — P2 功能：RAG 知识库增强、A/B 多候选、图片逆向工程
 - **v0.3.1** — 策略重写：基于 Nano Banana Pro (14,000+ prompts) 社区 prompt 提取各平台最佳模式，7 个策略文件全面增强（Midjourney 参数映射/SD 权重语法/DALL·E 自然语言结构/通义万相中文描写/文心一格关键词式/即梦视觉冲击力），镜头术语/光照分类/颜色精度/构图技巧全部内化为策略规则
-- **v0.5.0** — P3 功能：27 维 MJ 风格分类器（关键词 + 向量语义 + LLM 三级流水线）、跨平台风格关键词注入、CLI 命令行工具（classify/categories/optimize）、RAG 增强分类器
+- **v0.5.0** — 25 维 MJ 风格分类器（关键词 + 向量语义 + LLM 三级流水线）、跨平台风格关键词注入、CLI 工具、RAG 增强分类器、反馈闭环、反馈驱动权重调整
 
 ## License
 
