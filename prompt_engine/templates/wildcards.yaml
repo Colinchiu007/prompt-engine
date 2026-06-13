@@ -1,0 +1,63 @@
+# 通配符池 — 供 DSL 模板的 __wildcard__ 语法使用
+# 使用方式: render("A __animal__ sitting on a __surface__")
+# 需要先 register_wildcard_pool("animal", data)
+
+colors:
+  - red
+  - green
+  - blue
+  - golden
+  - silver
+  - pastel pink
+  - deep purple
+  - warm amber
+  - cool cyan
+  - vibrant orange
+
+animals:
+  - cat
+  - dog
+  - rabbit
+  - fox
+  - owl
+  - dragon
+  - phoenix
+  - wolf
+  - eagle
+  - butterfly
+
+art_styles:
+  - watercolor
+  - oil painting
+  - pixel art
+  - 3d render
+  - sketch
+  - anime
+  - cyberpunk
+  - minimalist
+  - impressionist
+  - surrealist
+
+lighting:
+  - golden hour
+  - soft diffused
+  - dramatic side
+  - cinematic
+  - neon glow
+  - volumetric
+  - rim light
+  - backlit
+  - studio softbox
+  - candlelight
+
+materials:
+  - marble
+  - velvet
+  - brushed metal
+  - frosted glass
+  - raw silk
+  - aged wood
+  - polished granite
+  - liquid mercury
+  - iridescent
+  - matte ceramic

@@ -25,6 +25,7 @@
 - 🏢 **多模型供应商**：支持 OpenAI / 讯飞 / Gemini 等供应商，统一注册表
 - 📊 **评估对比**：5 维度 LLM 评估优化效果（clarity/specificity/creativity/actionability/platform_best）
 - 🗂️ **多源 RAG 种子**：集成 awesome-gpt-image-2 (506)、gpt4o-image-prompts (1050) 等外部案例库
+- 🔤 **DSL 模板语法**：`{option1|option2}` / `__wildcard__` / `{N$$opt}` 模板语法，借鉴 sd-dynamic-prompts
 
 ## 25 维 MJ 风格分类体系
 
@@ -349,7 +350,7 @@ prompt-engine/
 │   ├── templates/         # 风格模板引擎
 │   ├── prompts_db/        # 优质提示词数据库
 │   └── image/             # 图片分析（逆向工程）
-├── tests/                  # 测试（165 个用例，mock 隔离）
+├── tests/                  # 测试（177 个用例，mock 隔离）
 ├── examples/               # 使用示例
 │   ├── sdk_usage.py
 │   ├── seed_rag_from_gptimage2.py
@@ -391,7 +392,7 @@ class MyPlatformStrategy(BaseStrategy):
 pytest -v
 ```
 
-全部 165 个测试通过，使用 mock 隔离，无需真实 API Key。
+全部 177 个测试通过，使用 mock 隔离，无需真实 API Key。
 
 ## 开发对接
 
@@ -426,7 +427,7 @@ pytest -v
 - **v0.3.1** — 策略重写：基于 Nano Banana Pro (14,000+ prompts) 社区 prompt 提取各平台最佳模式，7 个策略文件全面增强（Midjourney 参数映射/SD 权重语法/DALL·E 自然语言结构/通义万相中文描写/文心一格关键词式/即梦视觉冲击力），镜头术语/光照分类/颜色精度/构图技巧全部内化为策略规则
 - **v0.5.0** — 25 维 MJ 风格分类器（关键词 + 向量语义 + LLM 三级流水线）、跨平台风格关键词注入、CLI 工具、RAG 增强分类器、反馈闭环、反馈驱动权重调整
 - **v0.6.0** — Agent Skill 分发（`agents/skills/prompt-engine`）、RAG 种子注入（506 GPT-Image2 案例）、Prompt-as-Code 模板引擎（`template_engine.py`）
-- **v0.7.0** — 模板驱动优化（YAML 模板）、多模型供应商（Gemini）、评估对比模式（`POST /v1/evaluate`）
+- **v0.7.0** — 模板驱动优化（YAML 模板）、多模型供应商（Gemini）、评估对比模式（`POST /v1/evaluate`）、DSL 模板语法（`{a|b}` / `__wild__` / `{N$$opt}`）
 
 ## License
 

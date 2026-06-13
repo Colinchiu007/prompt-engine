@@ -16,23 +16,34 @@ from prompt_engine.models import StyleCategory
 class PromptBlock:
     """一个可组合的原子化 prompt 块。
 
+    支持 DSL 模板语法（use_dsl=True 时）：
+      {option1|option2} — 随机变体
+      __wildcard__      — 通配符
+      {N$$opt1|opt2}    — 数量限定
+
     Example:
         pb = PromptBlock(
             name="subject",
-            template="A {adjective} {subject} {action}",
-            params={"adjective": ["majestic", "serene"], "subject": ["cat", "mountain"]},
+            template="A {big|small} {cat|dog}",  # DSL 语法
+            use_dsl=True,
         )
-        pb.render(adjective="majestic", subject="cat")  # → "A majestic cat"
-        pb.render_with_params()  # → 从 params 池随机选值
+        pb.render()  # → "A big cat" or "A small dog"
     """
 
     name: str
     template: str
     params: dict[str, list[str]] = field(default_factory=dict)
     weight: float = 1.0
+    use_dsl: bool = False  # 是否使用 DSL 模板语法
 
     def render(self, **kwargs) -> str:
-        """填充指定参数渲染出文本。"""
+        """填充指定参数渲染出文本。
+
+        如果 use_dsl=True，使用 DSL 模板语法渲染。
+        """
+        if self.use_dsl:
+            from prompt_engine.dsl_parser import render as dsl_render
+            return dsl_render(self.template)
         return self.template.format(**kwargs)
 
     def render_with_params(self, **overrides) -> str:

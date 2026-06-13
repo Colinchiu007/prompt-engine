@@ -231,9 +231,14 @@
 | `examples/seed_rag_from_gpt4o_prompts.py` | gpt4o-image-prompts 1050 案例 RAG 种子 |
 | `tests/test_gpt4o_prompts.py` | gpt4o 数据解析测试(4) |
 
+### 变更
+
+- `template_engine.py` — PromptBlock 新增 `use_dsl` 参数，支持 DSL 模板语法
+- `dsl_parser.py` — 新增通配符 YAML 加载器 `load_wildcards_from_yaml()`
+
 ### 测试
 
-- 141 → **165** 个测试用例
+- 141 → **177** 个测试用例
 
 ### 依赖
 

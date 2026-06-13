@@ -1,7 +1,7 @@
 # Prompt Engine — PRD v0.7.0
 
 > 项目 011 / 图片生成提示词优化引擎
-> 状态：已交付 | 迭代周期：s1-s5 + P0-P4 + F1-F7
+> 状态：已交付 | 迭代周期：s1-s5 + P0-P4 + F1-F8
 
 ---
 
@@ -88,6 +88,7 @@
 │  templates/styles.yaml  (14 种风格的模板)
 │  agents/skills/prompt-engine (Agent Skill 分发)            │
 │  research/gpt4o-image-prompts/src/data/prompts.json (1050 条 RAG 种子) │
+│  templates/wildcards.yaml (10 类 100+ 通配符)                         │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -313,8 +314,9 @@ FeedbackEntry
 | 模板加载 | 6 | 模板加载/回退/变量 |
 | 供应商 | 6 | Gemini provider + 注册表 |
 | 评估 | 8 | 评估维度/结果/函数 |
+| DSL 解析器 | 12 | 变体/通配符/数量限定/嵌套 |
 | gpt4o 数据 | 4 | 1050 案例解析+注入 |
-| **合计** | **165** | 全部 mock 隔离, ~25s |
+| **合计** | **177** | 全部 mock 隔离, ~25s |
 
 ---
 
@@ -339,6 +341,7 @@ FeedbackEntry
 | P3 | 反馈循环 | `FeedbackStore`, API, CLI |
 | P4 | 权重系统 | `keyword_weights.json`, `_apply_feedback_to_weights()` |
 | F7 | 外部 RAG 种子 | awesome-gpt-image-2 (506) + gpt4o-image-prompts (1050) |
+| F8 | DSL 模板语法 | `dsl_parser.py`, `{a|b}`, `__wild__`, `{N$$opt}` |
 
 ---
 
