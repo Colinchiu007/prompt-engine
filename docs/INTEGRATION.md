@@ -6,6 +6,8 @@
 
 | 方式 | 快速通道 | 适合场景 |
 |------|---------|---------|
+|------|---------|---------|
+| **Web 看板** | `python -m uvicorn prompt_engine.api.rest:app` → 浏览器打开 | 可视化操作 |
 | **Python SDK** | `pip install prompt-engine` | Python 项目 |
 | **REST API** | `python -m uvicorn prompt_engine.api.rest:app` | 任意语言 HTTP 调用 |
 | **MCP Server** | `python -m prompt_engine.api.mcp_server` | Claude/Cursor/Hermes |

@@ -215,6 +215,7 @@
 - **模板驱动优化 (F1)** — 借鉴 prompt-optimizer，将策略 LLM 指令抽取为独立 YAML 模板文件（`templates/prompts/`），EN/ZH 双语支持，自动回退
 - **多模型供应商 (F2)** — 新增 Gemini provider（`llm/gemini.py`），供应商注册表 `list_providers()` / `create_provider()`
 - **评估对比 (F3)** — `prompt_engine/evaluator.py`，5 维度 LLM 评估（clarity/specificity/creativity/actionability/platform_best），`POST /v1/evaluate` 端点
+- **Web 看板 (F9)** — Vue 3 + Element Plus 全功能界面（Prompt 工作台 / 数据看板 / 配置面板）
 
 ### 新增文件
 
@@ -229,7 +230,12 @@
 | `tests/test_providers.py` | 供应商测试(6) |
 | `tests/test_evaluator.py` | 评估测试(8) |
 | `examples/seed_rag_from_gpt4o_prompts.py` | gpt4o-image-prompts 1050 案例 RAG 种子 |
-| `tests/test_gpt4o_prompts.py` | gpt4o 数据解析测试(4) |
+│ `tests/test_gpt4o_prompts.py` | gpt4o 数据解析测试(4) |
+│ `prompt_engine/dsl_parser.py` | DSL 模板语法解析器 |
+│ `prompt_engine/templates/wildcards.yaml` | 通配符池（10 类） |
+│ `tests/test_dsl_parser.py` | DSL 语法测试(12) |
+│ `prompt_engine/web/index.html` | Web 看板（Vue 3） |
+│ `tests/test_dashboard_api.py` | 看板统计测试(4) |
 
 ### 变更
 
@@ -238,7 +244,7 @@
 
 ### 测试
 
-- 141 → **177** 个测试用例
+- 141 → **181** 个测试用例
 
 ### 依赖
 

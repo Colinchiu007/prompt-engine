@@ -16,6 +16,7 @@ prompt_engine/
 ├── feedback.py           # 用户反馈存储
 ├── strategies/           # 7 个平台策略文件
 ├── api/                  # REST + MCP Server
+├── web/                   # Vue 3 Web 看板
 ├── models.py             # 所有 Pydantic 模型
 ├── templates/styles.yaml # 风格模板（含 StyleCategory）
 ├── data/mj_style_final.json  # MJ 关键词数据库
@@ -26,13 +27,14 @@ tests/
 ├── test_prompt_template.py  # Prompt-as-Code 模板测试
 ├── test_gpt4o_prompts.py  # gpt4o 1050 案例 RAG 种子测试
 ├── test_dsl_parser.py     # DSL 模板语法解析器测试
-└── ... (177 总用例)
+├── test_dashboard_api.py  # 看板统计 API 测试(4)
+└── ... (181 总用例)
 ```
 
 ## 重要约定
 
 1. **惰性导入** — `__init__.py` 使用 `__getattr__` 惰性导入 Optimizer/Classifier，避免启动时 LLM 连接
-2. **测试隔离** — 177 个测试全部 mock 隔离，无需 API Key
+2. **测试隔离** — 181 个测试全部 mock 隔离，无需 API Key
 3. **三级分类流水线** — keyword_match → vector_rag → llm_classify，不修改此流程
 4. **25 个 StyleCategory** — 枚举在 models.py，已移除 rainbow_of_colors
 5. **权重系统** — `keyword_weights.json` 持久化，`_get_weights()` 惰性加载
@@ -41,7 +43,7 @@ tests/
 ## 测试
 
 ```bash
-pytest tests/ -q        # 177 tests, ~25s
+pytest tests/ -q        # 181 tests, ~25s
 pytest tests/ -x --tb=short  # 失败即停
 ```
 
