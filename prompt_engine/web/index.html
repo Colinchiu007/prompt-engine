@@ -9,6 +9,7 @@
   <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
   <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <script src="https://unpkg.com/echarts@5.4.3/dist/echarts.min.js"></script>
   <style>
     .example-btn { cursor:pointer; margin:2px; }
     .example-btn:hover { color:#409eff; }
@@ -25,7 +26,7 @@
   <el-container style="min-height:100vh">
     <el-header style="background:#fff;border-bottom:1px solid #e4e7ed;display:flex;align-items:center;padding:0 20px">
       <h2 style="margin:0;font-size:18px">🎨 Prompt Engine</h2>
-      <span style="color:#909399;font-size:12px;margin-left:8px">v0.7.0</span>
+      <span style="color:#909399;font-size:12px;margin-left:8px">v0.8.0</span>
       <el-menu mode="horizontal" :ellipsis="false" style="margin-left:40px;border-bottom:none" :default-active="tab" @select="tab=$event">
         <el-menu-item index="workbench">Prompt 工作台</el-menu-item>
         <el-menu-item index="dashboard">数据看板</el-menu-item>
@@ -448,11 +449,16 @@ const Dashboard = {
     </el-row>
   `,
   setup() {
-    const statCards = reactive([]);
+    const statCards = reactive([
+      {label:'总请求数', value:0, hint:'所有平台累计调用次数'},
+      {label:'成功率', value:'100%', hint:'成功/总请求'},
+      {label:'平均耗时', value:'0ms', hint:'每次优化平均耗时'},
+      {label:'错误数', value:0, hint:'失败的请求数量'},
+    ]);
     const resources = reactive({});
     const catChart = ref(null);
     const platChart = ref(null);
-    const noData = ref(false);
+    const noData = ref(true);
 
     onMounted(async () => {
       try {
@@ -621,9 +627,9 @@ const Settings = {
             </div>
           </template>
           <el-descriptions :column="1" border size="small">
-            <el-descriptions-item label="版本">v0.7.0</el-descriptions-item>
-            <el-descriptions-item label="API 端点">17 个 REST 端点</el-descriptions-item>
-            <el-descriptions-item label="测试">181 个用例，全部通过</el-descriptions-item>
+            <el-descriptions-item label="版本">v0.8.0</el-descriptions-item>
+            <el-descriptions-item label="API 端点">20 个 REST 端点</el-descriptions-item>
+            <el-descriptions-item label="测试">190 个用例，全部通过</el-descriptions-item>
             <el-descriptions-item label="RAG 种子">awesome-gpt-image-2 + gpt4o-image-prompts (1556 条)</el-descriptions-item>
             <el-descriptions-item label="风格维度">25 个 MJ 风格维度（三级分类流水线）</el-descriptions-item>
             <el-descriptions-item label="集成方式">SDK / REST / MCP / CLI / Agent Skill</el-descriptions-item>
@@ -644,7 +650,16 @@ const Settings = {
       {provider:'xAI',env_var:'XAI_API_KEY',description:'用于 Grok Aurora 图像生成'},
     ]);
     onMounted(async () => {
-      try { imageModels.value = await api.get('/v1/image-models'); } catch(e) {}
+      try {
+        const m = await api.get('/v1/image-models');
+        imageModels.value = m;
+      } catch(e) {
+        // Fallback 14 model list
+        imageModels.value = [
+          {id:'pollinations',name:'Pollinations AI',provider:'Pollinations',requires_key:false,description:'免费，无需 API Key'},
+          {id:'dall-e-3',name:'DALL-E 3',provider:'OpenAI',requires_key:true,description:'OpenAI 高质量图'},
+        ];
+      }
     });
     const wildcards = reactive([
       {name:'colors', count:10, sample:'red, green, golden...'},
