@@ -100,12 +100,12 @@ const Workbench = {
           <el-tabs v-if="result" type="border-card" style="margin-top:12px">
             <el-tab-pane label="✨ 优化结果">
               <div style="margin-bottom:8px;color:#909399;font-size:12px">
-                原始输入：<code>{{ result.original }}</code>
+                原始输入：<code>{{ inputText }}</code>
               </div>
-              <pre style="background:#f0f5ff;padding:16px;border-radius:6px;white-space:pre-wrap;font-size:14px;line-height:1.6;border-left:4px solid #409eff">{{ result.prompt }}</pre>
+              <pre style="background:#f0f5ff;padding:16px;border-radius:6px;white-space:pre-wrap;font-size:14px;line-height:1.6;border-left:4px solid #409eff">{{ result.optimized_prompt }}</pre>
               <div style="margin-top:8px">
                 <el-tag v-if="result.platform" effect="plain">{{ result.platform }}</el-tag>
-                <el-tag v-if="result.creative_level" type="success" effect="plain" style="margin-left:8px">创意等级 {{ result.creative_level }}/10</el-tag>
+                <el-tag v-if="result.duration_ms" type="success" effect="plain" style="margin-left:8px">创意等级 {{ result.duration_ms || "-" }}ms/10</el-tag>
               </div>
             </el-tab-pane>
 
@@ -115,14 +115,17 @@ const Workbench = {
                 分类采用三级流水线：关键词匹配 → 向量语义搜索 → LLM 兜底。
               </div>
               <el-descriptions :column="2" border>
-                <el-descriptions-item label="风格维度">{{ classResult.category || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="风格维度">
+                  <el-tag v-for="c in classResult.categories" :key="c" size="small" style="margin:2px">{{ c }}</el-tag>
+                  <span v-if="!classResult.categories?.length">-</span>
+                </el-descriptions-item>
                 <el-descriptions-item label="置信度">
                   <el-tag :type="classResult.confidence>0.8?'success':classResult.confidence>0.5?'warning':'danger'" size="small">
                     {{ (classResult.confidence * 100).toFixed(1) }}%
                   </el-tag>
                 </el-descriptions-item>
-                <el-descriptions-item label="次分类">{{ classResult.subcategory || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="分类方法">{{ classResult.method || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="匹配关键词">{{ classResult.keywords_found ? Object.keys(classResult.keywords_found).join(', ') : '-' }}</el-descriptions-item>
               </el-descriptions>
             </el-tab-pane>
 
@@ -157,7 +160,7 @@ const Workbench = {
             </el-tab-pane>
           </el-tabs>
 
-          <el-empty v-if="!result && !error" description="输入描述后点击「优化 Prompt」开始" style="padding:40px 0" />
+          <el-empty v-if="!result && !error && !loading" description="输入描述后点击「优化 Prompt」开始" style="padding:40px 0" />
         </el-card>
       </el-col>
 
@@ -221,6 +224,7 @@ const Workbench = {
   `,
   setup() {
     const input = ref('');
+    const inputText = ref('');
     const platform = ref('midjourney');
     const platforms = ref([
       {value:'midjourney', label:'🎨 Midjourney'},
@@ -262,7 +266,7 @@ const Workbench = {
       try {
         const d = await api.post('/v1/optimize', {prompt: input.value, platform: platform.value});
         if (d.detail) { error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail); return; }
-        result.value = d;
+        result.value = d; inputText.value = input.value;
       } catch(e) { error.value = String(e); }
       finally { loading.value = false; }
     }
@@ -275,13 +279,13 @@ const Workbench = {
       finally { classifying.value = false; }
     }
     async function evaluate() {
-      if (!result.value?.original || !result.value?.prompt) {
+      if (!result.value?.optimized_prompt) {
         error.value = '请先优化 prompt，再进行评估对比';
         return;
       }
       evaluating.value = true; error.value = '';
       try {
-        const d = await api.post('/v1/evaluate', {original: result.value.original, optimized: result.value.prompt});
+        const d = await api.post('/v1/evaluate', {original: result.value.prompt_original || result.value.input, optimized: result.value.optimized_prompt});
         if (d.scores) {
           evalResult.value = {
             scores: Object.entries(d.scores).map(([k,v]) => ({dimension: dimHints[k]||k, ...v})),
@@ -293,7 +297,7 @@ const Workbench = {
     }
     function clear() { input.value = ''; result.value = null; classResult.value = null; evalResult.value = null; error.value = ''; }
 
-    return { input, platform, platforms, loading, classifying, evaluating, result, classResult, evalResult, error,
+    return { input, inputText, platform, platforms, loading, classifying, evaluating, result, classResult, evalResult, error,
              activeHelps, dimHints, examples, exampleGroups, optimize, classify, evaluate, clear };
   }
 };
