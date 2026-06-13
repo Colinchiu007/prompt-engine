@@ -7,3 +7,4 @@ build/
 .env
 .env.local
 feedback_db.json
+keyword_weights.json

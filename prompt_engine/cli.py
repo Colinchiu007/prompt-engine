@@ -164,6 +164,13 @@ def _feedback(args):
 
     store = get_feedback_store()
 
+    if args.apply:
+        from prompt_engine.classifier import _apply_feedback_to_weights, _invalidate_weight_cache
+        count = _apply_feedback_to_weights()
+        _invalidate_weight_cache()
+        print(f"Applied {count} feedback entries to keyword weights.")
+        return
+
     if args.stats:
         stats = store.stats()
         print(f"Total:      {stats.total}")
@@ -222,6 +229,7 @@ def main():
     # feedback
     p_feedback = subparsers.add_parser("feedback", help="风格分类反馈 (查看/提交)")
     p_feedback.add_argument("--stats", action="store_true", help="查看统计")
+    p_feedback.add_argument("--apply", action="store_true", help="应用反馈数据调整关键词权重")
     p_feedback.add_argument("--recent", type=int, nargs="?", const=10, default=0,
                            help="查看最近 N 条反馈 (default: 10)")
     p_feedback.add_argument("prompt", nargs="?", default="", help="被分类的 prompt (提交反馈时)")

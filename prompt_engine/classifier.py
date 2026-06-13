@@ -222,7 +222,9 @@ def _keyword_match(prompt: str, max_score: float = 0.7) -> tuple[list[StyleCateg
                 continue
             matching_parts = sum(1 for p in kw_parts if p in prompt_lower)
             if matching_parts >= len(kw_parts) * 0.5:
-                scores[category] = scores.get(category, 0.0) + 0.8 * (matching_parts / max(len(kw_parts), 1))
+                # 权重因子：用户反馈驱动的关键词权重
+                weight = _get_weights().get(category.value, {}).get(kw_lower, 1.0)
+                scores[category] = scores.get(category, 0.0) + 0.8 * (matching_parts / max(len(kw_parts), 1)) * weight
 
     # 第三步：使用 CN_SYNONYMS 中的英文词进行补充匹配（cyberpunk, steampunk, gothic 等）
     for category, syns in CN_SYNONYMS.items():
@@ -662,3 +664,149 @@ def recommend_categories_for_style(style: str, top_k: int = 5) -> list[StyleCate
         return _STYLE_TYPE_CATEGORY_MAP["default"][:top_k]
     return _STYLE_TYPE_CATEGORY_MAP[key][:top_k]
 
+
+# ================================================================
+# 反馈驱动权重系统 — 用用户反馈自动优化关键词权重
+# ================================================================
+
+# 权重持久化文件路径
+_KW_WEIGHTS_PATH = Path(__file__).parent.parent / "keyword_weights.json"
+
+
+def _load_keyword_weights() -> dict[str, dict[str, float]]:
+    """加载关键词权重。返回 {category_db_key: {keyword_lower: weight}}."""
+    path = _KW_WEIGHTS_PATH
+    if path.exists():
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def _save_keyword_weights(weights: dict[str, dict[str, float]]):
+    """保存关键词权重."""
+    path = _KW_WEIGHTS_PATH
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(weights, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+def _get_weighted_score(category: StyleCategory, keyword: str, weights: dict) -> float:
+    """获取带权重的得分乘数（默认 1.0）。"""
+    cat_key = category.value
+    cat_weights = weights.get(cat_key, {})
+    return cat_weights.get(keyword.lower(), 1.0)
+
+
+def _apply_feedback_to_weights(feedback_path: str = "./feedback_db.json", boost_factor: float = 1.15,
+                                reduce_factor: float = 0.85) -> int:
+    """从反馈数据库读取反馈，调整关键词权重。
+
+    逻辑：
+    - 用户确认了 corrected_categories → 对 prompt 中匹配到的关键词权重 * boost_factor
+    - detected_categories 中存在但 corrected 中没有的（假阳性）→ 权重 * reduce_factor
+    - rating >= 4 且无 correction → 轻微 boost
+    - rating <= 2 且无 correction → 轻微 reduce
+
+    Returns:
+        处理的反馈条目数量
+    """
+    from prompt_engine.feedback import FeedbackStore
+    from prompt_engine.classifier import _CATEGORY_KEYWORDS
+
+    store = FeedbackStore(feedback_path)
+    weights = _load_keyword_weights()
+    cat_kws = _CATEGORY_KEYWORDS if _CATEGORY_KEYWORDS else _load_category_keywords()
+    count = 0
+
+    for entry in store._entries:
+        if not entry.rating:
+            continue
+        prompt_lower = entry.prompt.lower()
+        count += 1
+
+        # 分解 prompt 中的单词
+        prompt_words = set(re.findall(r"[a-zA-Z\u4e00-\u9fff]+", prompt_lower))
+
+        if entry.corrected_categories:
+            # 有修正：boost corrected, reduce detected-but-wrong
+            corrected_set = set(entry.corrected_categories)
+            detected_set = set(entry.detected_categories)
+
+            for cat_name in corrected_set:
+                if cat_name not in weights:
+                    weights[cat_name] = {}
+                # 寻找匹配的关键词并 boost
+                best_kw = _find_matching_keyword_in_prompt(prompt_words, cat_name, cat_kws)
+                if best_kw:
+                    old_w = weights[cat_name].get(best_kw, 1.0)
+                    weights[cat_name][best_kw] = round(min(old_w * boost_factor, 3.0), 4)
+
+            for cat_name in detected_set - corrected_set:
+                if cat_name not in weights:
+                    weights[cat_name] = {}
+                best_kw = _find_matching_keyword_in_prompt(prompt_words, cat_name, cat_kws)
+                if best_kw:
+                    old_w = weights[cat_name].get(best_kw, 1.0)
+                    weights[cat_name][best_kw] = round(max(old_w * reduce_factor, 0.1), 4)
+        elif entry.rating >= 4:
+            # 高分且无修正：轻微 boost 检测到的类别
+            for cat_name in entry.detected_categories:
+                if cat_name not in weights:
+                    weights[cat_name] = {}
+                weight = weights[cat_name].get(cat_name, 1.0)
+                weights[cat_name][cat_name] = round(min(weight * 1.05, 2.0), 4)
+        elif entry.rating <= 2:
+            # 低分且无修正：轻微 reduce 检测到的类别
+            for cat_name in entry.detected_categories:
+                if cat_name not in weights:
+                    weights[cat_name] = {}
+                weight = weights[cat_name].get(cat_name, 1.0)
+                weights[cat_name][cat_name] = round(max(weight * 0.9, 0.1), 4)
+
+    _save_keyword_weights(weights)
+    return count
+
+
+def _find_matching_keyword_in_prompt(
+    prompt_words: set[str], cat_name: str, cat_kws: dict
+) -> str | None:
+    """在 prompt 中找一个匹配该类别关键词的最优关键词。"""
+    for cat_enum, kws in cat_kws.items():
+        if cat_enum.value == cat_name:
+            for kw in kws:
+                kw_lower = kw.lower()
+                kw_parts = kw_lower.split()
+                # 检查是否至少部分匹配
+                matching = sum(1 for p in kw_parts if p in prompt_words)
+                if matching >= len(kw_parts) * 0.5 and matching > 0:
+                    return kw_lower
+                    # 优先返回中文同义词
+            for syn in _CATEGORY_DESCRIPTIONS.get(cat_enum, "").split("、"):
+                syn = syn.strip()
+                if syn and syn in " ".join(prompt_words):
+                    return syn
+                break
+    return None
+
+
+# 全局权重缓存
+_KEYWORD_WEIGHTS: dict[str, dict[str, float]] | None = None
+
+
+def _get_weights() -> dict[str, dict[str, float]]:
+    """获取全局权重（惰性加载）."""
+    global _KEYWORD_WEIGHTS
+    if _KEYWORD_WEIGHTS is None:
+        _KEYWORD_WEIGHTS = _load_keyword_weights()
+    return _KEYWORD_WEIGHTS
+
+
+def _invalidate_weight_cache():
+    """让权重缓存失效（新反馈应用后调用）."""
+    global _KEYWORD_WEIGHTS
+    _KEYWORD_WEIGHTS = None

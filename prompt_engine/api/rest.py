@@ -193,3 +193,13 @@ async def recent_feedback(limit: int = 10):
     """查看最近反馈。"""
     store = get_feedback_store()
     return store.recent(limit)
+
+
+@app.post("/v1/feedback/apply")
+async def apply_feedback(persist_path: str = "./feedback_db.json"):
+    """应用反馈数据调整关键词权重。"""
+    from prompt_engine.classifier import _apply_feedback_to_weights, _invalidate_weight_cache
+    from prompt_engine.feedback import get_feedback_store
+    count = _apply_feedback_to_weights(persist_path)
+    _invalidate_weight_cache()  # 让权重缓存失效，下次分类时重新加载
+    return {"applied_count": count, "message": f"Applied {count} feedback entries to keyword weights"}
