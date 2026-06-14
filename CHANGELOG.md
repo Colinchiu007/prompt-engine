@@ -265,6 +265,24 @@
 
 
 
+
+
+## [v0.13.0] — 2026-06-13
+
+### 新增
+
+- **README 英文版** — `README.en.md` 完整英文文档，7KB 覆盖所有功能
+- **GitHub Actions 徽章** — README.md + README.en.md 顶部显示 CI 状态
+- **PyPI 发布配置** — `pyproject.toml` 补充 `[project]` 字段（name/license/classifiers）
+
+### 改进
+
+- 中文 README.md 保持不动，新增英文版独立维护
+- README.en.md 覆盖：Quick Start / CLI / REST API / Architecture / Configuration / Contributing
+
+### 测试
+
+- 212/212 测试通过
 ## [v0.12.0] — 2026-06-13
 
 ### 新增

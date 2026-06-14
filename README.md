@@ -1,5 +1,8 @@
 # Prompt Engine — 图片生成提示词优化引擎
 
+[![Tests](https://github.com/Colinchiu007/prompt-engine/actions/workflows/test.yml/badge.svg)](https://github.com/Colinchiu007/prompt-engine/actions)
+
+
 一个轻量级的 Python 引擎模块，将用户原始提示词自动优化为适合主流 AI 图片生成平台的高质量提示词。支持正向优化、逆向工程和 prompt 扩写。
 
 ## 特性
@@ -353,7 +356,7 @@ prompt-engine/
 │   ├── templates/         # 风格模板引擎
 │   ├── prompts_db/        # 优质提示词数据库
 │   └── image/             # 图片分析（逆向工程）
-├── tests/                  # 测试（207 个用例，mock 隔离）
+├── tests/                  # 测试（212 个用例，mock 隔离）
 ├── examples/               # 使用示例
 │   ├── sdk_usage.py
 │   ├── seed_rag_from_gptimage2.py
@@ -395,7 +398,7 @@ class MyPlatformStrategy(BaseStrategy):
 pytest -v
 ```
 
-全部 207 个测试通过，使用 mock 隔离，无需真实 API Key。
+全部 212 个测试通过，使用 mock 隔离，无需真实 API Key。
 
 ## 开发对接
 
