@@ -78,7 +78,23 @@ const Workbench = {
             placeholder="输入描述，如：a majestic cat sitting on a velvet throne in golden hour light" />
 
           <div style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <el-select v-model="platform" style="width:160px" placeholder="选择平台">
+            <el-select v-model="platform" style="width:140px" placeholder="选择平台">
+            </el-select>
+            <el-select v-model="style" style="width:140px" placeholder="选择风格(可选)" clearable>
+              <el-option value="" label="自动检测(默认)" />
+              <el-option value="landscape" label="🏞️ 风景" />
+              <el-option value="watercolor" label="🎨 水彩" />
+              <el-option value="oil_painting" label="🖼️ 油画" />
+              <el-option value="anime" label="🎬 动漫" />
+              <el-option value="cyberpunk" label="🌃 赛博朋克" />
+              <el-option value="fantasy" label="🧙 奇幻" />
+              <el-option value="minimalist" label="◻️ 极简" />
+              <el-option value="pixel" label="🟦 像素" />
+              <el-option value="photography" label="📷 摄影" />
+              <el-option value="abstract" label="🌀 抽象" />
+              <el-option value="cartoon" label="🎭 卡通" />
+              <el-option value="portrait" label="👤 人像" />
+              <el-option value="realistic" label="🌍 写实" />
               <el-option v-for="p in platforms" :key="p.value" :label="p.label" :value="p.value" />
             </el-select>
 
@@ -99,6 +115,19 @@ const Workbench = {
               <el-icon style="margin-right:4px"><DataAnalysis/></el-icon> 评估对比
             </el-button>
             <el-button @click="clear" text>清空</el-button>
+          </div>
+
+          <div style="margin:12px 0;padding:12px;background:#f0f5ff;border-radius:6px;border-left:3px solid #409eff">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:13px;color:#409eff;font-weight:bold">✍️ 扩写</span>
+              <el-input v-model="rewriteInput" style="width:240px" placeholder="输入简短描述" size="small" />
+              <el-button type="primary" size="small" @click="doRewrite" :loading="rewriting">扩写</el-button>
+              <span v-if="rewriteResult" style="font-size:11px;color:#909399">{{ rewriteResult.duration_ms }}ms</span>
+            </div>
+            <div v-if="rewriteResult" style="margin-top:8px;font-size:13px;line-height:1.5">
+              {{ rewriteResult.optimized_prompt }}
+              <el-button text size="small" @click="input=rewriteResult.optimized_prompt; rewriteResult=null">📋 填入输入框</el-button>
+            </div>
           </div>
 
           <div style="margin-bottom:8px">
@@ -287,6 +316,11 @@ const Workbench = {
   setup() {
     const input = ref('');
     const inputText = ref('');
+    const style = ref('');
+    const rewriteInput = ref('');
+    const rewriteResult = ref(null);
+    const rewriting = ref(false);
+    const keywords = ref([]);
     const mode = ref('single');  // 'single' | 'batch'
     const batchResults = ref([]);
     const batchRunning = ref(false);
@@ -343,11 +377,30 @@ const Workbench = {
       });
     }
 
+    async function loadKeywords() {
+      try {
+        const d = await api.get('/v1/keywords');
+        keywords.value = d;
+      } catch(e) {}
+    }
+    loadKeywords();
+
+    async function doRewrite() {
+      if (!rewriteInput.value.trim()) return;
+      rewriting.value = true; rewriteResult.value = null;
+      try {
+        const d = await api.post('/v1/rewrite', {prompt: rewriteInput.value, platform: platform.value});
+        if (d.detail) { error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail); }
+        else { rewriteResult.value = d; }
+      } catch(e) { error.value = String(e); }
+      finally { rewriting.value = false; }
+    }
+
     async function optimize() {
       if (!input.value.trim()) return;
       loading.value = true; result.value = null; classResult.value = null; evalResult.value = null; error.value = '';
       try {
-        const d = await api.post('/v1/optimize', {prompt: input.value, platform: platform.value});
+        const d = await api.post('/v1/optimize', {prompt: input.value, platform: platform.value, style: style.value || null});
         if (d.detail) { error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail); return; }
         result.value = d; inputText.value = input.value;
       } catch(e) { error.value = String(e); }

@@ -333,6 +333,35 @@ async def stats_platforms():
     ]
 
 
+
+# ── 关键词端点 (F10) ──────────────────────────
+from prompt_engine.keyword_injector import load_mj_style_db
+
+@app.get("/v1/keywords")
+async def list_keywords(platform: str = "midjourney"):
+    """返回指定平台的可用关键词列表"""
+    from prompt_engine.strategies import get_strategy
+    strategy_cls = get_strategy(platform.replace("_", "-").replace(" ", "").lower())
+    if not strategy_cls:
+        return {"keywords": [], "platform": platform, "count": 0}
+    # 读取 MJ 关键词库
+    mj_db = load_mj_style_db()
+    if not mj_db:
+        return {"keywords": [], "platform": platform, "count": 0}
+    # 提取所有关键词
+    all_keywords = set()
+    for style_keywords in mj_db.values():
+        if isinstance(style_keywords, list):
+            for kw in style_keywords:
+                if isinstance(kw, str) and kw.strip():
+                    all_keywords.add(kw.strip())
+                elif isinstance(kw, dict):
+                    text = kw.get("text", kw.get("keyword", ""))
+                    if text:
+                        all_keywords.add(text.strip())
+    keywords = sorted(all_keywords)[:100]
+    return {"keywords": keywords, "platform": platform, "count": len(keywords)}
+
 # ── 静态文件服务 (最后挂载) ────────────────────────
 
 import os
