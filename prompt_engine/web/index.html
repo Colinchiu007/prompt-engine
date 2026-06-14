@@ -34,9 +34,10 @@
       </el-menu>
     </el-header>
     <el-main style="background:#f5f7fa;padding:20px">
-      <Workbench v-if="tab==='workbench'" />
-      <Dashboard v-if="tab==='dashboard'" />
-      <Settings v-if="tab==='settings'" />
+
+      <div v-if="tab==='workbench'"><Workbench /></div>
+      <div v-if="tab==='dashboard'"><Dashboard /></div>
+      <div v-if="tab==='settings'"><Settings /></div>
     </el-main>
   </el-container>
 </div>
@@ -323,7 +324,7 @@ const Workbench = {
       }
       evaluating.value = true; error.value = '';
       try {
-        const d = await api.post('/v1/evaluate', {original: result.value.prompt_original || result.value.input, optimized: result.value.optimized_prompt});
+        const d = await api.post('/v1/evaluate', {original: inputText.value || result.value.optimized_prompt, optimized: result.value.optimized_prompt});
         if (d.scores) {
           evalResult.value = {
             scores: Object.entries(d.scores).map(([k,v]) => ({dimension: dimHints[k]||k, ...v})),
@@ -514,6 +515,9 @@ const Dashboard = {
   }
 };
 
+
+
+
 // ── Settings ─────────────────────────────────────
 const Settings = {
   template: `
@@ -693,7 +697,7 @@ const app = createApp({
   }
 });
 app.use(ElementPlus);
-app.mount('#app');
+app.mount('#app');;
 </script>
 </body>
 </html>
