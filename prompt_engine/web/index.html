@@ -46,6 +46,76 @@
 const { createApp, ref, reactive, onMounted, computed } = Vue;
 const { ElMessage } = ElementPlus;
 
+
+// ── EN→CN 翻译 (前端纯静态，0 成本) ──
+const EN_CN_DICT = {
+  'a':'一只', 'an':'一个', 'the':'',
+  'one':'一个', 'majestic':'威严的', 'beautiful':'美丽的',
+  'mysterious':'神秘的', 'ancient':'古老的', 'futuristic':'未来派的',
+  'cyberpunk':'赛博朋克', 'fantasy':'奇幻', 'magical':'魔幻的',
+  'cinematic':'电影感的', 'epic':'史诗般的', 'ethereal':'空灵的',
+  'surreal':'超现实的', 'vibrant':'鲜艳的', 'bright':'明亮的',
+  'dark':'黑暗的', 'serene':'平静的', 'cute':'可爱的', 'fierce':'凶猛的',
+  'powerful':'强大的', 'elegant':'优雅的', 'graceful':'优美的',
+  'royal':'皇家的', 'tiny':'微小的', 'huge':'巨大的', 'glowing':'发光的',
+  'cat':'猫', 'dog':'狗', 'bird':'鸟', 'horse':'马', 'tiger':'老虎',
+  'lion':'狮子', 'dragon':'龙', 'phoenix':'凤凰', 'wolf':'狼',
+  'eagle':'鹰', 'butterfly':'蝴蝶', 'fish':'鱼', 'flower':'花',
+  'tree':'树', 'mountain':'山', 'water':'水', 'sky':'天空', 'sea':'海',
+  'ocean':'海洋', 'forest':'森林', 'city':'城市', 'castle':'城堡',
+  'palace':'宫殿', 'warrior':'战士', 'queen':'女王', 'king':'国王',
+  'astronaut':'宇航员', 'robot':'机器人', 'alien':'外星人',
+  'girl':'女孩', 'woman':'女人', 'man':'男人', 'child':'孩子',
+  'feline':'猫科动物', 'mecha':'机甲',
+  'sitting':'端坐', 'standing':'站立', 'walking':'行走',
+  'running':'奔跑', 'flying':'飞翔', 'floating':'漂浮',
+  'looking':'凝视', 'gazing':'注视', 'riding':'骑乘',
+  'on':'在', 'in':'在', 'under':'在...下', 'above':'在...上',
+  'velvet':'天鹅绒', 'silk':'丝绸', 'gold':'金色', 'silver':'银色',
+  'crystal':'水晶', 'diamond':'钻石', 'throne':'宝座',
+  'golden hour':'金色时刻', 'sunset':'日落', 'sunrise':'日出',
+  'moonlight':'月光', 'starlight':'星光', 'twilight':'黄昏',
+  'volumetric':'体积光', 'rays':'光线', 'neon':'霓虹',
+  'candlelight':'烛光', 'soft':'柔和', 'ambient':'环境光',
+  'ultra-detailed':'超精细', 'highly detailed':'高度精细',
+  '8K':'8K', '4K':'4K', 'photorealistic':'照片级真实',
+  'realistic':'写实的', 'painterly':'绘画风', 'illustration':'插画',
+  'watercolor':'水彩', 'oil painting':'油画', 'digital art':'数字艺术',
+  'concept art':'概念艺术', 'matte painting':'哑光绘画',
+  'line art':'线稿', 'manga':'漫画', 'anime':'动漫',
+  'cartoon':'卡通', 'comic':'漫画', '3D':'三维', '2D':'二维',
+  'isometric':'等距视角', 'wide angle':'广角', 'telephoto':'长焦',
+  'macro':'微距', 'close-up':'特写', 'portrait':'肖像', 'headshot':'头像',
+  'bokeh':'散景', 'depth of field':'景深', 'sharp focus':'锐利对焦',
+  'red':'红色', 'blue':'蓝色', 'green':'绿色', 'yellow':'黄色',
+  'orange':'橙色', 'purple':'紫色', 'pink':'粉色', 'black':'黑色',
+  'white':'白色', 'gray':'灰色', 'brown':'棕色', 'golden':'金色的',
+  'emerald':'翠绿色', 'azure':'天蓝色', 'crimson':'深红色', 'ivory':'象牙白',
+  'scarlet':'猩红', 'violet':'紫色', 'warm':'暖色调', 'cool':'冷色调',
+  'composition':'构图', 'symmetric':'对称', 'leading lines':'引导线',
+  'bustling':'熙熙攘攘', 'chaotic':'混乱', 'calm':'平静', 'mood':'氛围',
+  'atmosphere':'气氛', 'peaceful':'宁静', 'dreamy':'梦幻',
+  'and':'与', 'with':'与', 'or':'或', 'very':'非常', 'extremely':'极其',
+  'highly':'高度', 'slightly':'略微', 'gently':'轻柔', 'slowly':'缓慢',
+  'no':'无', 'during':'在...期间', 'after':'在...之后', 'before':'在...之前'
+};
+
+function isEnglish(text) {
+  if (!text) return false;
+  let asciiCount = (text.match(/[a-zA-Z]/g) || []).length;
+  return asciiCount / text.length > 0.3;
+}
+
+function translateEN2CN(text) {
+  if (!text) return '';
+  const tokens = text.match(/\b\w+\b|[^\w\s]|\s+/g) || [];
+  return tokens.map(tok => {
+    if (/^\s+$/.test(tok)) return tok;
+    if (!/^[a-zA-Z]+$/.test(tok)) return tok;
+    return EN_CN_DICT[tok.toLowerCase()] || tok;
+  }).join('');
+}
+
 const api = {
   base: '',
   async post(path, body) {
@@ -195,6 +265,14 @@ const Workbench = {
                 </el-col>
               </el-row>
             </div>
+
+            <el-collapse v-if="result && result.optimized_prompt && isEnglish(result.optimized_prompt)" style="margin-top:12px">
+              <el-collapse-item title="🇨🇳 中文翻译（仅供参考，不用于图片生成）" name="translate">
+                <div style="font-size:13px;color:#909399;margin-bottom:8px">⚠️ 仅为展示。复制英文原文用于图片生成平台。</div>
+                <pre style="background:#fdf6e3;padding:12px;border-radius:4px;white-space:pre-wrap;font-size:13px;line-height:1.6;border-left:3px solid #f0c674">{{ translateEN2CN(result.optimized_prompt) }}</pre>
+                <el-button size="small" text @click="copyText(translateEN2CN(result.optimized_prompt))">📋 复制中文</el-button>
+              </el-collapse-item>
+            </el-collapse>
 
             <el-divider style="margin:20px 0"><span style="font-size:13px;color:#909399">🖼️ 图片预览</span></el-divider>
               <div class="section-desc">
