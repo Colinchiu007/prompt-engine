@@ -105,6 +105,9 @@ const Workbench = {
             <el-button v-if="mode==='single'" type="primary" @click="optimize" :loading="loading">
               <el-icon style="margin-right:4px"><Pointer/></el-icon> 优化 Prompt
             </el-button>
+            <el-button v-if="mode==='single'" @click="disturbOptimize" :loading="disturbLoading">
+              <el-icon style="margin-right:4px"><DataAnalysis/></el-icon> A/B 多版本
+            </el-button>
             <el-button v-if="mode==='batch'" type="success" @click="optimizeBatch" :loading="batchRunning">
               <el-icon style="margin-right:4px"><Files/></el-icon> 批量优化 ({{ inputRows.length }})
             </el-button>
@@ -170,9 +173,30 @@ const Workbench = {
               <div style="margin-top:8px">
                 <el-tag v-if="result.platform" effect="plain">{{ result.platform }}</el-tag>
                 <el-tag v-if="result.duration_ms" type="success" effect="plain" style="margin-left:8px">耗时 {{ result.duration_ms }}ms</el-tag>
+              <div style="margin-top:8px">
+                <el-button size="small" @click="submitFeedback('positive')" :type="feedbackType==='positive'?'success':'default'" :icon="Select">👍 满意</el-button>
+                <el-button size="small" @click="submitFeedback('negative')" :type="feedbackType==='negative'?'danger':'default'" :icon="Close">👎 不满意</el-button>
+                <span v-if="feedbackMsg" style="margin-left:8px;font-size:12px;color:#909399">{{ feedbackMsg }}</span>
+              </div>
               </div>
 
-              <el-divider style="margin:20px 0"><span style="font-size:13px;color:#909399">🖼️ 图片预览</span></el-divider>
+              <div v-if="disturbResults" style="margin:12px 0">
+              <div style="font-size:14px;font-weight:bold;margin-bottom:8px">📊 A/B 多版本对比</div>
+              <el-row :gutter="8">
+                <el-col :span="8" v-for="(c, idx) in disturbResults" :key="idx">
+                  <el-card shadow="never" :class="{'best-card': idx === bestIdx}">
+                    <div style="font-size:12px;color:#909399;margin-bottom:4px">版本 #{{ idx + 1 }}{{ idx === bestIdx ? ' (最佳)' : '' }}</div>
+                    <pre style="background:#f5f7fa;padding:8px;border-radius:4px;white-space:pre-wrap;font-size:12px;line-height:1.4;max-height:150px;overflow:auto">{{ c }}</pre>
+                    <div style="margin-top:4px;display:flex;gap:4px">
+                      <el-button size="small" text @click="input=c; disturbResults=null">选用</el-button>
+                      <el-button size="small" text @click="copyText(c)">复制</el-button>
+                    </div>
+                  </el-card>
+                </el-col>
+              </el-row>
+            </div>
+
+            <el-divider style="margin:20px 0"><span style="font-size:13px;color:#909399">🖼️ 图片预览</span></el-divider>
               <div class="section-desc">
                 选定模型，实时生成预览图。
                 <b style="color:#67c23a">Picsum Photos 免费真实图</b>开箱即用。
@@ -375,6 +399,38 @@ const Workbench = {
       }).catch(() => {
         ElMessage.error('复制失败');
       });
+    }
+
+    async function submitFeedback(type) {
+      if (!result.value?.optimized_prompt) return;
+      feedbackType.value = type;
+      try {
+        await api.post('/v1/feedback', {
+          entry_type: type,
+          prompt: inputText.value || '',
+          optimized_prompt: result.value.optimized_prompt,
+          platform: platform.value,
+          category: result.value.detected_categories?.categories?.[0]?.value || ''
+        });
+        feedbackMsg.value = '感谢反馈！';
+        setTimeout(() => { feedbackMsg.value = ''; }, 3000);
+      } catch(e) { feedbackMsg.value = '提交失败'; }
+    }
+
+    async function disturbOptimize() {
+      if (!input.value.trim()) return;
+      disturbLoading.value = true; disturbResults.value = null;
+      try {
+        const d = await api.post('/v1/disturb-optimize', {
+          prompt: input.value, platform: platform.value, num_candidates: 3
+        });
+        if (d.detail) { error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail); }
+        else if (d.candidates && d.candidates.length >= 3) {
+          disturbResults.value = d.candidates;
+          bestIdx.value = 1;  // 默认选中版本2 (最佳)
+        }
+      } catch(e) { error.value = String(e); }
+      finally { disturbLoading.value = false; }
     }
 
     async function loadKeywords() {

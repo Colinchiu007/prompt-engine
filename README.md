@@ -353,7 +353,7 @@ prompt-engine/
 │   ├── templates/         # 风格模板引擎
 │   ├── prompts_db/        # 优质提示词数据库
 │   └── image/             # 图片分析（逆向工程）
-├── tests/                  # 测试（203 个用例，mock 隔离）
+├── tests/                  # 测试（207 个用例，mock 隔离）
 ├── examples/               # 使用示例
 │   ├── sdk_usage.py
 │   ├── seed_rag_from_gptimage2.py
@@ -395,7 +395,7 @@ class MyPlatformStrategy(BaseStrategy):
 pytest -v
 ```
 
-全部 203 个测试通过，使用 mock 隔离，无需真实 API Key。
+全部 207 个测试通过，使用 mock 隔离，无需真实 API Key。
 
 ## 开发对接
 
