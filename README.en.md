@@ -8,6 +8,8 @@ An AI-powered image prompt optimization engine for Midjourney, Stable Diffusion,
 
 ---
 
+📖 Full user manual (Chinese): [docs/MANUAL.md](docs/MANUAL.md)
+
 ## What is Prompt Engine?
 
 Prompt Engine transforms simple text descriptions into high-quality prompts optimized for specific AI image generation platforms. It supports **7 platforms**, **25 visual style dimensions**, **RAG-enhanced optimization**, and **3 integration modes** (Python SDK, REST API, CLI).

@@ -5,6 +5,8 @@
 
 一个轻量级的 Python 引擎模块，将用户原始提示词自动优化为适合主流 AI 图片生成平台的高质量提示词。支持正向优化、逆向工程和 prompt 扩写。
 
+📖 完整使用指南见 [docs/MANUAL.md](docs/MANUAL.md)
+
 ## 特性
 
 - 🎯 **多平台适配**：Midjourney / Stable Diffusion / DALL·E / 通义万相 / 文心一格 / 即梦 / 通用
