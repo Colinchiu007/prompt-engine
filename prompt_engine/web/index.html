@@ -276,7 +276,8 @@ const Workbench = {
     const evalResult = ref(null);
     const error = ref('');
     const activeHelps = ref(['basic']);
-    const previewModel = ref('pollinations');
+    const previewModel = ref('picsum');
+    const imageModelsData = ref([]);
     const imageModels = ref([]);
     const previewUrl = ref('');
     const previewing = ref(false);
@@ -335,9 +336,9 @@ const Workbench = {
     function clear() { input.value = ''; result.value = null; classResult.value = null; evalResult.value = null; error.value = ''; }
 
     // 加载图片模型清单
-    api.get('/v1/image-models').then(m => { imageModels.value = m; });
-    // 默认 pollinations 在前
-    setTimeout(() => { if (!imageModels.value.length) imageModels.value = [{id:'pollinations',name:'Pollinations',requires_key:false}]; }, 1000);
+    api.get('/v1/image-models').then(m => { imageModelsData.value = m; });
+    // 默认 picsum 在前
+    setTimeout(() => { if (!imageModels.value.length) imageModelsData.value = [{id:'picsum',name:'Picsum Photos',requires_key:false}]; }, 1000);
 
     async function generatePreview() {
       if (!result.value?.optimized_prompt) return;
@@ -589,7 +590,7 @@ const Settings = {
           </template>
           <div class="section-desc">
             prompt-engine 内置 16+ 主流图片生成模型。
-            <b>Pollinations</b> 完全免费无需 Key，开箱即用。
+            <b>Picsum Photos</b> 完全免费真实图片，开箱即用。
             其他模型需在下方填写对应 API Key（重启服务生效）。
           </div>
           <el-table :data="imageModels" stripe size="small" :show-header="true">
@@ -659,7 +660,7 @@ const Settings = {
       } catch(e) {
         // Fallback 14 model list
         imageModels.value = [
-          {id:'pollinations',name:'Pollinations AI',provider:'Pollinations',requires_key:false,description:'免费，无需 API Key'},
+          {id:'picsum',name:'Picsum Photos',provider:'Picsum',requires_key:false,description:'免费真实图片，开箱即用'},
           {id:'dall-e-3',name:'DALL-E 3',provider:'OpenAI',requires_key:true,description:'OpenAI 高质量图'},
         ];
       }
