@@ -43,7 +43,8 @@
 </div>
 
 <script>
-const { createApp, ref, reactive, onMounted } = Vue;
+const { createApp, ref, reactive, onMounted, computed } = Vue;
+const { ElMessage } = ElementPlus;
 
 const api = {
   base: '',
@@ -81,8 +82,15 @@ const Workbench = {
               <el-option v-for="p in platforms" :key="p.value" :label="p.label" :value="p.value" />
             </el-select>
 
-            <el-button type="primary" @click="optimize" :loading="loading">
+            <el-radio-group v-model="mode" size="small" style="margin-right:8px">
+              <el-radio-button label="single">单条</el-radio-button>
+              <el-radio-button label="batch">批量</el-radio-button>
+            </el-radio-group>
+            <el-button v-if="mode==='single'" type="primary" @click="optimize" :loading="loading">
               <el-icon style="margin-right:4px"><Pointer/></el-icon> 优化 Prompt
+            </el-button>
+            <el-button v-if="mode==='batch'" type="success" @click="optimizeBatch" :loading="batchRunning">
+              <el-icon style="margin-right:4px"><Files/></el-icon> 批量优化 ({{ inputRows.length }})
             </el-button>
             <el-button @click="classify" :loading="classifying">
               <el-icon style="margin-right:4px"><Search/></el-icon> 风格分类
@@ -102,7 +110,27 @@ const Workbench = {
             </el-tag>
           </div>
 
-          <el-alert v-if="error" :title="error" type="error" show-icon closable style="margin-bottom:12px" />
+          
+            <el-divider v-if="batchResults.length" style="margin:20px 0"><span style="font-size:13px;color:#909399">📦 批量结果 ({{ batchResults.length }})</span></el-divider>
+            <el-progress v-if="batchRunning" :percentage="batchProgressPercent" :status="batchProgressPercent === 100 ? 'success' : ''" style="margin-bottom:12px" />
+            <div v-if="batchResults.length" class="preview-grid">
+              <el-card v-for="(item, idx) in batchResults" :key="idx" shadow="never">
+                <template #header>
+                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">
+                    <span>#{{ idx + 1 }} - {{ item.prompt.slice(0, 18) }}{{ item.prompt.length > 18 ? '…' : '' }}</span>
+                    <el-tag v-if="item.error" type="danger" size="small">失败</el-tag>
+                    <el-tag v-else type="success" size="small">{{ item.result?.duration_ms || '...' }}ms</el-tag>
+                  </div>
+                </template>
+                <div v-if="item.error" style="color:#f56c6c;font-size:11px">{{ item.error }}</div>
+                <pre v-else style="background:#f0f5ff;padding:8px;border-radius:4px;white-space:pre-wrap;font-size:11px;line-height:1.4;max-height:100px;overflow:auto">{{ item.result?.optimized_prompt || '' }}</pre>
+                <div style="margin-top:4px;display:flex;gap:4px">
+                  <el-button v-if="item.result" size="small" text @click="copyText(item.result.optimized_prompt)">📋 复制</el-button>
+                </div>
+              </el-card>
+            </div>
+        
+        <el-alert v-if="error" :title="error" type="error" show-icon closable style="margin-bottom:12px" />
 
           <el-tabs v-if="result" type="border-card" style="margin-top:12px">
             <el-tab-pane label="✨ 优化结果">
@@ -259,6 +287,10 @@ const Workbench = {
   setup() {
     const input = ref('');
     const inputText = ref('');
+    const mode = ref('single');  // 'single' | 'batch'
+    const batchResults = ref([]);
+    const batchRunning = ref(false);
+    const batchProgressPercent = ref(0);
     const platform = ref('midjourney');
     const platforms = ref([
       {value:'midjourney', label:'🎨 Midjourney'},
@@ -299,6 +331,18 @@ const Workbench = {
       {title:'动物', items:['majestic white wolf with glowing blue eyes','孔雀在雨中开屏','golden retriever puppy in flower field']},
     ];
 
+    const inputRows = computed(() => {
+      return input.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+    });
+
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        ElMessage.success('已复制');
+      }).catch(() => {
+        ElMessage.error('复制失败');
+      });
+    }
+
     async function optimize() {
       if (!input.value.trim()) return;
       loading.value = true; result.value = null; classResult.value = null; evalResult.value = null; error.value = '';
@@ -308,6 +352,32 @@ const Workbench = {
         result.value = d; inputText.value = input.value;
       } catch(e) { error.value = String(e); }
       finally { loading.value = false; }
+    }
+
+    async function optimizeBatch() {
+      const prompts = inputRows.value.slice(0, 10);
+      if (prompts.length === 0) {
+        ElMessage.warning('请输入至少一行 prompt（每行一个）');
+        return;
+      }
+      batchRunning.value = true;
+      batchResults.value = [];
+      batchProgressPercent.value = 0;
+      for (let i = 0; i < prompts.length; i++) {
+        try {
+          const d = await api.post('/v1/optimize', {prompt: prompts[i], platform: platform.value});
+          if (d.detail) {
+            batchResults.value.push({prompt: prompts[i], result: null, error: typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail)});
+          } else {
+            batchResults.value.push({prompt: prompts[i], result: d, error: null});
+          }
+        } catch(e) {
+          batchResults.value.push({prompt: prompts[i], result: null, error: String(e)});
+        }
+        batchProgressPercent.value = Math.round(((i + 1) / prompts.length) * 100);
+      }
+      batchRunning.value = false;
+      ElMessage.success(`批量优化完成：${batchResults.value.filter(r => !r.error).length}/${prompts.length} 成功`);
     }
     async function classify() {
       if (!input.value.trim()) return;
@@ -352,8 +422,9 @@ const Workbench = {
       finally { previewing.value = false; }
     }
 
-    return { input, inputText, platform, platforms, loading, classifying, evaluating, result, classResult, evalResult, error,
-             activeHelps, dimHints, examples, exampleGroups, optimize, classify, evaluate, clear,
+    return { input, inputText, mode, batchResults, batchRunning, batchProgressPercent, inputRows,
+             platform, platforms, loading, classifying, evaluating, result, classResult, evalResult, error,
+             activeHelps, dimHints, examples, exampleGroups, optimize, optimizeBatch, classify, evaluate, clear, copyText,
              previewModel, imageModels, previewUrl, previewing, generatePreview };
   }
 };

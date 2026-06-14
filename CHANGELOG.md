@@ -259,6 +259,27 @@
 ## [v0.8.0] — 2026-06-13
 
 
+
+
+## [v0.10.0] — 2026-06-13
+
+### 新增
+
+- **Dockerfile + docker-compose** - 一键容器化部署（`docker-compose up`）
+- **GitHub Actions CI** - PR 推 master 自动跑 212 个测试
+- **批量优化 UI** - Workbench 单条/批量模式切换，max 10 prompts/批
+
+### 改进
+
+- Workbench 增加模式切换（单条 ↔ 批量）
+- 批量进度条 + 每条独立结果 + 复制按钮
+- v-if 包裹方式统一（div wrapper）
+
+### 测试
+
+- 212 tests (198 + 8 v0.10.0 + 6 E2E)
+- TDD: 4 RED → GREEN（Dockerfile + workflow + 批量 UI）
+- CI 工作流：unit + E2E + health check
 ## [v0.9.3] — 2026-06-13
 
 ### 改动

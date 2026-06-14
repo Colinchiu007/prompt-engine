@@ -5,7 +5,7 @@
 import os
 import pytest
 
-SERVER_URL = os.environ.get("TEST_SERVER_URL", "http://127.0.0.1:8090")
+SERVER_URL = os.environ.get("TEST_SERVER_URL", "http://127.0.0.1:8094")
 
 
 @pytest.fixture(scope="module")
@@ -42,7 +42,7 @@ class TestWebE2E:
         debug = page.locator("#debug-tab")
         if debug.count() > 0:
             print(f"DEBUG TAB: {debug.first.inner_text()}")
-        buttons = page.locator("button:has-text('优化')")
+        buttons = page.locator("button:has-text('优化 Prompt')")
         assert buttons.count() >= 1, f"Workbench 优化按钮未渲染. el-card={el_count}"
         textarea = page.locator("textarea").first
         assert textarea.is_visible(), "textarea 不可见"
