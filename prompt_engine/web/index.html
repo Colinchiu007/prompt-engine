@@ -450,6 +450,14 @@ const Workbench = {
     const imageModels = ref([]);
     const previewUrl = ref('');
     const previewing = ref(false);
+    const feedbackMsg = ref('');
+    const feedbackType = ref(null);
+    const disturbLoading = ref(false);
+    const disturbResults = ref(null);
+    const bestIdx = ref(0);
+    const inputRows = computed(() => {
+      return input.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+    });
     const dimHints = {clarity:'清晰度',specificity:'具体性',creativity:'创意性',actionability:'可操作性',platform_best:'平台适配'};
 
     const examples = [
@@ -466,10 +474,6 @@ const Workbench = {
       {title:'科幻', items:['cyberpunk hacker in neon-lit alley','steampunk airship above clouds','futuristic city with flying cars at dusk']},
       {title:'动物', items:['majestic white wolf with glowing blue eyes','孔雀在雨中开屏','golden retriever puppy in flower field']},
     ];
-
-    const inputRows = computed(() => {
-      return input.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
-    });
 
     function copyText(text) {
       navigator.clipboard.writeText(text).then(() => {
@@ -612,7 +616,11 @@ const Workbench = {
     return { input, inputText, mode, batchResults, batchRunning, batchProgressPercent, inputRows,
              platform, platforms, loading, classifying, evaluating, result, classResult, evalResult, error,
              activeHelps, dimHints, examples, exampleGroups, optimize, optimizeBatch, classify, evaluate, clear, copyText,
-             previewModel, imageModels, previewUrl, previewing, generatePreview };
+             previewModel, imageModels, previewUrl, previewing, generatePreview,
+             style, rewriteInput, rewriteResult, rewriting, keywords,
+             feedbackMsg, feedbackType, submitFeedback,
+             disturbLoading, disturbResults, bestIdx, disturbOptimize,
+             EN_CN_DICT, isEnglish, translateEN2CN };
   }
 };
 
