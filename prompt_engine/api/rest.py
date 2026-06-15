@@ -31,6 +31,8 @@ def get_optimizer() -> Optimizer:
 @app.post("/v1/optimize", response_model=OptimizeResult)
 async def optimize(request: OptimizeRequest):
     """优化单条提示词"""
+    from prompt_engine.rest_validation import _validate_prompt
+    _validate_prompt(request.prompt)
     try:
         optimizer = get_optimizer()
         result = optimizer.optimize(request)

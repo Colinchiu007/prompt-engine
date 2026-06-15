@@ -253,6 +253,12 @@ Pick the most relevant ones naturally:
 - Color precision: "navy blue", "mint green", "warm amber tones"
 - Expression: "serious, with a slight smile", "focused and expectant"
 
+## Short prompt handling
+IMPORTANT: If user input is very short (less than 5 characters/words), DO NOT auto-generate an unrelated scene.
+- If the input has no visual meaning (like "好吧", "可以", "好的", "ok"), generate a minimal, neutral scene based only on what's given.
+- Never add people, animals, or specific objects that weren't mentioned.
+- When in doubt, create an abstract pattern or gradient in the requested colors.
+
 ## Output rules
 1. Output ONLY the prompt — NO explanations, NO labels
 2. Preserve user's core semantic
