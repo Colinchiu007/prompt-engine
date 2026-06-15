@@ -98,7 +98,15 @@ const EN_CN_DICT = {
   'atmosphere':'气氛', 'peaceful':'宁静', 'dreamy':'梦幻',
   'and':'与', 'with':'与', 'or':'或', 'very':'非常', 'extremely':'极其',
   'highly':'高度', 'slightly':'略微', 'gently':'轻柔', 'slowly':'缓慢',
-  'no':'无', 'during':'在...期间', 'after':'在...之后', 'before':'在...之前'
+  'no':'无', 'during':'在...期间', 'after':'在...之后', 'before':'在...之前',
+  'wide shot':'远景', 'medium shot':'中景', 'long shot':'远景',
+  'close up':'特写', 'of':'的', 'traditional':'传统的',
+  'market':'市场', 'deep':'深', 'tones':'色调',
+  'wooden':'木制的', 'architecture':'建筑',
+  'lantern':'灯笼', 'lanterns':'灯笼', 'award-winning':'获奖的',
+  'photography':'摄影', 'shallow':'浅',
+  'wide':'广角', 'shot':'镜头', 'depth':'景深',
+  'award':'获奖', 'winning':'优胜',
 };
 
 function isEnglish(text) {
@@ -292,7 +300,7 @@ const Workbench = {
               </el-row>
             </div>
 
-            <el-collapse v-if="result && result.optimized_prompt && isEnglish(result.optimized_prompt)" style="margin-top:12px">
+            <el-collapse v-if="result && result.optimized_prompt && isEnglish(result.optimized_prompt)" v-model="activeTranslate" style="margin-top:12px">
               <el-collapse-item title="🇨🇳 中文翻译（仅供参考，不用于图片生成）" name="translate">
                 <div style="font-size:13px;color:#909399;margin-bottom:8px">⚠️ 仅为展示。复制英文原文用于图片生成平台。</div>
                 <pre style="background:#fdf6e3;padding:12px;border-radius:4px;white-space:pre-wrap;font-size:13px;line-height:1.6;border-left:3px solid #f0c674">{{ translateEN2CN(result.optimized_prompt) }}</pre>
@@ -470,6 +478,7 @@ const Workbench = {
     const classResult = ref(null);
     const evalResult = ref(null);
     const error = ref('');
+    const activeTranslate = ref(['translate']);
     const activeHelps = ref(['basic']);
     const previewModel = ref('picsum');
     const imageModelsData = ref([]);
@@ -676,7 +685,7 @@ const Workbench = {
 
     return { input, inputText, mode, batchResults, batchRunning, batchProgressPercent, inputRows,
              platform, platforms, loading, classifying, evaluating, result, classResult, evalResult, error,
-             activeHelps, dimHints, examples, exampleGroups, optimize, optimizeBatch, classify, evaluate, clear, copyText,
+             activeHelps, activeTranslate, dimHints, examples, exampleGroups, optimize, optimizeBatch, classify, evaluate, clear, copyText,
              previewModel, imageModels, previewUrl, previewing, generatePreview,
              style, rewriteInput, rewriteResult, rewriting, keywords,
              feedbackMsg, feedbackType, submitFeedback, showGuide, guideTopics, guideExamples, applyGuideTopic, applyGuideExample,

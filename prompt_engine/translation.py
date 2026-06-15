@@ -138,8 +138,18 @@ EN_CN_DICT = {
     'during': '在...期间', 'after': '在...之后', 'before': '在...之前',
     'very': '非常', 'extremely': '极其', 'highly': '高度',
     'slightly': '略微', 'gently': '轻柔', 'slowly': '缓慢',
-    'quickly': '快速', 'brightly': '明亮地', 'darkly': '黑暗地',
-}
+ 'quickly': '快速', 'brightly': '明亮地', 'darkly': '黑暗地',
+ # 补充常见 MJ 术语
+ 'wide shot': '远景', 'medium shot': '中景', 'long shot': '远景',
+ 'close up': '特写', 'of': '的', 'traditional': '传统的',
+ 'market': '市场', 'deep': '深', 'tones': '色调',
+ 'wooden': '木制的', 'wood': '木', 'architecture': '建筑',
+ 'lantern': '灯笼', 'lanterns': '灯笼', 'award-winning': '获奖的',
+ 'photography': '摄影', 'shallow': '浅',
+     # 补充常见 MJ 术语（单字，解决分词不匹配多词条的问题）
+     'wide': '广角', 'shot': '镜头', 'depth': '景深',
+     'award': '获奖', 'winning': '优胜',
+ }
 
 
 def is_english(text: str) -> bool:
