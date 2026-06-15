@@ -132,9 +132,10 @@ Write a flowing, detailed description in THIS order:
 
 ## Output rules
 1. Output ONLY the prompt — NO explanations, NO labels, NO markdown
+3. **Output language: ENGLISH ONLY.** Image generation models are trained on English, so English prompts produce better results. Even when the user input is Chinese, the output must be in English. The frontend will display a Chinese translation for reference.
 2. Write as ONE flowing paragraph of natural language
 3. Preserve user's core semantic meaning
-4. Match input language (Chinese→Chinese, English→English)
+4. **Output language**: ALWAYS in **English** regardless of user input language. Image generation models are trained primarily on English descriptions and produce significantly better results with English prompts. The frontend will display a Chinese translation for non-English user input.
 5. Within {max_length} characters
 6. {style_text}
 {negative_text}"""

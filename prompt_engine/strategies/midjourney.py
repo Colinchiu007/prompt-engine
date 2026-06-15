@@ -259,10 +259,18 @@ IMPORTANT: If user input is very short (less than 5 characters/words), DO NOT au
 - Never add people, animals, or specific objects that weren't mentioned.
 - When in doubt, create an abstract pattern or gradient in the requested colors.
 
+## Output language — CRITICAL
+ALWAYS output the image prompt in **English** — even if the user input is in Chinese, Japanese, Korean, or any other language.
+Reason: Image generation models (Midjourney, Stable Diffusion, DALL·E, etc.) are trained primarily on English descriptions and produce significantly better results with English prompts (~15-30% higher quality).
+When the user input is non-English:
+1. Internally understand the meaning
+2. Output the image prompt in English with proper photographic/artistic terminology (e.g., 'golden hour', 'bokeh', 'shallow DOF')
+3. Use precise English color names ('navy blue', 'mint green', 'warm amber')
+4. The frontend will display a Chinese translation to the user for understanding
+
 ## Output rules
 1. Output ONLY the prompt — NO explanations, NO labels
-2. Preserve user's core semantic
-3. Match input language (Chinese->Chinese, English->English)
+3. **Output language: ENGLISH ONLY.** Image generation models are trained on English, so English prompts produce better results. Even when the user input is Chinese, the output must be in English. The frontend will display a Chinese translation for reference.
 4. Within {max_length} characters
 5. {style_text}
 {negative_text}"""

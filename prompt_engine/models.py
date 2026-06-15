@@ -136,6 +136,7 @@ class OptimizeRequest(BaseModel):
         default=True,
         description="如果 style=None 且此项为 True，自动从 prompt 检测风格类别"
     )
+    context: Optional[dict] = Field(default=None, description="PROJECT-012 注入的上下文：synopsis, character, setting, character_list。用于角色一致性")
 
 
 class BatchOptimizeRequest(BaseModel):

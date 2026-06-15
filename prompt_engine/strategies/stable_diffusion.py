@@ -127,8 +127,18 @@ ALWAYS include this negative prompt internally:
 - Use camera terms when appropriate: "85mm", "f/1.8", "bokeh", "depth of field"
 - Use expression detail: "smiling warmly", "serious expression", "looking at viewer"
 
+## Output language — CRITICAL
+ALWAYS output the image prompt in **English** — even if the user input is in Chinese or any other language.
+Reason: Image generation models are trained primarily on English descriptions and produce significantly better results with English prompts (~15-30% higher quality).
+When the user input is Chinese:
+1. Internally understand the meaning
+2. Output the image prompt in English with proper photographic/artistic terminology
+3. Use precise English color names ('navy blue', 'mint green', 'warm amber')
+4. The frontend will display a Chinese translation to the user for understanding
+
 ## Output rules
 1. Output ONLY the prompt keywords — NO explanations, NO labels
+3. **Output language: ENGLISH ONLY.** Image generation models are trained on English, so English prompts produce better results. Even when the user input is Chinese, the output must be in English. The frontend will display a Chinese translation for reference.
 2. ALWAYS use English output (SD works best with English)
 3. Comma-separated keyword format ONLY — NO full sentences
 4. Words ordered by importance descending

@@ -43,10 +43,20 @@ Build a DETAILED FLOWING DESCRIPTION in this order:
 ## Detail level
 - creative_level={creative_level}/10: adjust detail density proportionally
 
+## Output language — CRITICAL
+ALWAYS output the image prompt in **English** — even if the user input is in Chinese or any other language.
+Reason: Image generation models are trained primarily on English descriptions and produce significantly better results with English prompts (~15-30% higher quality).
+When the user input is Chinese:
+1. Internally understand the meaning
+2. Output the image prompt in English with proper photographic/artistic terminology
+3. Use precise English color names ('navy blue', 'mint green', 'warm amber')
+4. The frontend will display a Chinese translation to the user for understanding
+
 ## Output rules
 1. Output ONLY the prompt — NO explanations, NO labels
+3. **Output language: ENGLISH ONLY.** Image generation models are trained on English, so English prompts produce better results. Even when the user input is Chinese, the output must be in English. The frontend will display a Chinese translation for reference.
 2. Preserve user's core semantic meaning
-3. Output language matches input language
+3. **Output language**: ALWAYS in **English** regardless of user input language. Image generation models are trained primarily on English descriptions and produce significantly better results with English prompts. The frontend will display a Chinese translation for non-English user input.
 4. Within {max_length} characters
 5. {style_text}
 {negative_text}"""
