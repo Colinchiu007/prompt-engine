@@ -19,6 +19,7 @@
     .resource-value { font-size:24px;font-weight:bold;color:#67c23a;margin-bottom:4px; }
     .resource-value small { font-size:12px;color:#909399;font-weight:normal; }
     .preview-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-top:12px; }
+    .hover-bg:hover { background:#e6f7ff !important; }
   </style>
 </head>
 <body>
@@ -232,7 +233,32 @@ const Workbench = {
               </el-card>
             </div>
         
-        <el-alert v-if="error" :title="error" type="error" show-icon closable style="margin-bottom:12px" />
+        <el-alert v-if="error && !showGuide" :title="error" type="error" show-icon closable style="margin-bottom:12px" />
+
+            <!-- 输入引导面板 -->
+            <el-card v-if="showGuide" shadow="never" style="margin-bottom:12px;border:1px solid #e6a23c">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div>
+                  <div style="font-size:15px;font-weight:bold;color:#e6a23c">💡 描述太简短了</div>
+                  <div style="font-size:12px;color:#909399;margin-top:4px">试试更详细地描述你想生成的画面</div>
+                </div>
+                <el-button size="small" text @click="showGuide=false">✕</el-button>
+              </div>
+              <div style="margin-bottom:12px">
+                <div style="font-size:13px;color:#606266;margin-bottom:6px">选择主题：</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <el-button v-for="t in guideTopics" :key="t.name" size="small" @click="applyGuideTopic(t)">{{ t.icon }} {{ t.name }}</el-button>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:13px;color:#606266;margin-bottom:6px">或一键使用示例：</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <div v-for="(ex, i) in guideExamples" :key="i" @click="applyGuideExample(ex)" style="cursor:pointer;padding:6px 10px;background:#f5f7fa;border-radius:4px;font-size:13px;line-height:1.4" class="hover-bg">
+                    📝 {{ ex }}
+                  </div>
+                </div>
+              </div>
+            </el-card>
 
           <el-tabs v-if="result" type="border-card" style="margin-top:12px">
             <el-tab-pane label="✨ 优化结果">
@@ -458,6 +484,34 @@ const Workbench = {
     const inputRows = computed(() => {
       return input.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
     });
+    const showGuide = ref(false);
+    const guideTopics = [
+      {name:'风景',icon:'🏞️',example:'sunset over mountain lake with mist'},
+      {name:'动物',icon:'🐱',example:'a majestic cat sitting on a velvet throne'},
+      {name:'人物',icon:'🧑',example:'portrait of a warrior queen with golden armor'},
+      {name:'科幻',icon:'🌃',example:'cyberpunk city at night with neon lights'},
+      {name:'抽象',icon:'🎨',example:'abstract fluid art with vibrant colors'},
+      {name:'奇幻',icon:'🧙',example:'enchanted forest with glowing mushrooms'},
+    ];
+    const guideExamples = [
+      '一只威严的猫端坐在天鹅绒宝座上',
+      '赛博朋克城市夜景霓虹灯光',
+      '梦幻森林中的魔法光斑',
+      'a majestic white wolf with glowing blue eyes',
+      'sunset over mountain lake with mist aurora borealis',
+    ];
+
+    function applyGuideTopic(t) {
+      input.value = t.example;
+      showGuide.value = false;
+      error.value = '';
+    }
+    function applyGuideExample(ex) {
+      input.value = ex;
+      showGuide.value = false;
+      error.value = '';
+    }
+
     const dimHints = {clarity:'清晰度',specificity:'具体性',creativity:'创意性',actionability:'可操作性',platform_best:'平台适配'};
 
     const examples = [
@@ -618,7 +672,7 @@ const Workbench = {
              activeHelps, dimHints, examples, exampleGroups, optimize, optimizeBatch, classify, evaluate, clear, copyText,
              previewModel, imageModels, previewUrl, previewing, generatePreview,
              style, rewriteInput, rewriteResult, rewriting, keywords,
-             feedbackMsg, feedbackType, submitFeedback,
+             feedbackMsg, feedbackType, submitFeedback, showGuide, guideTopics, guideExamples, applyGuideTopic, applyGuideExample,
              disturbLoading, disturbResults, bestIdx, disturbOptimize,
              EN_CN_DICT, isEnglish, translateEN2CN };
   }
