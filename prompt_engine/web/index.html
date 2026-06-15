@@ -593,7 +593,11 @@ const Workbench = {
       loading.value = true; result.value = null; classResult.value = null; evalResult.value = null; error.value = '';
       try {
         const d = await api.post('/v1/optimize', {prompt: input.value, platform: platform.value, style: style.value || null});
-        if (d.detail) { error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail); return; }
+                if (d.detail) {
+                  error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail);
+                  showGuide.value = d.detail && typeof d.detail === 'string' && (d.detail.includes('太简短') || d.detail.includes('Too short'));
+                  return;
+                }
         result.value = d; inputText.value = input.value;
       } catch(e) { error.value = String(e); }
       finally { loading.value = false; }
