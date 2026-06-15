@@ -1,6 +1,9 @@
 """FastAPI REST 服务层"""
+import logging
 from functools import lru_cache
 from fastapi import FastAPI, HTTPException
+
+logger = logging.getLogger(__name__)
 from prompt_engine.classifier import StyleCategoryClassifier
 from prompt_engine.models import (
     OptimizeRequest, BatchOptimizeRequest, OptimizeResult,
@@ -42,7 +45,8 @@ async def optimize(request: OptimizeRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("optimize failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal processing error")
 
 
 @app.post("/v1/optimize/batch", response_model=list[OptimizeResult])
@@ -70,7 +74,8 @@ async def reverse_engineer(request: ReverseRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("optimize failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal processing error")
 
 
 @app.get("/v1/platforms")
@@ -105,7 +110,8 @@ async def rewrite(request: RewriteRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("optimize failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal processing error")
 
 
 @app.post("/v1/disturb-optimize", response_model=OptimizeResult)
@@ -120,7 +126,8 @@ async def disturb_optimize(request: OptimizeRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("optimize failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal processing error")
 
 
 @app.post("/v1/classify", response_model=StyleCategoryResult)
@@ -135,7 +142,8 @@ async def classify_style(request: AutoStyleRequest):
         )
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("optimize failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal processing error")
 
 
 @app.get("/v1/styles/categories")
@@ -402,7 +410,7 @@ async def engine_resources():
                         rag_cases += len(d["items"])
                     elif "prompts" in d and isinstance(d["prompts"], list):
                         rag_cases += len(d["prompts"])
-            except:
+            except Exception:
                 pass
 
     # MJ 关键词
@@ -415,7 +423,7 @@ async def engine_resources():
                 mj_count = sum(len(v) if isinstance(v, list) else 0 for v in d.values())
             elif isinstance(d, list):
                 mj_count = len(d)
-        except:
+        except Exception:
             pass
     if mj_count == 0:
         mj_count = 2100
@@ -430,7 +438,7 @@ async def engine_resources():
             d = yaml.safe_load(wc.read_text())
             if isinstance(d, dict):
                 wildcards_count = sum(len(v) for v in d.values() if isinstance(v, list))
-        except:
+        except Exception:
             pass
 
     return {
@@ -497,7 +505,7 @@ import urllib.parse
 async def image_preview(request: dict):
     """生成图片预览 URL (不实际调 API，返回可访问的 URL 供前端 img 标签使用)."""
     prompt = request.get("prompt", "").strip()
-    model = request.get("model", "pollinations")
+    model = request.get("model", "picsum")
     width = request.get("width", 1024)
     height = request.get("height", 1024)
     seed = request.get("seed", -1)
@@ -505,9 +513,7 @@ async def image_preview(request: dict):
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt 不能为空")
 
-    # Pollinations 走公开 URL（不需要 API Key）
-    if model == "pollinations":
-        encoded = urllib.parse.quote(prompt)
+    # Picsum Photos 免费图片生成（基于 prompt hash 确定性）
     if model == "picsum":
         # Picsum Photos 免费图片生成（基于 prompt hash 确定性）
         import hashlib
