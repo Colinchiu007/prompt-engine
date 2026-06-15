@@ -282,12 +282,100 @@
 - `prompt_engine/translation.py` — Python 单元（200+ 词中英对照表 + 翻译函数）
 - Workbench 前端嵌入同款字典 + 函数（纯静态 0 成本）
 - 仅当原文 ASCII 比例 > 30% 才显示翻译区
-- 提示「仅供展示，请复制英文原文用于图片生成平台」
-## [v0.14.0] — 2026-06-13
-
-### 新增
-
-- **产品使用说明文档** — `docs/MANUAL.md`（11KB，7 章节，完整覆盖 Web/CLI/API/高级功能/部署/FAQ）
+|- 提示「仅供展示，请复制英文原文用于图片生成平台」
+|## [v0.16.0] — 2026-06-14
+|
+|### 新增
+|
+|- **输入验证 (F1)** — API 层中文 < 3 字/英文 < 3 词返回 400 + 友好提示「描述太简短」
+|- **System Prompt 改进 (F1.5)** — MJ/SD/DALL·E 等策略新增短文本处理规则，避免 LLM 自动生成无关画面
+|- **前端提示 (F2)** — Workbench 验证失败时显示中文引导文字
+|
+|### 新增文件
+|
+|| 文件 | 说明 |
+||------|------|
+|| `prompt_engine/rest_validation.py` | 输入验证逻辑（33 行） |
+|| `tests/test_v016_validation.py` | 验证测试（6 个） |
+|
+|### 变更
+|
+|- `prompt_engine/api/rest.py` — 优化端点集成输入验证
+|- `prompt_engine/strategies/midjourney.py` — 新增短文本处理规则
+|- `docs/PM-PRD-v0.16.0.md` — 产品需求文档
+|
+|## [v0.16.1] — 2026-06-14
+|
+|### 新增
+|
+|- **输入引导面板 (F1)** — 短文本拒绝时不再显示简单 error banner，改为交互式引导面板
+|- **主题按钮** — 6 个主题卡片（风景/动物/人物/科幻/抽象/奇幻），点击自动填充示例 prompt
+|- **一键示例** — 点击示例文本自动填入输入框
+|
+|### 变更
+|
+|- `prompt_engine/web/index.html` — 新增引导面板 UI（58 行）
+|- 点击[× 关闭]面板消失，正常错误仍显示 error banner
+|- `docs/PM-PRD-v0.16.1.md` — 产品需求文档
+|
+|### 修复
+|
+|- **Workbench 渲染修复** — `feedbackMsg`/`inputRows` 未声明导致 Vue 渲染异常
+|- **输入验证 fix** — 短文本（好吧/嗯/好的）自动拒绝
+|- 新增 `tests/test_qa_comprehensive.py` — QA 综合检查脚本（109 行）
+|
+|## [v0.17.0] — 2026-06-14
+|
+|### 变更
+|
+|- **速度优化** — 默认 max_length 500→300，优化耗时从 7s→4s
+|- **速度模式选择器** — Workbench 新增 dropdown 3 档：
+|
+|| 模式 | max_length | creative_level | 目标耗时 |
+||------|-----------|---------------|---------|
+|| ⚡ 快速 | 150 | 4 | ~2s |
+|| 🎯 标准（默认） | 300 | 6 | ~4s |
+|| 📖 详细 | 500 | 8 | ~7s |
+|
+|### 变更文件
+|
+|- `prompt_engine/models.py` — OptimizeRequest 默认 max_length 500→300
+|- `prompt_engine/web/index.html` — 速度模式下拉框（+9 行）
+|- `tests/test_v017_speed.py` — 速度测试（3 个）
+|- `docs/PM-PRD-v0.17.0.md` — 产品需求文档
+|
+|### 测试
+|
+|- 3 个新增速度测试全部通过
+|- 缓存命中仍保持 0ms
+|
+|## [v0.18.0] — 2026-06-14
+|
+|### 新增
+|
+|- **中文输入自动英文输出 (F1)** — 所有 7 个策略（MJ/SD/DALL·E/通义/文心/即梦/通用）的 system prompt 中「输出语言」规则改为"ENGLISH ONLY"，中文用户输入自动输出英文 prompt
+|- **检测逻辑 (F3)** — 输出几乎总是英文，`isEnglish()` 检测仍有效，中文翻译面板（v0.15.0）正常显示
+|
+|### 变更
+|
+|- 修改 7 个策略文件的 `build_system_prompt`：
+|  - `midjourney.py` / `stable_diffusion.py` / `dalle.py` / `tongyi.py`
+|  - `yizhang.py` / `jimeng.py` / `generic.py`
+|- `prompt_engine/models.py` — 默认语言策略调整
+|- `tests/test_v018_english_output.py` — 英文输出测试（3 个）
+|- `docs/PM-PRD-v0.18.0.md` — 产品需求文档
+|
+|### 验收
+|
+|- 输入「一只威严的猫」→ 输出英文
+|- 输入 "a majestic cat" → 输出英文
+|- 中文翻译面板仍正常显示
+|
+|### 测试
+|
+|- 全量 224/224 测试通过（212 + 6 + 3 + 3）
+|
+|## [v0.14.0] — 2026-06-13
 
 ### 文档
 
