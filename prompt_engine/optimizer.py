@@ -10,30 +10,57 @@ from prompt_engine.llm.base import BaseLLMProvider
 from prompt_engine.rewriter import PromptRewriter
 from prompt_engine.disturb import PromptDisturber
 from prompt_engine.classifier import StyleCategoryClassifier
+from prompt_engine.cache import SqlitePromptCache, MemoryPromptCache
 
 logger = logging.getLogger(__name__)
 
-# ── 内存缓存池（优化结果缓存）
-_PromptCacheKey = tuple[str, str, int, int, str, int]  # (prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+# ── 内存缓存池（L1 热点缓存）
+_PromptCacheKey = tuple[str, str, int, int, str, int]
 _PromptCache: dict[_PromptCacheKey, OptimizeResult] = {}
 
-# Simple fuzzy string matching (preprocessing only)
-def _similarity(a: str, b: str) -> float:
-    """Return similarity score 0.0-1.0 (lower is more similar)"""
+# ── TF-IDF 向量化器（惰性初始化）
+_VECTORIZER = None
+
+def _get_vectorizer():
+    global _VECTORIZER
+    if _VECTORIZER is None:
+        try:
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            import numpy as np
+            _VECTORIZER = TfidfVectorizer(analyzer='char', ngram_range=(2, 3))
+        except ImportError:
+            _VECTORIZER = False  # sentinel
+    return _VECTORIZER if _VECTORIZER is not False else None
+
+def _legacy_similarity(a: str, b: str) -> float:
+    """旧版相似度（set inclusion），作为 TF-IDF 的降级"""
     a = a.strip().lower()
     b = b.strip().lower()
-    
-    # Fast path: exact match
     if a == b:
         return 1.0
-    
-    # Check for set inclusion
     a_words = set(a.split())
     b_words = set(b.split())
     if a_words & b_words:
-        return 0.8  # At least one word in common
-    
-    return 0.5  # Default
+        return 0.8
+    return 0.5
+
+def _similarity(a: str, b: str) -> float:
+    """TF-IDF 余弦相似度（降级到旧算法）"""
+    # 精确匹配快速路径
+    if a.strip().lower() == b.strip().lower():
+        return 1.0
+
+    vec = _get_vectorizer()
+    if vec is None:
+        return _legacy_similarity(a, b)
+
+    try:
+        import numpy as np
+        tfidf = vec.fit_transform([a.strip().lower(), b.strip().lower()])
+        sim = (tfidf * tfidf.T).A[0, 1]
+        return float(sim)
+    except Exception:
+        return _legacy_similarity(a, b)
 
 def fuzzy_match_prompt(prompt: str, platform: str, creative_level: int = 7, max_length: int = 500, negative_prompt: str = "", num_candidates: int = 1, similarity_threshold: float = 0.7) -> Optional[OptimizeResult]:
     """模糊匹配相似 prompt，命中缓存后返回"""
@@ -200,6 +227,76 @@ class Optimizer:
         self._vector_store = None
         self._cat_classifier = StyleCategoryClassifier()
         self._init_knowledge()
+        # ── 双级缓存 ──
+        self._sqlite_cache = SqlitePromptCache()
+        self._mem_cache = MemoryPromptCache()
+
+    def _cache_key(self, prompt: str, platform: str, creative_level: int,
+                   max_length: int, negative_prompt: str, num_candidates: int) -> str:
+        return SqlitePromptCache.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+
+    def _cache_get(self, prompt: str, platform: str, creative_level: int,
+                   max_length: int, negative_prompt: str, num_candidates: int) -> Optional[OptimizeResult]:
+        """双级缓存读取：L1 内存 → L2 SQLite（预热 L1）"""
+        key = self._cache_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+        # L1
+        cached = self._mem_cache.get(key)
+        if cached:
+            return cached
+        # L2
+        cached = self._sqlite_cache.get(prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+        if cached:
+            self._mem_cache.set(key, cached)  # 预热 L1
+            return cached
+        return None
+
+    def _cache_set(self, prompt: str, platform: str, creative_level: int,
+                   max_length: int, negative_prompt: str, num_candidates: int,
+                   result: OptimizeResult):
+        """写入双级缓存"""
+        key = self._cache_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+        self._mem_cache.set(key, result)
+        self._sqlite_cache.set(prompt, platform, creative_level, max_length, negative_prompt, num_candidates, result)
+        # 同时写入旧版 dict 缓存（兼容 fuzzy_match_prompt）
+        _PromptCache[(prompt.strip().lower(), platform, creative_level, max_length, negative_prompt, num_candidates)] = result
+
+    @staticmethod
+    def _render_from_template(request: OptimizeRequest) -> OptimizeResult:
+        """低创意等级（≤3）用模板直出，不调 LLM"""
+        from prompt_engine.template_engine import PromptBlock
+
+        strategy_cls = get_strategy(request.platform.value)
+        if not strategy_cls:
+            strategy_cls = get_strategy("generic")
+
+        cl = max(1, min(3, request.creative_level))
+
+        # 基础块：用户 prompt 就是主体
+        parts = [request.prompt]
+
+        # Level 2+: 质量标签
+        if cl >= 2:
+            quality_tags = ["simple", "clean", "medium", "detailed", "refined"]
+            parts.append(quality_tags[min(cl - 1, len(quality_tags) - 1)])
+
+        # Level 3: 简单光影描述
+        if cl >= 3:
+            from random import choice
+            lighting = choice(["soft lighting", "natural light", "warm glow", "bright daylight"])
+            parts.append(lighting)
+
+        raw = ", ".join(parts)
+        final = strategy_cls.post_process(raw, creative_level=cl)
+
+        return OptimizeResult(
+            optimized_prompt=final,
+            platform=request.platform,
+            style=request.style,
+            model_used="template",
+            tokens_used=0,
+            duration_ms=0,
+            error=None,
+        )
 
     def _init_knowledge(self):
         """初始化 RAG 知识库（如果启用）"""
@@ -329,21 +426,22 @@ class Optimizer:
         """单条提示词优化主流程"""
         start_time = time.time()
         try:
-            # ✨ 内存缓存池检查（降低成本 + 提升速度）
+            # ✨ 双级缓存检查（SQLite + 内存）
             from prompt_engine.models import OptimizeResult as _OptRes
-            cached = fuzzy_match_prompt(request.prompt, request.platform.value, request.creative_level, request.max_length, request.negative_prompt or "", request.num_candidates)
+            cached = self._cache_get(
+                request.prompt, request.platform.value,
+                request.creative_level, request.max_length,
+                request.negative_prompt or "", request.num_candidates
+            )
             if cached:
                 logger.info("Cache hit: %s @ %s", request.prompt[:50], request.platform.value)
-                return _OptRes(
-                    optimized_prompt=cached.optimized_prompt,
-                    platform=cached.platform,
-                    style=cached.style,
-                    model_used=cached.model_used,
-                    tokens_used=0,
-                    duration_ms=0,
-                    candidates=[],
-                    detected_categories=None,
-                )
+                return cached
+
+            # ✨ F2: 低创意模板直出（免 LLM）
+            if request.creative_level <= 3:
+                logger.info("Template render: creative_level=%d, %s @ %s",
+                            request.creative_level, request.prompt[:50], request.platform.value)
+                return self._render_from_template(request)
 
             detected_result: Optional["StyleCategoryResult"] = None
             
@@ -403,7 +501,7 @@ class Optimizer:
 
             elapsed = (time.time() - start_time) * 1000
             
-            # 存入缓存以便下次命中
+            # 存入双级缓存以便下次命中
             result = _OptRes(
                 optimized_prompt=candidates[0],
                 platform=request.platform,
@@ -414,7 +512,12 @@ class Optimizer:
                 candidates=candidates if num > 1 else [],
                 detected_categories=detected_result,
             )
-            _PromptCache[(request.prompt.strip().lower(), request.platform.value, request.creative_level, request.max_length, request.negative_prompt or "", request.num_candidates)] = result
+            self._cache_set(
+                request.prompt, request.platform.value,
+                request.creative_level, request.max_length,
+                request.negative_prompt or "", request.num_candidates,
+                result
+            )
             return result
 
             result = None  # Only for type checker

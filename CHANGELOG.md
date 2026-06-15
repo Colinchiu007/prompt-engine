@@ -4,7 +4,34 @@
 
 ## [Unreleased]
 
-### 新增 (v0.4.0)
+### 新增 (v0.19.0)
+
+- **SQLite 缓存持久化 (F1)** — `prompt_engine/cache.py` 双级缓存（L1 Memory + L2 SQLite），重启不丢失，默认 TTL 48 小时
+- **低创意模板直出 (F2)** — creative_level ≤ 3 时用模板引擎直出 prompt，零 LLM 调用，耗时 < 10ms
+- **TF-IDF 缓存相似匹配 (F3)** — 基于 sklearn TfidfVectorizer 的 char ngram 余弦相似度，降级到旧 set inclusion 算法
+- **缓存统计 API** — `GET /v1/cache/stats` 返回 SQLite + Memory 缓存状态
+
+### 新增文件
+
+| 文件 | 说明 |
+|------|------|
+| `prompt_engine/cache.py` | SqlitePromptCache + MemoryPromptCache 双级缓存 |
+| `prompt_engine/data/` | 缓存数据库目录（自动创建） |
+| `tests/test_cache_persistence.py` | 缓存持久化测试（10 个） |
+| `tests/test_template_render.py` | 模板直出测试（8 个） |
+| `tests/test_similarity_tfidf.py` | TF-IDF 相似度测试（8 个） |
+
+### 变更
+
+- `prompt_engine/optimizer.py` — 集成双级缓存 + 模板直出 + TF-IDF 相似度
+- `prompt_engine/api/rest.py` — 新增 `GET /v1/cache/stats` 端点
+- `prompt_engine/__init__.py` — 惰性导出 `SqlitePromptCache` / `MemoryPromptCache`，版本号 0.5.0→0.19.0
+- `pyproject.toml` — 版本号同步到 0.19.0
+
+### 测试
+
+- 新增 26 个测试用例，全量从 224 → **250**
+- 所有测试 mock 隔离，无需 API Key
 
 - **`rewrite()`** — 借鉴 Infinity `prompt_rewriter.py`，将简短描述扩展为详细 prompt（含 CFG 参数自动判断）
 - **`disturb_and_optimize()`** — 借鉴 Infinity BSC，prompt 扰动增强后多次优化取最佳

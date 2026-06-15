@@ -6,7 +6,7 @@ from prompt_engine.models import (
     FeedbackEntry, FeedbackStats,
 )
 
-__version__ = "0.5.0"
+__version__ = "0.19.0"
 
 
 def __getattr__(name: str):
@@ -23,6 +23,12 @@ def __getattr__(name: str):
     if name == "FeedbackStore":
         from prompt_engine.feedback import FeedbackStore
         return FeedbackStore
+    if name == "SqlitePromptCache":
+        from prompt_engine.cache import SqlitePromptCache
+        return SqlitePromptCache
+    if name == "MemoryPromptCache":
+        from prompt_engine.cache import MemoryPromptCache
+        return MemoryPromptCache
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -31,6 +37,8 @@ __all__ = [
     "StyleCategoryClassifier",
     "recommend_categories_for_style",
     "FeedbackStore",
+    "SqlitePromptCache",
+    "MemoryPromptCache",
     "FeedbackEntry",
     "FeedbackStats",
     "OptimizeRequest",

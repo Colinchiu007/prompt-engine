@@ -521,6 +521,18 @@ async def image_preview(request: dict):
             "note": "该模型需配置 API Key，请前往 Settings 页面配置"}
 
 
+# ── v0.19.0: 缓存统计 API ───
+@app.get("/v1/cache/stats")
+async def cache_stats():
+    """缓存统计：条目数/命中数/TTL"""
+    optimizer = get_optimizer()
+    sqlite_stats = optimizer._sqlite_cache.stats()
+    return {
+        "sqlite": sqlite_stats,
+        "memory": {"entries": optimizer._mem_cache.size},
+    }
+
+
 if _web_dir.exists():
     app.mount("/", StaticFiles(directory=str(_web_dir), html=True), name="web")
 
