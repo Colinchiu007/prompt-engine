@@ -484,6 +484,7 @@ const Workbench = {
     const inputRows = computed(() => {
       return input.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
     });
+    const speedMode = ref('standard');
     const showGuide = ref(false);
     const guideTopics = [
       {name:'风景',icon:'🏞️',example:'sunset over mountain lake with mist'},
@@ -592,7 +593,8 @@ const Workbench = {
       if (!input.value.trim()) return;
       loading.value = true; result.value = null; classResult.value = null; evalResult.value = null; error.value = '';
       try {
-        const d = await api.post('/v1/optimize', {prompt: input.value, platform: platform.value, style: style.value || null});
+        const speedLen = {fast: 150, standard: 300, detailed: 500};
+        const d = await api.post('/v1/optimize', {prompt: input.value, platform: platform.value, style: style.value || null, max_length: speedLen[speedMode.value] || 300});
                 if (d.detail) {
                   error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail);
                   showGuide.value = d.detail && typeof d.detail === 'string' && (d.detail.includes('太简短') || d.detail.includes('Too short'));
@@ -614,7 +616,8 @@ const Workbench = {
       batchProgressPercent.value = 0;
       for (let i = 0; i < prompts.length; i++) {
         try {
-          const d = await api.post('/v1/optimize', {prompt: prompts[i], platform: platform.value});
+          const speedLen2 = {fast: 150, standard: 300, detailed: 500};
+          const d = await api.post('/v1/optimize', {prompt: prompts[i], platform: platform.value, max_length: speedLen2[speedMode.value] || 300});
           if (d.detail) {
             batchResults.value.push({prompt: prompts[i], result: null, error: typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail)});
           } else {
@@ -678,7 +681,7 @@ const Workbench = {
              style, rewriteInput, rewriteResult, rewriting, keywords,
              feedbackMsg, feedbackType, submitFeedback, showGuide, guideTopics, guideExamples, applyGuideTopic, applyGuideExample,
              disturbLoading, disturbResults, bestIdx, disturbOptimize,
-             EN_CN_DICT, isEnglish, translateEN2CN };
+             speedMode, EN_CN_DICT, isEnglish, translateEN2CN };
   }
 };
 
