@@ -51,4 +51,10 @@ pytest tests/ -x --tb=short  # 失败即停
 
 ## 版本
 
-当前 v0.19.0，所有 s1-s5 + P0-P4 + F1-F12 + v0.16-v0.19 已完成。
+当前 v0.19.1，所有 s1-s5 + P0-P4 + F1-F12 + v0.16-v0.19 已完成。
+
+### v0.19.1 — PROJECT-012 上下文注入
+
+- `OptimizeRequest` 新增 `context: Optional[dict]` 字段
+- `optimizer.optimize()` 自动将 context 注入 system prompt（角色一致性）
+- 详见 [INTEGRATION.md → PROJECT-012 集成](./INTEGRATION.md#project-012-上下文注入)

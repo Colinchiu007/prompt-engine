@@ -262,4 +262,70 @@ cp -r agents/skills/prompt-engine ~/.hermes/skills/
 ## 测试
 
 - 全部 224 个测试通过（mock 隔离，无需 API Key）
+
+
+## PROJECT-012 上下文注入
+
+### 背景
+
+PROJECT-012（语义分句引擎）对剧本/故事分句后，可注入上下文到优化请求，确保相同角色在多张图中保持外貌/服装/发型一致。
+
+### context 字段结构
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `setting` | str | 当前场景描述 |
+| `character` | dict | 当前主角：`{"name": "Tom"}` |
+| `character_list` | list[dict] | 全部角色列表：`[{"name": "Tom"}, {"name": "Jerry"}]` |
+| `synopsis` | str | 故事梗概（自动截断 200 字） |
+
+### 使用方式
+
+**REST API** — 在优化请求中加 `context` 字段：
+
+```bash
+curl -X POST http://localhost:8000/v1/optimize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Tom chasing Jerry on the beach",
+    "platform": "midjourney",
+    "context": {
+      "setting": "sunny beach",
+      "character": {"name": "Tom"},
+      "character_list": [{"name": "Tom"}, {"name": "Jerry"}],
+      "synopsis": "Tom and Jerry having fun at the beach"
+    }
+  }'
+```
+
+**Python SDK**:
+
+```python
+opt = Optimizer()
+result = opt.optimize(OptimizeRequest(
+    prompt="Tom chasing Jerry on the beach",
+    platform=PlatformType.MIDJOURNEY,
+    context={
+        "setting": "sunny beach",
+        "character": {"name": "Tom"},
+        "character_list": [{"name": "Tom"}, {"name": "Jerry"}],
+        "synopsis": "Tom and Jerry having fun at the beach"
+    }
+))
+```
+
+**PROJECT-012 端调用**（自动构建 context）：
+
+```python
+# PROJECT-012 端
+result = SmartSentenceSplitter({"enable_script_analysis": True}).split(剧本)
+batch = PromptEngineExporter().from_split_result(result)
+requests.post("http://localhost:8013/v1/optimize/batch", json={"requests": batch})
+```
+
+### 效果
+
+- context 自动注入到 system prompt 的「角色一致性」段落
+- LLM 在生成图片 prompt 时保持角色身份一致
+- 兼容所有 7 个平台策略（generic / midjourney / stable-diffusion / dall-e / tongyi / jimeng / yizhang）
 - 优化器缓存（v0.9.3）：224 = 224 + 1 cache test

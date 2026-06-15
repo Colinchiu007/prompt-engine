@@ -476,6 +476,25 @@ class Optimizer:
                 negative_prompt=request.negative_prompt,
             )
 
+            # 2.5 PROJECT-012 上下文注入（角色一致性）
+            if request.context:
+                ctx = request.context
+                parts = []
+                if ctx.get("setting"):
+                    parts.append(f"Setting/场景: {ctx['setting']}")
+                if ctx.get("character"):
+                    parts.append(f"Current character/当前角色: {ctx['character'].get('name', '')}")
+                if ctx.get("character_list"):
+                    names = [c["name"] for c in ctx["character_list"] if "name" in c]
+                    parts.append(f"All characters/全部角色: {', '.join(names)}")
+                if ctx.get("synopsis"):
+                    parts.append(f"Story synopsis/故事梗概: {ctx['synopsis'][:200]}")
+                if parts:
+                    system_prompt += "\n\n## Character consistency / 角色一致性\n"
+                    system_prompt += "\n".join(parts)
+                    system_prompt += "\n- Keep the same character identity (appearance/服装/发型) across all images where the same name appears."
+                    system_prompt += "\n- 相同名字的角色在所有图片中保持同一身份（外貌、服装、发型一致）。"
+
             # 3. RAG few-shot 注入
             few_shot = self._retrieve_few_shot(request)
             if few_shot:
