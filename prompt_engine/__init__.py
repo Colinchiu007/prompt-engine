@@ -6,7 +6,7 @@ from prompt_engine.models import (
     FeedbackEntry, FeedbackStats,
 )
 
-__version__ = "0.19.0"
+__version__ = "0.19.1"
 
 
 def __getattr__(name: str):

@@ -440,6 +440,11 @@ class StyleCategoryClassifier:
 
         返回: {db_category_key: score} 得分字典（归一化后）
         """
+        # 惰性构建 RAG 索引（首次使用时加载）
+        if self._rag_index is None:
+            self._rag_index = self.__class__._build_rag_index(
+                _load_category_keywords_data()
+            )
         if not self._rag_index:
             return {}
 

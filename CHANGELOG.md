@@ -2,9 +2,46 @@
 
 本项目更新日志。
 
-## [Unreleased]
+## [v0.19.1] — 2026-06-15
 
-### 新增 (v0.19.0)
+### P2 安全与测试
+
+- **预览端点修复** — Pollinations 死代码移除，默认模型改为 picsum
+- **裸 `except:` 修复** — 3 处改为 `except Exception:`，不再吃 SystemExit
+- **异常详情掩盖** — 5 个端点 `detail=str(e)` → 通用错误信息 + 服务端 `logger.error`
+- **API 端点测试** — 新增 `test_api_endpoints.py`（29 个测试，覆盖 optimize/classify/feedback/cache/preview/batch）
+
+### P3 代码质量
+
+- **StyleCategory 映射归并** — 三份重复 25 维映射归并到 `models.py` 单一定义点
+- **classifier.py 异常日志** — 5 处静默 `except` 改为 `logger.debug`
+- **死代码清理** — optimizer.py (result=None, _STYLE_CATEGORY_TO_TYPE), cache.py (_DEFAULT_DB_DIR), rest.py (if False yaml)
+- **seed_demo_data() 惰性化** — 从模块导入时执行改为首次 stats 请求
+- **MCP Server 测试** — 新增 `test_mcp_server.py`
+- **.gitignore 完善** — 补充 `__pycache__/`、`*.egg-info/`、`feedback_db.json`、`keyword_weights.json`
+
+### 变更文件
+
+| 文件 | 说明 |
+|------|------|
+| `prompt_engine/models.py` | 新增 4 个共享映射常量（+300 行） |
+| `prompt_engine/optimizer.py` | 删除死代码 32 行，映射改 import |
+| `prompt_engine/classifier.py` | 3 份映射改 import，5 处异常加日志（-696 行） |
+| `prompt_engine/api/rest.py` | 映射改 import + 异常掩盖 + 惰性 seed（±0 行） |
+| `prompt_engine/cache.py` | 删除未用变量 _DEFAULT_DB_DIR |
+| `prompt_engine/__init__.py` | 版本号 0.19.0→0.19.1 |
+| `.gitignore` | 补充 Python 标准忽略项 |
+| `tests/test_api_endpoints.py` | 新增 29 个 API 端点测试 |
+| `tests/test_mcp_server.py` | 新增 MCP Server 基础测试 |
+
+### 测试
+
+- 全量测试通过，新增 32 个测试用例（29 API + 3 MCP）
+- 版本一致：pyproject.toml / __init__.py / CHANGELOG 全部 v0.19.1
+
+## [v0.19.0] — 2026-06-14
+
+### 新增
 
 - **SQLite 缓存持久化 (F1)** — `prompt_engine/cache.py` 双级缓存（L1 Memory + L2 SQLite），重启不丢失，默认 TTL 48 小时
 - **低创意模板直出 (F2)** — creative_level ≤ 3 时用模板引擎直出 prompt，零 LLM 调用，耗时 < 10ms
