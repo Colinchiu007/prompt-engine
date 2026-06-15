@@ -33,6 +33,10 @@
 - 新增 26 个测试用例，全量从 224 → **250**
 - 所有测试 mock 隔离，无需 API Key
 
+## [v0.4.0] — 2026-06-12
+
+### 新增
+
 - **`rewrite()`** — 借鉴 Infinity `prompt_rewriter.py`，将简短描述扩展为详细 prompt（含 CFG 参数自动判断）
 - **`disturb_and_optimize()`** — 借鉴 Infinity BSC，prompt 扰动增强后多次优化取最佳
 - **`BitwiseClassifier`** — 借鉴 Infinity IVC，N 分类拆为 d 个二分类，参数量从 O(N×H) 降到 O(d×H)
@@ -44,8 +48,6 @@
 - `models.py` — 新增 `RewriteRequest` 数据模型
 - `__init__.py` — 导出 `RewriteRequest`
 - 策略文件数：7 → 7（无变化，策略重写已在 v0.3.1 完成）
-
--
 
 ## [v0.3.1] — 2026-06-12
 
@@ -146,6 +148,23 @@
 
 - [ ] 将 NBP prompt 库作为 RAG 知识库，提供 few-shot 增强（Phase 2）
 - [ ] 基于 NBP 社区分类数据构建风格模板库 `templates/styles.yaml`
+
+
+## [v0.4.0] — 2026-06-12
+
+### 新增
+
+- **`rewrite()`** — 借鉴 Infinity `prompt_rewriter.py`，将简短描述扩展为详细 prompt（含 CFG 参数自动判断）
+- **`disturb_and_optimize()`** — 借鉴 Infinity BSC，prompt 扰动增强后多次优化取最佳
+- **`BitwiseClassifier`** — 借鉴 Infinity IVC，N 分类拆为 d 个二分类，参数量从 O(N×H) 降到 O(d×H)
+- **REST API** — 新增 `POST /v1/rewrite` 和 `POST /v1/disturb-optimize` 端点
+- **测试** — 新增 16 个测试用例，全量 70 个
+
+### 变更
+
+- `models.py` — 新增 `RewriteRequest` 数据模型
+- `__init__.py` — 导出 `RewriteRequest`
+- 策略文件数：7 → 7（无变化，策略重写已在 v0.3.1 完成）
 
 
 ## [v0.5.0] — 2026-06-13

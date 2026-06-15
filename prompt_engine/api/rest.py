@@ -10,12 +10,11 @@ from prompt_engine.models import (
 )
 from prompt_engine.evaluator import evaluate as evaluate_prompt, EvaluationResult
 from prompt_engine.feedback import get_feedback_store
-from prompt_engine.optimizer import Optimizer
 from typing import TYPE_CHECKING
 app = FastAPI(
     title="Prompt Engine API",
     description="图片生成提示词优化引擎 - REST API",
-    version="0.5.0",
+    version="0.19.0",
 )
 
 
@@ -23,8 +22,9 @@ app = FastAPI(
 
 
 @lru_cache
-def get_optimizer() -> Optimizer:
+def get_optimizer():
     """线程安全的单例 — lru_cache 保证只构造一次"""
+    from prompt_engine.optimizer import Optimizer
     return Optimizer()
 
 

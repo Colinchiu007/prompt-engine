@@ -1,10 +1,15 @@
+# Python
 __pycache__/
+*.py[cod]
 *.pyc
-.pytest_cache/
 *.egg-info/
 dist/
 build/
-.env
-.env.local
+
+# Runtime data (auto-generated)
+prompt_engine/data/*.db
+!prompt_engine/data/.gitkeep
+
+# User feedback & weights (auto-generated)
 feedback_db.json
 keyword_weights.json

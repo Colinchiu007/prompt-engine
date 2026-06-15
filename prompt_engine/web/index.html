@@ -747,6 +747,39 @@ const Dashboard = {
       </el-row>
     </el-card>
 
+    <!-- v0.19.0: 缓存统计卡片 -->
+    <el-card shadow="never" style="margin-top:16px">
+      <template #header>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>💾 缓存状态</span>
+          <span style="font-size:12px;color:#909399">SQLite + Memory 双级缓存</span>
+        </div>
+      </template>
+      <el-row :gutter="16">
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">🗄️ SQLite</div>
+            <div class="resource-value">{{ cacheStats.sqlite?.entries || 0 }} <small>条目</small></div>
+            <div style="font-size:12px;color:#909399">累积命中 {{ cacheStats.sqlite?.total_hits || 0 }} 次，TTL {{ cacheStats.sqlite?.ttl_hours || 48 }}h</div>
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">⚡ 内存 (L1)</div>
+            <div class="resource-value">{{ cacheStats.memory?.entries || 0 }} <small>条目</small></div>
+            <div style="font-size:12px;color:#909399">热点缓存，FIFO 淘汰</div>
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">🎯 未命中时</div>
+            <div class="resource-value">{{ cacheStats.sqlite?.storage || 'sqlite' }}</div>
+            <div style="font-size:12px;color:#909399">creative_level ≤ 3 模板直出免 LLM</div>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
+
     <el-row :gutter="16" style="margin-top:16px">
       <el-col :span="12">
         <el-card shadow="never">
@@ -786,6 +819,7 @@ const Dashboard = {
       {label:'错误数', value:0, hint:'失败的请求数量'},
     ]);
     const resources = reactive({});
+    const cacheStats = reactive({});
     const catChart = ref(null);
     const platChart = ref(null);
     const noData = ref(true);
@@ -795,6 +829,7 @@ const Dashboard = {
         const overview = await api.get('/v1/stats/overview');
         const res = await api.get('/v1/resources');
         Object.assign(resources, res);
+        try { const cs = await api.get('/v1/cache/stats'); Object.assign(cacheStats, cs); } catch(e) {}
         statCards.length = 0;
         statCards.push(
           {label:'总请求数', value:overview.total_requests, hint:'所有平台累计调用次数'},
@@ -838,7 +873,7 @@ const Dashboard = {
         }
       } catch(e) {}
     });
-    return { statCards, resources, catChart, platChart, noData };
+    return { statCards, resources, cacheStats, catChart, platChart, noData };
   }
 };
 
