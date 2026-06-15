@@ -26,10 +26,9 @@ def _get_vectorizer():
     if _VECTORIZER is None:
         try:
             from sklearn.feature_extraction.text import TfidfVectorizer
-            import numpy as np
             _VECTORIZER = TfidfVectorizer(analyzer='char', ngram_range=(2, 3))
         except ImportError:
-            _VECTORIZER = False  # sentinel
+            _VECTORIZER = False
     return _VECTORIZER if _VECTORIZER is not False else None
 
 def _legacy_similarity(a: str, b: str) -> float:
@@ -90,12 +89,7 @@ def fuzzy_match_prompt(prompt: str, platform: str, creative_level: int = 7, max_
 
 
 
-# StyleCategory → StyleType 自动映射
-# 当自动检测到某些 MJ 风格类别时，映射到平台可用的 StyleType
-_STYLE_CATEGORY_TO_TYPE: dict[StyleCategory, StyleType] = {
-    StyleCategory.DRAWING_AND_ART_MEDIUMS: None,  # 由具体媒介词汇决定
-    StyleCategory.THEMES: None,  # 由具体主题词汇决定
-}
+
 # 反向映射：关键词 → StyleType
 _STYLE_TYPE_KEYWORDS: dict[StyleType, list[str]] = {
     # 具体媒介排前面（更高优先级）
@@ -180,34 +174,8 @@ def _detect_style_type_from_category(
 
 def _style_category_to_db_key(cat: StyleCategory) -> str:
     """将 StyleCategory 枚举值转换为 MJ 数据库的 key（硬编码映射，保证 100% 准确）。"""
-    _CATEGORY_DB_MAP = {
-        StyleCategory.LIGHTING: "Lighting",
-        StyleCategory.MATERIAL_PROPERTIES: "Material_Properties",
-        StyleCategory.MATERIALS: "Materials",
-        StyleCategory.DIMENSIONALITY: "Dimensionality",
-        StyleCategory.COLORS_AND_PALETTES: "Colors_and_Palettes",
-        StyleCategory.COMBINATIONS: "Combinations",
-        StyleCategory.CAMERA: "Camera",
-        StyleCategory.PERSPECTIVE: "Perspective",
-        StyleCategory.STRUCTURAL_MODIFICATION: "Structural_Modification",
-        StyleCategory.NATURE_AND_ANIMALS: "Nature_and_Animals",
-        StyleCategory.OBJECTS: "Objects",
-        StyleCategory.OUTER_SPACE: "Outer_Space",
-        StyleCategory.GEOMETRY: "Geometry",
-        StyleCategory.GEOGRAPHY_AND_CULTURE: "Geography_and_Culture",
-        StyleCategory.DRAWING_AND_ART_MEDIUMS: "Drawing_and_Art_Mediums",
-        StyleCategory.SFX_AND_SHADERS: "SFX_and_Shaders",
-        StyleCategory.THEMES: "Themes",
-        StyleCategory.INTANGIBLES: "Intangibles",
-        StyleCategory.TV_AND_MOVIES: "TV_and_Movies",
-        StyleCategory.SONG_LYRICS: "Song_Lyrics",
-        StyleCategory.DESIGN_STYLES: "Design_Styles",
-        StyleCategory.DIGITAL: "Digital",
-        StyleCategory.EXPERIMENTAL: "Experimental",
-        StyleCategory.EMOJIS: "Emojis",
-        StyleCategory.MISCELLANEOUS: "Miscellaneous",
-    }
-    return _CATEGORY_DB_MAP.get(cat, cat.value.replace("_", " ").title().replace(" ", "_"))
+    from prompt_engine.models import STYLE_CATEGORY_DB_MAP
+    return STYLE_CATEGORY_DB_MAP.get(cat, cat.value.replace("_", " ").title().replace(" ", "_"))
 
 
 def _get_preferred_db_keys(category_result: Optional["StyleCategoryResult"]) -> list[str]:  # noqa: F821
@@ -539,7 +507,6 @@ class Optimizer:
             )
             return result
 
-            result = None  # Only for type checker
         except Exception as e:
             elapsed = (time.time() - start_time) * 1000
             logger.error("optimize failed for prompt '%s': %s", request.prompt[:50], e)

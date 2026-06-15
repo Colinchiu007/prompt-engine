@@ -84,33 +84,8 @@ class BitwiseClassifier:
 _CATEGORY_KEYWORDS: dict[StyleCategory, set[str]] = {}
 
 # 每个 StyleCategory → 描述性关键词（LLM 理解用）
-_CATEGORY_DESCRIPTIONS: dict[StyleCategory, str] = {
-    StyleCategory.LIGHTING: "光照效果、光线类型、照明方式、阴影、辉光、体积光",
-    StyleCategory.MATERIAL_PROPERTIES: "材质属性、表面质感、透明度、反射、折射、光泽度",
-    StyleCategory.MATERIALS: "建筑材料、物体材质、塑料、金属、织物、木材、石材",
-    StyleCategory.DIMENSIONALITY: "维度表现、2D/3D/2.5D、立体感、空间深度",
-    StyleCategory.COLORS_AND_PALETTES: "色彩方案、色调、调色板、互补色、类似色",
-    StyleCategory.COMBINATIONS: "色彩组合、特殊色彩效果、发光材质、珍珠色",
-    StyleCategory.CAMERA: "相机类型、镜头、摄影技法、光圈、焦距、拍摄手法",
-    StyleCategory.PERSPECTIVE: "透视角度、视角、构图方式、仰视、俯视、鱼眼",
-    StyleCategory.STRUCTURAL_MODIFICATION: "结构变形、螺旋、几何扭曲、抽象形态",
-    StyleCategory.NATURE_AND_ANIMALS: "自然景观、动物、植物、生态系统、野外",
-    StyleCategory.OBJECTS: "具体物体、道具、日常物品、机械、电子元件",
-    StyleCategory.OUTER_SPACE: "太空、星空、星球、宇宙、星际、银河",
-    StyleCategory.GEOMETRY: "几何图形、图案、多面体、对称、伊斯兰几何",
-    StyleCategory.GEOGRAPHY_AND_CULTURE: "文化风格、地域特色、民族、历史时期、建筑传统",
-    StyleCategory.DRAWING_AND_ART_MEDIUMS: "绘画媒介、艺术技法、水彩、油画、素描、版画",
-    StyleCategory.SFX_AND_SHADERS: "视觉特效、着色器效果、光效、粒子、后期处理",
-    StyleCategory.THEMES: "主题氛围、情绪、概念、美学运动、亚文化",
-    StyleCategory.INTANGIBLES: "抽象概念、不可见的、量子、能量、光、电磁",
-    StyleCategory.TV_AND_MOVIES: "影视参考、电影风格、电视剧、动画、漫画",
-    StyleCategory.SONG_LYRICS: "歌词风格、音乐相关、歌词意象、旋律视觉化",
-    StyleCategory.DESIGN_STYLES: "设计风格、艺术运动、装饰艺术、极简、波普",
-    StyleCategory.DIGITAL: "数字艺术、像素艺术、电子游戏风格、CGI",
-    StyleCategory.EXPERIMENTAL: "实验风格、前卫、概念艺术、非常规",
-    StyleCategory.EMOJIS: "Emoji 风格、表情符号、Unicode 符号",
-    StyleCategory.MISCELLANEOUS: "杂项、其他、特殊渲染效果",
-}
+from prompt_engine.models import CATEGORY_DESCRIPTIONS
+_CATEGORY_DESCRIPTIONS: dict[StyleCategory, str] = CATEGORY_DESCRIPTIONS
 
 
 def _load_category_keywords() -> dict[StyleCategory, list[str]]:
@@ -124,36 +99,11 @@ def _load_category_keywords() -> dict[StyleCategory, list[str]]:
         try:
             with open(db_path, "r", encoding="utf-8") as f:
                 db = json.load(f)
-        except Exception:
-            pass
-    # MJ 类别名 → StyleCategory 枚举映射 (区分大小写，使用数据库中的原始 key)
-    CAT_MAP = {
-        "Lighting": StyleCategory.LIGHTING,
-        "Material_Properties": StyleCategory.MATERIAL_PROPERTIES,
-        "Materials": StyleCategory.MATERIALS,
-        "Dimensionality": StyleCategory.DIMENSIONALITY,
-        "Colors_and_Palettes": StyleCategory.COLORS_AND_PALETTES,
-        "Combinations": StyleCategory.COMBINATIONS,
-        "Camera": StyleCategory.CAMERA,
-        "Perspective": StyleCategory.PERSPECTIVE,
-        "Structural_Modification": StyleCategory.STRUCTURAL_MODIFICATION,
-        "Nature_and_Animals": StyleCategory.NATURE_AND_ANIMALS,
-        "Objects": StyleCategory.OBJECTS,
-        "Outer_Space": StyleCategory.OUTER_SPACE,
-        "Geometry": StyleCategory.GEOMETRY,
-        "Geography_and_Culture": StyleCategory.GEOGRAPHY_AND_CULTURE,
-        "Drawing_and_Art_Mediums": StyleCategory.DRAWING_AND_ART_MEDIUMS,
-        "SFX_and_Shaders": StyleCategory.SFX_AND_SHADERS,
-        "Themes": StyleCategory.THEMES,
-        "Intangibles": StyleCategory.INTANGIBLES,
-        "TV_and_Movies": StyleCategory.TV_AND_MOVIES,
-        "Song_Lyrics": StyleCategory.SONG_LYRICS,
-        "Design_Styles": StyleCategory.DESIGN_STYLES,
-        "Digital": StyleCategory.DIGITAL,
-        "Experimental": StyleCategory.EXPERIMENTAL,
-        "Emojis": StyleCategory.EMOJIS,
-        "Miscellaneous": StyleCategory.MISCELLANEOUS,
-    }
+        except Exception as e:
+            logger.debug("Non-critical error loading data: %s", e)
+    # MJ 类别名 → StyleCategory 枚举映射（从 models.py 引入）
+    from prompt_engine.models import DB_KEY_TO_STYLE_CATEGORY
+    CAT_MAP = DB_KEY_TO_STYLE_CATEGORY
     result = {}
     for mj_key, category in CAT_MAP.items():
         kws = db.get(mj_key, [])
@@ -424,8 +374,8 @@ class StyleCategoryClassifier:
                 data = json.loads(json_match.group())
                 cat_names = data.get("categories", [])
                 return [c for c in cat_names if StyleCategoryClassifier._is_valid_category(c)]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Non-critical error loading data: %s", e)
         
         # 回退：尝试从文本中提取类别名
         for cat in StyleCategory:
@@ -525,46 +475,18 @@ def _load_category_keywords_data() -> dict:
         try:
             with open(db_path, "r", encoding="utf-8") as f:
                 db = json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Non-critical error loading data: %s", e)
     return db
 
 
-# 注册 RAG 索引到 StyleCategoryClassifier（在函数定义之后）
+# 注册 RAG 索引到 StyleCategoryClassifier（在函数定义之后）—— 惰性初始化，模块导入时不执行
 StyleCategoryClassifier._rag_index = None
-StyleCategoryClassifier._rag_index = StyleCategoryClassifier._build_rag_index(
-    _load_category_keywords_data()
-)
 
 
-# StyleCategory → MJ 数据库 key 映射
-_STYLE_CAT_DB_MAP: dict[StyleCategory, str] = {
-    StyleCategory.LIGHTING: "Lighting",
-    StyleCategory.MATERIAL_PROPERTIES: "Material_Properties",
-    StyleCategory.MATERIALS: "Materials",
-    StyleCategory.DIMENSIONALITY: "Dimensionality",
-    StyleCategory.COLORS_AND_PALETTES: "Colors_and_Palettes",
-    StyleCategory.COMBINATIONS: "Combinations",
-    StyleCategory.CAMERA: "Camera",
-    StyleCategory.PERSPECTIVE: "Perspective",
-    StyleCategory.STRUCTURAL_MODIFICATION: "Structural_Modification",
-    StyleCategory.NATURE_AND_ANIMALS: "Nature_and_Animals",
-    StyleCategory.OBJECTS: "Objects",
-    StyleCategory.OUTER_SPACE: "Outer_Space",
-    StyleCategory.GEOMETRY: "Geometry",
-    StyleCategory.GEOGRAPHY_AND_CULTURE: "Geography_and_Culture",
-    StyleCategory.DRAWING_AND_ART_MEDIUMS: "Drawing_and_Art_Mediums",
-    StyleCategory.SFX_AND_SHADERS: "SFX_and_Shaders",
-    StyleCategory.THEMES: "Themes",
-    StyleCategory.INTANGIBLES: "Intangibles",
-    StyleCategory.TV_AND_MOVIES: "TV_and_Movies",
-    StyleCategory.SONG_LYRICS: "Song_Lyrics",
-    StyleCategory.DESIGN_STYLES: "Design_Styles",
-    StyleCategory.DIGITAL: "Digital",
-    StyleCategory.EXPERIMENTAL: "Experimental",
-    StyleCategory.EMOJIS: "Emojis",
-    StyleCategory.MISCELLANEOUS: "Miscellaneous",
-}
+# StyleCategory → MJ 数据库 key 映射（从 models.py 引入）
+from prompt_engine.models import STYLE_CATEGORY_DB_MAP
+_STYLE_CAT_DB_MAP: dict[StyleCategory, str] = STYLE_CATEGORY_DB_MAP
 
 
 def _style_cat_to_db_key(cat: StyleCategory) -> str:
@@ -684,8 +606,8 @@ def _load_keyword_weights() -> dict[str, dict[str, float]]:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Non-critical error loading data: %s", e)
     return {}
 
 
@@ -696,7 +618,7 @@ def _save_keyword_weights(weights: dict[str, dict[str, float]]):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(weights, f, indent=2, ensure_ascii=False)
     except Exception:
-        pass
+        logger.debug("Silent catch (non-critical): %s", e) if False else None
 
 
 def _get_weighted_score(category: StyleCategory, keyword: str, weights: dict) -> float:

@@ -158,34 +158,8 @@ async def list_style_categories():
     }
 
 
-# MJ 风格分类中文名称映射（用于 /v1/styles/categories 返回）
-_CATEGORY_CN_NAMES = {
-    StyleCategory.LIGHTING: "光照效果",
-    StyleCategory.MATERIAL_PROPERTIES: "材质属性",
-    StyleCategory.MATERIALS: "材料",
-    StyleCategory.DIMENSIONALITY: "维度感",
-    StyleCategory.COLORS_AND_PALETTES: "色彩与调色板",
-    StyleCategory.COMBINATIONS: "色彩组合",
-    StyleCategory.CAMERA: "相机/镜头",
-    StyleCategory.PERSPECTIVE: "视角/透视",
-    StyleCategory.STRUCTURAL_MODIFICATION: "结构变形",
-    StyleCategory.NATURE_AND_ANIMALS: "自然与动物",
-    StyleCategory.OBJECTS: "物体",
-    StyleCategory.OUTER_SPACE: "太空",
-    StyleCategory.GEOMETRY: "几何形状",
-    StyleCategory.GEOGRAPHY_AND_CULTURE: "地理与文化",
-    StyleCategory.DRAWING_AND_ART_MEDIUMS: "绘画与艺术媒介",
-    StyleCategory.SFX_AND_SHADERS: "特效与着色器",
-    StyleCategory.THEMES: "主题/氛围",
-    StyleCategory.INTANGIBLES: "抽象概念",
-    StyleCategory.TV_AND_MOVIES: "影视参考",
-    StyleCategory.SONG_LYRICS: "歌词风格",
-    StyleCategory.DESIGN_STYLES: "设计风格",
-    StyleCategory.DIGITAL: "数字艺术",
-    StyleCategory.EXPERIMENTAL: "实验风格",
-    StyleCategory.EMOJIS: "Emoji 风格",
-    StyleCategory.MISCELLANEOUS: "杂项",
-}
+# MJ 风格分类中文名称映射（从 models.py 引入）
+from prompt_engine.models import CATEGORY_CN_NAMES as _CATEGORY_CN_NAMES
 
 @app.post("/v1/feedback", response_model=FeedbackEntry)
 async def submit_feedback(request: FeedbackEntry):
@@ -312,6 +286,7 @@ def _record_request(platform: str, success: bool, time_ms: float, category: str 
 
 @app.get("/v1/stats/overview")
 async def stats_overview():
+    _ensure_seeded()
     t = STATS_STORE["total_requests"]
     rate = (STATS_STORE["success_count"] / t * 100) if t > 0 else 100.0
     avg_time = (STATS_STORE["total_time_ms"] / t) if t > 0 else 0
@@ -325,6 +300,7 @@ async def stats_overview():
 
 @app.get("/v1/stats/categories")
 async def stats_categories():
+    _ensure_seeded()
     cats = STATS_STORE["categories"]
     total = sum(cats.values()) or 1
     return [
@@ -335,6 +311,7 @@ async def stats_categories():
 
 @app.get("/v1/stats/platforms")
 async def stats_platforms():
+    _ensure_seeded()
     plats = STATS_STORE["platforms"]
     total = sum(plats.values()) or 1
     return [
@@ -433,7 +410,6 @@ async def engine_resources():
     wc = base / "templates" / "wildcards.yaml"
     if wc.exists():
         try:
-            d = _json.loads((_json.dumps(__import__("yaml").safe_load(wc.read_text())))) if False else None
             import yaml
             d = yaml.safe_load(wc.read_text())
             if isinstance(d, dict):
@@ -543,6 +519,12 @@ if _web_dir.exists():
     app.mount("/", StaticFiles(directory=str(_web_dir), html=True), name="web")
 
 
-# ── 自动 seed 演示数据（在所有函数定义完成后调用）───
-seed_demo_data()
+# ── 惰性 seed：首次访问 stats 时自动填充 ───
+_seeded = False
+
+def _ensure_seeded():
+    global _seeded
+    if not _seeded:
+        seed_demo_data()
+        _seeded = True
 

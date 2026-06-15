@@ -19,8 +19,7 @@ from prompt_engine.models import OptimizeResult
 logger = logging.getLogger(__name__)
 
 # 默认数据库路径
-_DEFAULT_DB_DIR = Path(__file__).parent / "data"
-_DEFAULT_DB_PATH = _DEFAULT_DB_DIR / "prompt_cache.db"
+_DEFAULT_DB_PATH = Path(__file__).parent / "data" / "prompt_cache.db"
 
 
 class SqlitePromptCache:

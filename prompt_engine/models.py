@@ -206,3 +206,93 @@ class FeedbackStats(BaseModel):
     avg_rating: float = Field(default=0.0, description="平均评分")
     corrected: int = Field(default=0, description="有纠正的反馈数")
     method_breakdown: dict[str, int] = Field(default_factory=dict, description="按分类方法的分布")
+
+
+# ── 共享映射表（StyleCategory ↔ 各种表示形式）───
+# 单一定义点，消除 optimizer.py / classifier.py / rest.py 三份重复
+
+STYLE_CATEGORY_DB_MAP: dict["StyleCategory", str] = {
+    StyleCategory.LIGHTING: "Lighting",
+    StyleCategory.MATERIAL_PROPERTIES: "Material_Properties",
+    StyleCategory.MATERIALS: "Materials",
+    StyleCategory.DIMENSIONALITY: "Dimensionality",
+    StyleCategory.COLORS_AND_PALETTES: "Colors_and_Palettes",
+    StyleCategory.COMBINATIONS: "Combinations",
+    StyleCategory.CAMERA: "Camera",
+    StyleCategory.PERSPECTIVE: "Perspective",
+    StyleCategory.STRUCTURAL_MODIFICATION: "Structural_Modification",
+    StyleCategory.NATURE_AND_ANIMALS: "Nature_and_Animals",
+    StyleCategory.OBJECTS: "Objects",
+    StyleCategory.OUTER_SPACE: "Outer_Space",
+    StyleCategory.GEOMETRY: "Geometry",
+    StyleCategory.GEOGRAPHY_AND_CULTURE: "Geography_and_Culture",
+    StyleCategory.DRAWING_AND_ART_MEDIUMS: "Drawing_and_Art_Mediums",
+    StyleCategory.SFX_AND_SHADERS: "SFX_and_Shaders",
+    StyleCategory.THEMES: "Themes",
+    StyleCategory.INTANGIBLES: "Intangibles",
+    StyleCategory.TV_AND_MOVIES: "TV_and_Movies",
+    StyleCategory.SONG_LYRICS: "Song_Lyrics",
+    StyleCategory.DESIGN_STYLES: "Design_Styles",
+    StyleCategory.DIGITAL: "Digital",
+    StyleCategory.EXPERIMENTAL: "Experimental",
+    StyleCategory.EMOJIS: "Emojis",
+    StyleCategory.MISCELLANEOUS: "Miscellaneous",
+}
+
+DB_KEY_TO_STYLE_CATEGORY: dict[str, "StyleCategory"] = {v: k for k, v in STYLE_CATEGORY_DB_MAP.items()}
+
+CATEGORY_CN_NAMES: dict["StyleCategory", str] = {
+    StyleCategory.LIGHTING: "光照效果",
+    StyleCategory.MATERIAL_PROPERTIES: "材质属性",
+    StyleCategory.MATERIALS: "材料",
+    StyleCategory.DIMENSIONALITY: "维度感",
+    StyleCategory.COLORS_AND_PALETTES: "色彩与调色板",
+    StyleCategory.COMBINATIONS: "色彩组合",
+    StyleCategory.CAMERA: "相机/镜头",
+    StyleCategory.PERSPECTIVE: "视角/透视",
+    StyleCategory.STRUCTURAL_MODIFICATION: "结构变形",
+    StyleCategory.NATURE_AND_ANIMALS: "自然与动物",
+    StyleCategory.OBJECTS: "物体",
+    StyleCategory.OUTER_SPACE: "太空",
+    StyleCategory.GEOMETRY: "几何形状",
+    StyleCategory.GEOGRAPHY_AND_CULTURE: "地理与文化",
+    StyleCategory.DRAWING_AND_ART_MEDIUMS: "绘画与艺术媒介",
+    StyleCategory.SFX_AND_SHADERS: "特效与着色器",
+    StyleCategory.THEMES: "主题/氛围",
+    StyleCategory.INTANGIBLES: "抽象概念",
+    StyleCategory.TV_AND_MOVIES: "影视参考",
+    StyleCategory.SONG_LYRICS: "歌词风格",
+    StyleCategory.DESIGN_STYLES: "设计风格",
+    StyleCategory.DIGITAL: "数字艺术",
+    StyleCategory.EXPERIMENTAL: "实验风格",
+    StyleCategory.EMOJIS: "Emoji 风格",
+    StyleCategory.MISCELLANEOUS: "杂项",
+}
+
+CATEGORY_DESCRIPTIONS: dict["StyleCategory", str] = {
+    StyleCategory.LIGHTING: "光照效果、光线类型、照明方式、阴影、辉光、体积光",
+    StyleCategory.MATERIAL_PROPERTIES: "材质属性、表面质感、透明度、反射、折射、光泽度",
+    StyleCategory.MATERIALS: "建筑材料、物体材质、塑料、金属、织物、木材、石材",
+    StyleCategory.DIMENSIONALITY: "维度表现、2D/3D/2.5D、立体感、空间深度",
+    StyleCategory.COLORS_AND_PALETTES: "色彩方案、色调、调色板、互补色、类似色",
+    StyleCategory.COMBINATIONS: "色彩组合、特殊色彩效果、发光材质、珍珠色",
+    StyleCategory.CAMERA: "相机类型、镜头、摄影技法、光圈、焦距、拍摄手法",
+    StyleCategory.PERSPECTIVE: "透视角度、视角、构图方式、仰视、俯视、鱼眼",
+    StyleCategory.STRUCTURAL_MODIFICATION: "结构变形、螺旋、几何扭曲、抽象形态",
+    StyleCategory.NATURE_AND_ANIMALS: "自然景观、动物、植物、生态系统、野外",
+    StyleCategory.OBJECTS: "具体物体、道具、日常物品、机械、电子元件",
+    StyleCategory.OUTER_SPACE: "太空、星空、星球、宇宙、星际、银河",
+    StyleCategory.GEOMETRY: "几何图形、图案、多面体、对称、伊斯兰几何",
+    StyleCategory.GEOGRAPHY_AND_CULTURE: "文化风格、地域特色、民族、历史时期、建筑传统",
+    StyleCategory.DRAWING_AND_ART_MEDIUMS: "绘画媒介、艺术技法、水彩、油画、素描、版画",
+    StyleCategory.SFX_AND_SHADERS: "视觉特效、着色器效果、光效、粒子、后期处理",
+    StyleCategory.THEMES: "主题氛围、情绪、概念、美学运动、亚文化",
+    StyleCategory.INTANGIBLES: "抽象概念、不可见的、量子、能量、光、电磁",
+    StyleCategory.TV_AND_MOVIES: "影视参考、电影风格、电视剧、动画、漫画",
+    StyleCategory.SONG_LYRICS: "歌词风格、音乐相关、歌词意象、旋律视觉化",
+    StyleCategory.DESIGN_STYLES: "设计风格、艺术运动、装饰艺术、极简、波普",
+    StyleCategory.DIGITAL: "数字艺术、像素艺术、电子游戏风格、CGI",
+    StyleCategory.EXPERIMENTAL: "实验风格、前卫、概念艺术、非常规",
+    StyleCategory.EMOJIS: "Emoji 风格、表情符号、Unicode 符号",
+    StyleCategory.MISCELLANEOUS: "杂项、其他、特殊渲染效果",
+}
