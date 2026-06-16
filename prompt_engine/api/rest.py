@@ -1,6 +1,7 @@
 """FastAPI REST 服务层"""
 import logging
 from functools import lru_cache
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 
 logger = logging.getLogger(__name__)
@@ -39,14 +40,14 @@ async def optimize(request: OptimizeRequest):
     try:
         optimizer = get_optimizer()
         result = optimizer.optimize(request)
-        if result.error:
-            raise HTTPException(status_code=502, detail=result.error)
         return result
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error("optimize failed: %s", e)
-        raise HTTPException(status_code=500, detail="Internal processing error")
+        return OptimizeResult(
+            optimized_prompt=request.prompt,
+            platform=request.platform,
+            style=request.style,
+            error=str(e),
+        )
 
 
 @app.post("/v1/optimize/batch", response_model=list[OptimizeResult])
@@ -435,7 +436,7 @@ IMAGE_MODELS = [
     {"id": "picsum", "name": "Picsum Photos (推荐)", "provider": "Picsum", "requires_key": False,
      "description": "✅ 免费真实图片，基于 prompt hash 产生确定性图片（同一 prompt 同一图）", "endpoint": "https://picsum.photos/seed/{prompt_hash}/{width}/{height}"},
     {"id": "MiniMax", "name": "MiniMax image-01", "provider": "MiniMax", "requires_key": True,
-     "description": "MiniMax image-01 图像生成（高质量，国内可直连）", "endpoint": "https://api.MiniMax.chat/v1/image/generation"},
+     "description": "MiniMax image-01 图像生成（高质量，国内可直连）", "endpoint": "https://api.minimaxi.com/v1/image_generation", "model_id": "image-01"},
     {"id": "vidu", "name": "Vidu", "provider": "Vidu", "requires_key": True,
      "description": "Vidu 视频/图像生成（生数科技，支持文生图）", "endpoint": "https://api.vidu.studio/v1/image/generations"},
 
@@ -479,28 +480,206 @@ import urllib.parse
 
 @app.post("/v1/preview")
 async def image_preview(request: dict):
-    """生成图片预览 URL (不实际调 API，返回可访问的 URL 供前端 img 标签使用)."""
+    """生成图片预览 URL.
+
+    - Picsum: 免费，返回确定性 URL
+    - MiniMax: 调用 image-01 API，返回真实图片 URL
+    - 其他: 需要配置 API Key
+    """
+    import hashlib
+    import os
+
     prompt = request.get("prompt", "").strip()
     model = request.get("model", "picsum")
     width = request.get("width", 1024)
     height = request.get("height", 1024)
-    seed = request.get("seed", -1)
+    n = request.get("n", 1)  # 生成数量
 
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt 不能为空")
 
-    # Picsum Photos 免费图片生成（基于 prompt hash 确定性）
+    # ── Picsum Photos 免费图片 ──────────────────────────
     if model == "picsum":
-        # Picsum Photos 免费图片生成（基于 prompt hash 确定性）
-        import hashlib
         prompt_hash = hashlib.md5(prompt.encode()).hexdigest()[:16]
         url = f"https://picsum.photos/seed/{prompt_hash}/{width}/{height}"
         return {"url": url, "model": "picsum", "width": width, "height": height, "prompt": prompt}
 
-    # 其他模型返回 placeholder URL（前端 img 标签可直接显示）
-    # 不实际调 API（避免被用户未配 key 时的 API 账单打到）
-    return {"url": "", "model": model, "width": width, "height": height, "prompt": prompt,
-            "note": "该模型需配置 API Key，请前往 Settings 页面配置"}
+    # ── MiniMax image-01 ──────────────────────────
+    if model == "MiniMax":
+        api_key = os.environ.get("MINIMAX_API_KEY", "")
+        if not api_key:
+            return {
+                "url": "",
+                "model": "MiniMax",
+                "width": width,
+                "height": height,
+                "prompt": prompt,
+                "note": "MiniMax API Key 未配置，请在 .env 或环境变量中设置 MINIMAX_API_KEY"
+            }
+
+        try:
+            import httpx
+            # MiniMax API: aspect_ratio 从尺寸推断
+            aspect = "1:1"
+            if width > height:
+                aspect = "16:9"
+            elif height > width:
+                aspect = "9:16"
+
+            resp = httpx.post(
+                "https://api.minimaxi.com/v1/image_generation",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "image-01",
+                    "prompt": prompt,
+                    "aspect_ratio": aspect,
+                    "response_format": "url",
+                    "n": min(n, 3),  # 最多 3 张
+                    "prompt_optimizer": True,
+                },
+                timeout=60.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            # 解析 MiniMax 响应
+            image_urls = data.get("data", {}).get("image_urls", [])
+            if image_urls:
+                return {
+                    "url": image_urls[0],  # 返回第一张
+                    "urls": image_urls,     # 全部 URL
+                    "model": "MiniMax",
+                    "width": width,
+                    "height": height,
+                    "prompt": prompt,
+                    "count": len(image_urls),
+                }
+            else:
+                return {
+                    "url": "",
+                    "model": "MiniMax",
+                    "width": width,
+                    "height": height,
+                    "prompt": prompt,
+                    "note": "MiniMax 返回了空结果"
+                }
+
+        except httpx.HTTPStatusError as e:
+            return {
+                "url": "",
+                "model": "MiniMax",
+                "width": width,
+                "height": height,
+                "prompt": prompt,
+                "note": f"MiniMax API 错误: {e.response.status_code}"
+            }
+        except Exception as e:
+            return {
+                "url": "",
+                "model": "MiniMax",
+                "width": width,
+                "height": height,
+                "prompt": prompt,
+                "note": f"MiniMax 调用失败: {str(e)[:100]}"
+            }
+
+    # ── 其他模型: 需要 API Key ──────────────────────────
+    return {
+        "url": "",
+        "model": model,
+        "width": width,
+        "height": height,
+        "prompt": prompt,
+        "note": f"该模型 ({model}) 需配置对应 API Key，请前往 Settings 页面配置"
+    }
+
+
+# ── API Key 管理端点 ─────────────────────────────────
+ENV_FILE = Path(__file__).parent.parent.parent / ".env"
+
+
+def _get_configured_keys() -> dict:
+    """返回哪些 provider 的 key 已配置（不返回实际 key）。"""
+    configured = {}
+    if ENV_FILE.exists():
+        with open(ENV_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, val = line.partition("=")
+                    val = val.strip()
+                    if val and val not in ("your_...", "your_k...here"):
+                        configured[key] = True
+    return configured
+
+
+@app.get("/v1/config/api-key")
+async def get_api_keys_status():
+    """返回哪些 key 已配置（不明文返回 key 内容）。"""
+    configured = _get_configured_keys()
+    return {
+        "configured": list(configured.keys()),
+        "hint": "POST /v1/config/api-key {provider, api_key} 更新 key（写入 .env，重启生效）",
+    }
+
+
+@app.post("/v1/config/api-key")
+async def set_api_key(request: dict):
+    """更新 .env 中的 API Key（不明文落盘后返回）。"""
+    provider = request.get("provider", "")
+    api_key = request.get("api_key", "")
+
+    if not provider or not api_key:
+        raise HTTPException(status_code=400, detail="provider 和 api_key 均不能为空")
+
+    # 构造环境变量名
+    key_map = {
+        "minimax": "MINIMAX_API_KEY",
+        "openai": "OPENAI_API_KEY",
+        "xfyun": "XFYUN_API_KEY",
+        "gemini": "GEMINI_API_KEY",
+        "replicate": "REPLICATE_API_KEY",
+        "stability": "STABILITY_API_KEY",
+        "together": "TOGETHER_API_KEY",
+        "vidu": "VIDU_API_KEY",
+    }
+    env_var = key_map.get(provider.lower())
+    if not env_var:
+        raise HTTPException(status_code=400, detail=f"未知 provider: {provider}，支持: {list(key_map.keys())}")
+
+    # 读写 .env
+    env_lines = []
+    found = False
+    if ENV_FILE.exists():
+        with open(ENV_FILE, "r", encoding="utf-8") as f:
+            env_lines = f.readlines()
+
+    new_lines = []
+    for line in env_lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and "=" in stripped:
+            k = stripped.split("=", 1)[0].strip()
+            if k == env_var:
+                new_lines.append(f'{env_var}={api_key}\n')
+                found = True
+                continue
+        new_lines.append(line)
+
+    if not found:
+        new_lines.append(f'{env_var}={api_key}\n')
+
+    with open(ENV_FILE, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
+    return {
+        "provider": provider,
+        "env_var": env_var,
+        "configured": True,
+        "hint": "重启后端服务后生效",
+    }
 
 
 # ── v0.19.0: 缓存统计 API ───
@@ -516,7 +695,7 @@ async def cache_stats():
 
 
 if _web_dir.exists():
-    app.mount("/", StaticFiles(directory=str(_web_dir), html=True), name="web")
+    app.mount("/web", StaticFiles(directory=str(_web_dir), html=True), name="web")
 
 
 # ── 惰性 seed：首次访问 stats 时自动填充 ───

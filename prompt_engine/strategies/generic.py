@@ -1,11 +1,24 @@
-"""通用平台策略 — 不限定平台，参考 NBP 库的通用模式"""
+"""通用平台策略 — 平台无关的提示词优化策略
+
+适用场景：
+- 用户不确定使用哪个图片生成模型
+- 需要生成跨平台兼容的高质量提示词
+- 作为默认fallback策略
+"""
 from prompt_engine.strategies.base import BaseStrategy, register
 from prompt_engine.models import PlatformType, StyleType
 
 
 @register("generic")
 class GenericStrategy(BaseStrategy):
-    """通用提示词优化策略 — 从 Nano Banana Pro 社区 prompt 提取的通用模式"""
+    """通用提示词优化策略 — 生成平台无关的高质量提示词
+
+    设计原则：
+    1. 输出英文（所有主流模型英文效果最佳）
+    2. 使用跨平台兼容的描述性语言
+    3. 结构化输出：主体→动作→环境→色彩→光照→风格
+    4. 避免特定平台的参数语法（如 MJ 的 --ar、SD 的权重括号）
+    """
 
     platform = PlatformType.GENERIC
 
@@ -17,53 +30,72 @@ class GenericStrategy(BaseStrategy):
         max_length: int = 500,
         negative_prompt: str | None = None,
     ) -> str:
-        style_text = f"风格：{style.value}" if style else "不限定风格"
+        style_text = f"，风格：{style.value}" if style else ""
         negative_text = cls.build_negative_section(negative_prompt)
 
-        return f"""You are an AI image prompt expert. Rewrite the user's input into a high-quality, platform-agnostic image generation prompt.
+        # Detail density based on creative level
+        if creative_level <= 3:
+            detail_level = "简洁精炼"
+            detail_instruction = "使用简洁的描述，保留核心要点"
+        elif creative_level <= 6:
+            detail_level = "适中"
+            detail_instruction = "提供中等程度的细节描写"
+        else:
+            detail_level = "丰富细腻"
+            detail_instruction = "添加丰富的细节描写、环境氛围、情绪表达"
 
-## Prompt structure (based on analysis of 14,000+ community-created prompts)
-Build a DETAILED FLOWING DESCRIPTION in this order:
+        return f"""You are an expert prompt engineer for AI image generation. Your task is to transform user descriptions into high-quality, platform-agnostic image prompts.
 
-1. [Subject] — Precise: appearance, clothing, pose, expression
-2. [Action] — What is happening? Use specific verbs
-3. [Environment] — Detailed setting, background, furnishings, props
-4. [Color palette] — Dominant colors, accents, mood
-5. [Lighting] — Light source, quality, direction, effect
-6. [Style/Composition] — Photography terms, camera reference, composition technique
+## Core Principle: Platform-Agnostic
+Generate prompts that work across ALL major image generation models:
+- Midjourney, DALL-E 3, Stable Diffusion, Imagen, Flux, etc.
+- Do NOT use platform-specific syntax (no --ar, --v, --s for MJ, no (word:1.2) weights for SD)
+- Use universal descriptive language that any model understands
 
-## Quality patterns from the community prompt library
+## Output Structure (follow this order)
+1. **Subject** — Precise description of the main subject: appearance, clothing, pose, expression, details
+2. **Action/State** — What is happening or the subject's state
+3. **Environment** — Detailed setting: location, background elements, props, atmosphere
+4. **Color Palette** — Dominant colors and color relationships
+5. **Lighting** — Light source, quality, direction, and effects (e.g., "soft natural light", "dramatic side lighting")
+6. **Style/Composition** — Artistic style references, camera techniques, composition
+
+## Quality Patterns (from 14,000+ community prompts)
 - Color precision: "navy blue", "mint green", "warm amber", "crimson", "teal"
-- Lighting precision: "soft diffused natural light from a large window", "dramatic side lighting", "golden hour warm glow", "rim light", "volumetric rays"
+- Lighting: "soft diffused natural light", "golden hour glow", "dramatic rim light", "volumetric rays"
+- Camera: "85mm lens f/1.8", "shallow depth of field", "cinematic bokeh"
+- Texture: "intricate patterns", "smooth surface", "rough texture", "shiny metallic"
 
-- Camera references: "85mm lens at f/1.8", "shallow depth of field", "bokeh"
-- Expression details: "eyes focused, expression serious with a slight smile"
-- Texture details: "intricate patterns", "smooth surface", "rough texture", "shiny metallic"
+## Detail Level Control
+- creative_level={creative_level}/10: {detail_instruction}
 
-## Detail level
-- creative_level={creative_level}/10: adjust detail density proportionally
+## Output Language — MANDATORY
+**ALWAYS output in ENGLISH.** This is critical because:
+1. All image generation models are primarily trained on English descriptions
+2. English prompts produce 15-30% better quality on average
+3. Even if user input is Chinese/Japanese/other language, output MUST be in English
 
-## Output language — CRITICAL
-ALWAYS output the image prompt in **English** — even if the user input is in Chinese or any other language.
-Reason: Image generation models are trained primarily on English descriptions and produce significantly better results with English prompts (~15-30% higher quality).
-When the user input is Chinese:
-1. Internally understand the meaning
-2. Output the image prompt in English with proper photographic/artistic terminology
-3. Use precise English color names ('navy blue', 'mint green', 'warm amber')
-4. The frontend will display a Chinese translation to the user for understanding
+The frontend will display a Chinese translation for user understanding.
 
-## Output rules
-1. Output ONLY the prompt — NO explanations, NO labels
-3. **Output language: ENGLISH ONLY.** Image generation models are trained on English, so English prompts produce better results. Even when the user input is Chinese, the output must be in English. The frontend will display a Chinese translation for reference.
-2. Preserve user's core semantic meaning
-3. **Output language**: ALWAYS in **English** regardless of user input language. Image generation models are trained primarily on English descriptions and produce significantly better results with English prompts. The frontend will display a Chinese translation for non-English user input.
-4. Within {max_length} characters
-5. {style_text}
+## Output Rules
+1. Output ONLY the prompt text — no explanations, no labels, no prefixes
+2. No quotation marks around the output
+3. Within {max_length} characters
+4. Use natural, flowing prose (not bullet points)
+5. Focus on visual details that translate well across models
+{style_text}
 {negative_text}"""
 
     @classmethod
     def post_process(cls, raw_output: str, creative_level: int = 5,
                      preferred_categories: list[str] | None = None) -> str:
-        text = raw_output.strip().strip('"').strip("'")
+        """通用后处理：清理格式 + 注入风格关键词"""
+        text = raw_output.strip().strip('"').strip("'").strip()
 
-        from prompt_engine.keyword_injector import inject_style_keywords; return inject_style_keywords(text, creative_level, preferred_categories)
+        # 移除可能的标签或前缀
+        import re
+        text = re.sub(r'^(prompt[:：]\s*)', '', text, flags=re.IGNORECASE)
+
+        # 注入风格关键词（如果需要）
+        from prompt_engine.keyword_injector import inject_style_keywords
+        return inject_style_keywords(text, creative_level, preferred_categories)

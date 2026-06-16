@@ -29,5 +29,8 @@ class BaseLLMProvider:
         elif provider_name == "xfyun":
             from prompt_engine.llm.xfyun import XfyunProvider
             return XfyunProvider(cfg["llm"]["xfyun"])
+        elif provider_name == "minimax":
+            from prompt_engine.llm.minimax import MiniMaxProvider
+            return MiniMaxProvider(cfg["llm"]["minimax"])
         else:
             raise ValueError(f"不支持的 LLM 供应商: {provider_name}")

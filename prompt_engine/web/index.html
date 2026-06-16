@@ -158,6 +158,7 @@ const Workbench = {
 
           <div style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <el-select v-model="platform" style="width:140px" placeholder="选择平台">
+              <el-option v-for="p in platforms" :key="p.value" :label="p.label" :value="p.value" />
             </el-select>
             <el-select v-model="style" style="width:140px" placeholder="选择风格(可选)" clearable>
               <el-option value="" label="自动检测(默认)" />
@@ -174,8 +175,7 @@ const Workbench = {
               <el-option value="cartoon" label="🎭 卡通" />
               <el-option value="portrait" label="👤 人像" />
               <el-option value="realistic" label="🌍 写实" />
-              <el-option v-for="p in platforms" :key="p.value" :label="p.label" :value="p.value" />
-            </el-select>
+                          </el-select>
 
             <el-radio-group v-model="mode" size="small" style="margin-right:8px">
               <el-radio-button label="single">单条</el-radio-button>
@@ -268,80 +268,65 @@ const Workbench = {
               </div>
             </el-card>
 
-          <el-tabs v-if="result" type="border-card" style="margin-top:12px">
-            <el-tab-pane label="✨ 优化结果">
-              <div style="margin-bottom:8px;color:#909399;font-size:12px">
-                原始输入：<code>{{ inputText }}</code>
-              </div>
-              <pre style="background:#f0f5ff;padding:16px;border-radius:6px;white-space:pre-wrap;font-size:14px;line-height:1.6;border-left:4px solid #409eff">{{ result.optimized_prompt }}</pre>
-              <div style="margin-top:8px">
-                <el-tag v-if="result.platform" effect="plain">{{ result.platform }}</el-tag>
-                <el-tag v-if="result.duration_ms" type="success" effect="plain" style="margin-left:8px">耗时 {{ result.duration_ms }}ms</el-tag>
-              <div style="margin-top:8px">
-                <el-button size="small" @click="submitFeedback('positive')" :type="feedbackType==='positive'?'success':'default'" :icon="Select">👍 满意</el-button>
-                <el-button size="small" @click="submitFeedback('negative')" :type="feedbackType==='negative'?'danger':'default'" :icon="Close">👎 不满意</el-button>
-                <span v-if="feedbackMsg" style="margin-left:8px;font-size:12px;color:#909399">{{ feedbackMsg }}</span>
-              </div>
-              </div>
+            <el-tabs v-if="result" type="border-card" style="margin-top:12px">
+              <el-tab-pane label="✨ 优化结果">
+                <div style="margin-bottom:8px;color:#909399;font-size:12px">
+                  原始输入：<code>{{ inputText }}</code>
+                </div>
+                <pre style="background:#f0f5ff;padding:16px;border-radius:6px;white-space:pre-wrap;font-size:14px;line-height:1.6;border-left:4px solid #409eff">{{ result.optimized_prompt }}</pre>
+                <div style="margin-top:8px">
+                  <el-tag v-if="result.platform" effect="plain">{{ result.platform }}</el-tag>
+                  <el-tag v-if="result.duration_ms" type="success" effect="plain" style="margin-left:8px">耗时 {{ result.duration_ms }}ms</el-tag>
+                <div style="margin-top:8px">
+                  <el-button size="small" @click="submitFeedback('positive')" :type="feedbackType==='positive'?'success':'default'" :icon="Select">👍 满意</el-button>
+                  <el-button size="small" @click="submitFeedback('negative')" :type="feedbackType==='negative'?'danger':'default'" :icon="Close">👎 不满意</el-button>
+                  <span v-if="feedbackMsg" style="margin-left:8px;font-size:12px;color:#909399">{{ feedbackMsg }}</span>
+                </div>
+                </div>
 
-              <div v-if="disturbResults" style="margin:12px 0">
-              <div style="font-size:14px;font-weight:bold;margin-bottom:8px">📊 A/B 多版本对比</div>
-              <el-row :gutter="8">
-                <el-col :span="8" v-for="(c, idx) in disturbResults" :key="idx">
-                  <el-card shadow="never" :class="{'best-card': idx === bestIdx}">
-                    <div style="font-size:12px;color:#909399;margin-bottom:4px">版本 #{{ idx + 1 }}{{ idx === bestIdx ? ' (最佳)' : '' }}</div>
-                    <pre style="background:#f5f7fa;padding:8px;border-radius:4px;white-space:pre-wrap;font-size:12px;line-height:1.4;max-height:150px;overflow:auto">{{ c }}</pre>
-                    <div style="margin-top:4px;display:flex;gap:4px">
-                      <el-button size="small" text @click="input=c; disturbResults=null">选用</el-button>
-                      <el-button size="small" text @click="copyText(c)">复制</el-button>
+                <el-collapse v-if="result.optimized_prompt && isEnglish(result.optimized_prompt)" v-model="activeTranslate" style="margin-top:12px">
+                  <el-collapse-item title="🇨🇳 中文翻译（仅供参考，不用于图片生成）" name="translate">
+                    <div style="font-size:13px;color:#909399;margin-bottom:8px">⚠️ 仅为展示。复制英文原文用于图片生成平台。</div>
+                    <pre style="background:#fdf6e3;padding:12px;border-radius:4px;white-space:pre-wrap;font-size:13px;line-height:1.6;border-left:3px solid #f0c674">{{ translateEN2CN(result.optimized_prompt) }}</pre>
+                    <el-button size="small" text @click="copyText(translateEN2CN(result.optimized_prompt))">📋 复制中文</el-button>
+                  </el-collapse-item>
+                </el-collapse>
+              </el-tab-pane>
+
+              <el-tab-pane label="🖼️ 图片预览">
+                <div class="section-desc">
+                  选定模型，实时生成预览图。
+                  <b style="color:#67c23a">Picsum Photos 免费真实图</b>开箱即用。
+                  其余模型需先配置对应 API Key。
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+                  <el-select v-model="previewModel" style="width:200px" placeholder="选择模型">
+                    <el-option v-for="m in imageModelsData" :key="m.id" :label="m.name + (m.requires_key?' 🔑':' 🆓')" :value="m.id" />
+                  </el-select>
+                  <el-button type="success" @click="generatePreview" :loading="previewing">
+                    生成预览
+                  </el-button>
+                  <el-button v-if="previewUrl" @click="previewUrl=''">清除</el-button>
+                </div>
+
+                <div v-if="previewUrl" class="preview-grid">
+                  <div style="border:1px solid #ebeef5;border-radius:6px;overflow:hidden;background:#f5f7fa">
+                    <img :src="previewUrl" style="width:100%;height:200px;object-fit:cover" :alt="result.optimized_prompt.slice(0,50)" />
+                    <div style="padding:6px 8px;font-size:11px;color:#909399">
+                      <el-tag size="small">{{ previewModel }}</el-tag>
+                      <span style="margin-left:6px">1024×1024</span>
                     </div>
-                  </el-card>
-                </el-col>
-              </el-row>
-            </div>
-
-            <el-collapse v-if="result && result.optimized_prompt && isEnglish(result.optimized_prompt)" v-model="activeTranslate" style="margin-top:12px">
-              <el-collapse-item title="🇨🇳 中文翻译（仅供参考，不用于图片生成）" name="translate">
-                <div style="font-size:13px;color:#909399;margin-bottom:8px">⚠️ 仅为展示。复制英文原文用于图片生成平台。</div>
-                <pre style="background:#fdf6e3;padding:12px;border-radius:4px;white-space:pre-wrap;font-size:13px;line-height:1.6;border-left:3px solid #f0c674">{{ translateEN2CN(result.optimized_prompt) }}</pre>
-                <el-button size="small" text @click="copyText(translateEN2CN(result.optimized_prompt))">📋 复制中文</el-button>
-              </el-collapse-item>
-            </el-collapse>
-
-            <el-divider style="margin:20px 0"><span style="font-size:13px;color:#909399">🖼️ 图片预览</span></el-divider>
-              <div class="section-desc">
-                选定模型，实时生成预览图。
-                <b style="color:#67c23a">Picsum Photos 免费真实图</b>开箱即用。
-                其余 15 个模型（MiniMax/Vidu/DALL-E/Flux/SD等）需先到「配置」页填 API Key。
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-                <el-select v-model="previewModel" style="width:200px" placeholder="选择模型">
-                  <el-option v-for="m in imageModelsData" :key="m.id" :label="m.name + (m.requires_key?' 🔑':' 🆓')" :value="m.id" />
-                </el-select>
-                <el-button type="success" @click="generatePreview" :loading="previewing">
-                  生成预览
-                </el-button>
-                <el-button v-if="previewUrl" @click="previewUrl=''">清除</el-button>
-              </div>
-
-              <div v-if="previewUrl" class="preview-grid">
-                <div style="border:1px solid #ebeef5;border-radius:6px;overflow:hidden;background:#f5f7fa">
-                  <img :src="previewUrl" style="width:100%;height:200px;object-fit:cover" :alt="result.optimized_prompt.slice(0,50)" />
-                  <div style="padding:6px 8px;font-size:11px;color:#909399">
-                    <el-tag size="small">{{ previewModel }}</el-tag>
-                    <span style="margin-left:6px">1024×1024</span>
                   </div>
                 </div>
-              </div>
-              <el-empty v-else-if="!previewing" description="点击「生成预览」查看效果" :image-size="60" />
-            </el-tab-pane>
+                <el-empty v-else-if="!previewing" description="点击「生成预览」查看效果" :image-size="60" />
+              </el-tab-pane>
 
-            <el-tab-pane label="🏷️ 分类结果" v-if="classResult">
-              <div class="section-desc">
-                引擎自动判断输入 prompt 属于 25 种 MJ 风格维度中的哪一个。
-                分类采用三级流水线：关键词匹配 → 向量语义搜索 → LLM 兜底。
-              </div>
-              <el-descriptions :column="2" border>
+              <el-tab-pane label="🏷️ 分类结果" v-if="classResult">
+                <div class="section-desc">
+                  引擎自动判断输入 prompt 属于 25 种 MJ 风格维度中的哪一个。
+                  分类采用三级流水线：关键词匹配 → 向量语义搜索 → LLM 兜底。
+                </div>
+                <el-descriptions :column="2" border>
                 <el-descriptions-item label="风格维度">
                   <el-tag v-for="c in classResult.categories" :key="c" size="small" style="margin:2px">{{ c }}</el-tag>
                   <span v-if="!classResult.categories?.length">-</span>
@@ -461,7 +446,7 @@ const Workbench = {
     const batchResults = ref([]);
     const batchRunning = ref(false);
     const batchProgressPercent = ref(0);
-    const platform = ref('midjourney');
+    const platform = ref('generic');
     const platforms = ref([
       {value:'midjourney', label:'🎨 Midjourney'},
       {value:'stable_diffusion', label:'🖌️ Stable Diffusion'},
@@ -568,10 +553,11 @@ const Workbench = {
       disturbLoading.value = true; disturbResults.value = null;
       try {
         const d = await api.post('/v1/disturb-optimize', {
-          prompt: input.value, platform: platform.value, num_candidates: 3
+          prompt: input.value, platform: platform.value, num_candidates: 2,
+          creative_level: 3  // 模板路径，快速出多版本
         });
         if (d.detail) { error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail); }
-        else if (d.candidates && d.candidates.length >= 3) {
+        else if (d.candidates && d.candidates.length >= 2) {
           disturbResults.value = d.candidates;
           bestIdx.value = 1;  // 默认选中版本2 (最佳)
         }
@@ -669,8 +655,6 @@ const Workbench = {
 
     // 加载图片模型清单
     api.get('/v1/image-models').then(m => { imageModelsData.value = m; });
-    // 默认 picsum 在前
-    setTimeout(() => { if (!imageModels.value.length) imageModelsData.value = [{id:'picsum',name:'Picsum Photos',requires_key:false}]; }, 1000);
 
     async function generatePreview() {
       if (!result.value?.optimized_prompt) return;
@@ -686,7 +670,7 @@ const Workbench = {
     return { input, inputText, mode, batchResults, batchRunning, batchProgressPercent, inputRows,
              platform, platforms, loading, classifying, evaluating, result, classResult, evalResult, error,
              activeHelps, activeTranslate, dimHints, examples, exampleGroups, optimize, optimizeBatch, classify, evaluate, clear, copyText,
-             previewModel, imageModels, previewUrl, previewing, generatePreview,
+             previewModel, imageModelsData, imageModels, previewUrl, previewing, generatePreview,
              style, rewriteInput, rewriteResult, rewriting, keywords,
              feedbackMsg, feedbackType, submitFeedback, showGuide, guideTopics, guideExamples, applyGuideTopic, applyGuideExample,
              disturbLoading, disturbResults, bestIdx, disturbOptimize,
@@ -908,6 +892,7 @@ const Settings = {
             <el-option label="OpenAI — GPT-4o（推荐，稳定）" value="openai" />
             <el-option label="讯飞星火 — 国内直连（低延迟）" value="xfyun" />
             <el-option label="Gemini — Google（高质量，免费额度）" value="gemini" />
+            <el-option label="MiniMax — MiniMax-M3（国内可直连）" value="minimax" />
           </el-select>
           <div style="margin-top:12px;padding:8px 12px;background:#f0f5ff;border-radius:4px;font-size:13px;color:#409eff">
             💡 建议：国内市场使用讯飞星火，海外使用 OpenAI 或 Gemini
@@ -983,14 +968,33 @@ const Settings = {
             <el-table-column prop="description" label="说明" min-width="200" />
           </el-table>
           <el-collapse style="margin-top:12px">
-            <el-collapse-item title="🔑 配置 API Key（环境变量）" name="apikey">
-              <el-table :data="apiKeyConfigs" stripe size="small" border>
-                <el-table-column prop="provider" label="供应商" width="100" />
-                <el-table-column prop="env_var" label="环境变量" />
-                <el-table-column prop="description" label="说明" />
-              </el-table>
-              <div style="margin-top:8px;font-size:12px;color:#909399">
-                💡 在系统环境变量或 .env 文件中设置上述变量，重启后端服务即可使用
+            <el-collapse-item title="🔑 配置 API Key" name="apikey">
+              <div style="margin-bottom:12px">
+                <div style="font-size:13px;color:#606266;margin-bottom:6px">
+                  为当前选定的 LLM 供应商配置 API Key（重启后端服务生效）：
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <el-select v-model="provider" style="width:160px" size="small">
+                    <el-option label="OpenAI" value="openai" />
+                    <el-option label="讯飞星火" value="xfyun" />
+                    <el-option label="Gemini" value="gemini" />
+                    <el-option label="MiniMax" value="minimax" />
+                  </el-select>
+                  <el-input v-model="apiKeyInput" type="password" show-password size="small"
+                    placeholder="粘贴 API Key…" style="flex:1;min-width:200px;max-width:360px" />
+                  <el-button type="primary" size="small" @click="saveApiKey" :loading="apiKeySaving"
+                    :disabled="!provider || !apiKeyInput">
+                    保存到 .env
+                  </el-button>
+                  <el-tag v-if="apiKeySaved" type="success" size="small">已保存 ✓</el-tag>
+                </div>
+                <div v-if="configuredKeys.length" style="margin-top:8px;font-size:12px;color:#67c23a">
+                  ✓ 已配置：{{ configuredKeys.join('、') }}
+                </div>
+              </div>
+              <el-divider style="margin:12px 0" />
+              <div style="font-size:12px;color:#909399">
+                API Key 将写入项目根目录 <code>.env</code>，从环境变量加载，重启后端服务后生效。
               </div>
             </el-collapse-item>
           </el-collapse>
@@ -1018,28 +1022,55 @@ const Settings = {
   setup() {
     const provider = ref('openai');
     const imageModels = ref([]);
-    const apiKeyConfigs = reactive([
-      {provider:'Picsum Photos',env_var:'(无需 Key)',description:'免费真实图片，开箱即用'},
-      {provider:'MiniMax',env_var:'MiniMax_API_KEY',description:'用于 image-01（国内可直连）'},
-      {provider:'Vidu',env_var:'VIDU_API_KEY',description:'用于 Vidu 文生图（生数科技）'},
-      {provider:'OpenAI',env_var:'OPENAI_API_KEY',description:'用于 DALL-E 3 / DALL-E 2 / GPT-Image-1'},
-      {provider:'Replicate',env_var:'REPLICATE_API_KEY',description:'用于 Flux Pro / Schnell / Midjourney v6 / Kandinsky'},
-      {provider:'Stability',env_var:'STABILITY_API_KEY',description:'用于 Stable Diffusion XL / SD3.5'},
-      {provider:'Together',env_var:'TOGETHER_API_KEY',description:'用于 Ideogram v2 / Playground / Imagen 3'},
-      {provider:'xAI',env_var:'XAI_API_KEY',description:'用于 Grok Aurora 图像生成'},
-    ]);
+    const configuredKeys = ref([]);
+    const apiKeyInput = ref('');
+    const apiKeySaved = ref(false);
+    const apiKeySaving = ref(false);
+
     onMounted(async () => {
       try {
         const m = await api.get('/v1/image-models');
-        imageModels.value = m;
+        // API 直接返回数组，或返回 {models: [...]} 包装
+        imageModels.value = Array.isArray(m) ? m : (m.models || m.data || []);
       } catch(e) {
-        // Fallback 14 model list
+        // 完整的 Fallback 16 model list
         imageModels.value = [
-          {id:'picsum',name:'Picsum Photos',provider:'Picsum',requires_key:false,description:'免费真实图片，开箱即用'},
-          {id:'dall-e-3',name:'DALL-E 3',provider:'OpenAI',requires_key:true,description:'OpenAI 高质量图'},
+          {id:'picsum',name:'Picsum Photos (推荐)',provider:'Picsum',requires_key:false,description:'✅ 免费真实图片，开箱即用'},
+          {id:'MiniMax',name:'MiniMax image-01',provider:'MiniMax',requires_key:true,description:'MiniMax image-01 图像生成（国内可直连）'},
+          {id:'vidu',name:'Vidu',provider:'Vidu',requires_key:true,description:'Vidu 视频/图像生成（生数科技）'},
+          {id:'dall-e-3',name:'DALL-E 3',provider:'OpenAI',requires_key:true,description:'OpenAI 高质量图，1024x1024'},
+          {id:'dall-e-2',name:'DALL-E 2',provider:'OpenAI',requires_key:true,description:'OpenAI 经典版，512x512'},
+          {id:'gpt-image-1',name:'GPT-Image-1',provider:'OpenAI',requires_key:true,description:'OpenAI 多模态图像生成，2025 最新'},
+          {id:'flux-pro',name:'Flux Pro',provider:'Replicate',requires_key:true,description:'Black Forest Labs 旗舰图模型'},
+          {id:'flux-schnell',name:'Flux Schnell',provider:'Replicate',requires_key:true,description:'Flux 快速版，1-4 步出图'},
+          {id:'sdxl',name:'Stable Diffusion XL',provider:'Stability',requires_key:true,description:'Stability AI SDXL 高质量'},
+          {id:'sd3.5',name:'Stable Diffusion 3.5',provider:'Stability',requires_key:true,description:'Stability AI 最新 SD3.5'},
+          {id:'ideogram',name:'Ideogram v2',provider:'Together',requires_key:true,description:'Ideogram 文字渲染专家'},
+          {id:'playground',name:'Playground v2.5',provider:'Together',requires_key:true,description:'Playground 美学风格'},
+          {id:'kandinsky',name:'Kandinsky 3',provider:'Replicate',requires_key:true,description:'Kandinsky 多语言支持'},
+          {id:'midjourney-v6',name:'Midjourney v6',provider:'Replicate',requires_key:true,description:'Midjourney v6 via Replicate'},
+          {id:'imagen-3',name:'Imagen 3',provider:'Together',requires_key:true,description:'Google Imagen 3'},
+          {id:'aurora',name:'Aurora',provider:'xai',requires_key:true,description:'xAI Grok Aurora 图像'},
         ];
       }
+      try {
+        const status = await api.get('/v1/config/api-key');
+        configuredKeys.value = status.configured || [];
+      } catch(e) {}
     });
+
+    async function saveApiKey() {
+      if (!provider.value || !apiKeyInput.value.trim()) return;
+      apiKeySaving.value = true;
+      try {
+        await api.post('/v1/config/api-key', {provider: provider.value, api_key: apiKeyInput.value.trim()});
+        apiKeySaved.value = true;
+        configuredKeys.value.push(provider.value + '_key');
+        apiKeyInput.value = '';
+        setTimeout(() => { apiKeySaved.value = false; }, 3000);
+      } catch(e) { alert('保存失败: ' + String(e)); }
+      finally { apiKeySaving.value = false; }
+    }
     const wildcards = reactive([
       {name:'colors', count:10, sample:'red, green, golden...'},
       {name:'animals', count:10, sample:'cat, dog, dragon...'},
@@ -1056,7 +1087,7 @@ const Settings = {
       {name:'即梦', status:'就绪', desc:'视觉冲击力 + 氛围描写'},
       {name:'Nano Banana Pro', status:'就绪', desc:'风格直描 + 推荐分辨率'},
     ]);
-    return { provider, imageModels, apiKeyConfigs, wildcards, platforms };
+    return { provider, imageModels, configuredKeys, apiKeyInput, apiKeySaved, apiKeySaving, saveApiKey, wildcards, platforms };
   }
 };
 

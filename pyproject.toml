@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prompt-engine"
-version = "0.19.1"
+version = "0.21.0"
 description = "Image generation prompt optimization engine - SDK, REST API & MCP Server"
 authors = [{ name = "Prompt Engine Team" }]
 license = { text = "MIT" }

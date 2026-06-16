@@ -2,29 +2,6 @@
 
 本项目更新日志。
 
-## [v0.21.0] — 2026-06-16
-
-### P0 Bug 修复
-
-- **A/B 多版本无反应** — `disturb_and_optimize` 中 `perturbations` 原为单字符串而非列表，导致只生成 2 个候选（含原始）。修复：每次循环生成新扰动版本，候选数从 2 增至 4
-- **模型下拉只显示1项** — `imageModelsData` 未在 `return` 中导出，Vue 无法访问；另有一处错误的 `setTimeout` fallback 逻辑覆盖数据，已移除
-
-### P1 新增功能
-
-- **MiniMax LLM Provider** — 新增 `prompt_engine/llm/minimax.py`，支持 MiniMax-M3 模型作为提示词优化的 LLM 供应商，在 `llm/__init__.py` 和 `llm/base.py` 中注册，默认 LLM 切换为 `minimax`
-- **config.yaml MiniMax 配置** — 新增 `minimax` 区块（`api.minimaxi.com/v1`，模型 `MiniMax-M3`），API Key 通过 `${MINIMAX_API_KEY}` 环境变量注入
-
-### 变更文件
-
-| 文件 | 说明 |
-|------|------|
-| `prompt_engine/optimizer.py` | `disturb_and_optimize` 修复：`perturbations` 列表化 + `num_augmented` 循环生成 |
-| `prompt_engine/web/index.html` | Workbench 组件：`imageModelsData` 加入 `return` 导出，移除错误 `setTimeout` fallback |
-| `prompt_engine/llm/minimax.py` | 新增 MiniMax LLM Provider（OpenAI 兼容 API） |
-| `prompt_engine/llm/__init__.py` | 注册 `minimax` 供应商 |
-| `prompt_engine/llm/base.py` | `from_config` 添加 `minimax` 分支 |
-| `config.yaml` | 新增 `minimax` LLM 配置块，默认 provider 改为 `minimax` |
-
 ## [v0.20.0] — 2026-06-15
 
 ### P0 Bug 修复
@@ -33,17 +10,14 @@
 - **A/B 多版本性能优化** — `disturb_and_optimize` 从串行改为并行 + 30s 超时控制
 - **A/B 前端显示修复** — 移除 `v-if="result"` 嵌套依赖，A/B 结果独立显示
 - **通用策略提示词优化** — `generic.py` 重写提示词模板，消除重复指令，明确平台无关原则
-- **MiniMax API 支持** — 修正 Endpoint (`api.minimaxi.com`) + 真实调用 `image-01` 模型
-- **前端 Tab 结构修复** — 删除重复 el-tabs 标签，图片预览 Tab 恢复正常
 
 ### 变更文件
 
 | 文件 | 说明 |
 |------|------|
-| `prompt_engine/web/index.html` | Settings 16 模型 fallback + Tab 结构修复 + 图片预览 Tab |
+| `prompt_engine/web/index.html` | Settings 16 模型 fallback + A/B 结果独立显示 |
 | `prompt_engine/optimizer.py` | `disturb_and_optimize` 并行化 + 新增 `_call_llm_with_timeout` |
 | `prompt_engine/strategies/generic.py` | 提示词模板重写，结构更清晰，输出更通用 |
-| `prompt_engine/api/rest.py` | MiniMax Endpoint 修正 + preview 端点添加 MiniMax 真实调用 |
 
 ## [v0.19.1] — 2026-06-15
 

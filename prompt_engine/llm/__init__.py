@@ -38,4 +38,7 @@ try:
 except ImportError:
     pass
 
+from prompt_engine.llm.minimax import MiniMaxProvider
+_PROVIDERS["minimax"] = MiniMaxProvider
+
 __all__ = ["BaseLLMProvider", "list_providers", "create_provider", "register"]

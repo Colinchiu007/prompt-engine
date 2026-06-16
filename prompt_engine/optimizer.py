@@ -580,17 +580,20 @@ class Optimizer:
 
         借鉴 Infinity BSC 的扰动思路：
         1. 对原始 prompt 生成 N 个扰动版本
-        2. 分别优化每个版本
+        2. 并行优化每个版本（加超时控制）
         3. 返回最佳（最长、质量最高）结果
         """
+        import concurrent.futures
         start_time = time.time()
         try:
             disturb = PromptDisturber(strength=strength)
             perturbations = disturb.perturb(request.prompt)
 
-            all_results = []
-            # 原始 prompt 也参与
-            for p in [request.prompt] + [perturbations]:
+            # 原始 + 多个扰动版本，并行优化（每次生成 num_augmented 个扰动）
+            all_prompts = [request.prompt]
+            for _ in range(num_augmented):
+                all_prompts.append(disturb.perturb(request.prompt))
+            def optimize_one(p: str) -> OptimizeResult:
                 try:
                     sub_req = OptimizeRequest(
                         prompt=p,
@@ -601,10 +604,32 @@ class Optimizer:
                         negative_prompt=request.negative_prompt,
                         num_candidates=request.num_candidates,
                     )
-                    result = self.optimize(sub_req)
-                    all_results.append(result)
-                except Exception:
-                    continue
+                    return self._call_llm_with_timeout(sub_req, timeout_seconds=15)
+                except Exception as e:
+                    logger.warning("Sub-optimize failed for '%s': %s", p[:30], e)
+                    return OptimizeResult(
+                        optimized_prompt=p,
+                        platform=request.platform,
+                        error=str(e),
+                    )
+
+            # 并行执行，加超时保护（总共最多等 30 秒）
+            all_results = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(all_prompts)) as executor:
+                futures = {executor.submit(optimize_one, p): p for p in all_prompts}
+                try:
+                    done, _ = concurrent.futures.wait(
+                        futures.keys(),
+                        timeout=30.0,
+                        return_when=concurrent.futures.ALL_COMPLETED,
+                    )
+                    for future in done:
+                        try:
+                            all_results.append(future.result())
+                        except Exception as e:
+                            logger.warning("Future failed: %s", e)
+                except Exception as e:
+                    logger.warning("Parallel execution error: %s", e)
 
             # 选择最佳结果（非错误且最长的）
             best = None
@@ -648,3 +673,22 @@ class Optimizer:
                 duration_ms=round(elapsed, 1),
                 error=str(e),
             )
+
+    def _call_llm_with_timeout(self, request: OptimizeRequest, timeout_seconds: float = 15) -> OptimizeResult:
+        """带超时的 LLM 调用（用于 A/B 并行优化）"""
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(self._do_optimize_sync, request)
+            try:
+                return future.result(timeout=timeout_seconds)
+            except concurrent.futures.TimeoutError:
+                return OptimizeResult(
+                    optimized_prompt=request.prompt,
+                    platform=request.platform,
+                    error=f"LLM call timeout after {timeout_seconds}s",
+                    duration_ms=timeout_seconds * 1000,
+                )
+
+    def _do_optimize_sync(self, request: OptimizeRequest) -> OptimizeResult:
+        """同步执行优化（供 _call_llm_with_timeout 调用）"""
+        return self.optimize(request)

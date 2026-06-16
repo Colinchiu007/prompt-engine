@@ -27,7 +27,7 @@
 - 🤖 **Agent Skill 分发**：导出为 Claude / Cursor / Hermes 可安装的 Agent Skill（`npm run install:skill`）
 - 🧩 **Prompt-as-Code 模板**：原子化 PromptBlock + 组合模板引擎，低创意等级纯模板渲染不调 LLM
 - 📋 **模板驱动优化**：策略 LLM 指令抽取为独立 YAML 模板，EN/ZH 双语支持
-- 🏢 **多模型供应商**：支持 OpenAI / 讯飞 / Gemini 等供应商，统一注册表
+- 🏢 **多模型供应商**：支持 OpenAI / 讯飞星火 / Gemini / MiniMax 等供应商，统一注册表
 - 📊 **评估对比**：5 维度 LLM 评估优化效果（clarity/specificity/creativity/actionability/platform_best）
 - 🗂️ **多源 RAG 种子**：集成 awesome-gpt-image-2 (506)、gpt4o-image-prompts (1050) 等外部案例库
 - 📚 **资源展示**：Dashboard 完整展示引擎所有资源（数据/词库/供应商/通配符/模板）
@@ -437,6 +437,7 @@ pytest -v
 - **v0.6.0** — Agent Skill 分发（`agents/skills/prompt-engine`）、RAG 种子注入（506 GPT-Image2 案例）、Prompt-as-Code 模板引擎（`template_engine.py`）
 - **v0.7.0** — 模板驱动优化（YAML 模板）、多模型供应商（Gemini）、Web 看板（Vue 3 + Element Plus）
 - **v0.9.3** — Dashboard 资源展示、Workbench 图片预览（14 模型）、Settings 图片模型 API 配置、评估对比模式（`POST /v1/evaluate`）、DSL 模板语法（`{a|b}` / `__wild__` / `{N$$opt}`）
+- **v0.20.0** — A/B 多版本性能优化（并行 + 超时控制）、前端模型下拉修复（16 模型）、MiniMax API 支持（真实调用 image-01）、通用策略提示词重写（平台无关原则）
 
 ## License
 
