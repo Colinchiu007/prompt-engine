@@ -29,6 +29,9 @@ class BaseLLMProvider:
         elif provider_name == "xfyun":
             from prompt_engine.llm.xfyun import XfyunProvider
             return XfyunProvider(cfg["llm"]["xfyun"])
+        elif provider_name == "gemini":
+            from prompt_engine.llm.gemini import GeminiProvider
+            return GeminiProvider(cfg["llm"]["gemini"])
         elif provider_name == "minimax":
             from prompt_engine.llm.minimax import MiniMaxProvider
             return MiniMaxProvider(cfg["llm"]["minimax"])

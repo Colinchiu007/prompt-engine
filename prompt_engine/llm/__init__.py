@@ -41,4 +41,7 @@ except ImportError:
 from prompt_engine.llm.minimax import MiniMaxProvider
 _PROVIDERS["minimax"] = MiniMaxProvider
 
+from prompt_engine.llm.deepseek import DeepSeekProvider
+_PROVIDERS["deepseek"] = DeepSeekProvider
+
 __all__ = ["BaseLLMProvider", "list_providers", "create_provider", "register"]
