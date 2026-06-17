@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.egg-info/
+dist/
+build/
+
+# Runtime data (auto-generated)
+prompt_engine/data/*.db
+!prompt_engine/data/.gitkeep
+
+# User feedback & weights (auto-generated)
+feedback_db.json
+keyword_weights.json
+
+# Environment variables (API keys - never commit)
+.env

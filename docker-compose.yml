@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: prompt-engine-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai_compat}
+    env_file:
+      - .env
+    volumes:
+      - ./prompt_engine/data:/app/prompt_engine/data
+      - ./prompt_engine/prompts_db:/app/prompt_engine/prompts_db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -1,0 +1,5 @@
+# 缓存数据库文件（自动创建）
+prompt_engine/data/prompt_cache.db
+prompt_engine/data/*.db
+# 保留 .gitkeep
+!prompt_engine/data/.gitkeep

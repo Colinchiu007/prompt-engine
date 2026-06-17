@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-app-version="0.8.0-20260613">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prompt Engine — 图片生成提示词优化引擎 (v0.8.0)</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <script src="https://unpkg.com/echarts@5.4.3/dist/echarts.min.js"></script>
+  <style>
+    .example-btn { cursor:pointer; margin:2px; }
+    .example-btn:hover { color:#409eff; }
+    .section-desc { color:#909399; font-size:13px; margin-bottom:12px; line-height:1.6; }
+    .resource-block { padding:8px 0; }
+    .resource-label { font-size:13px;color:#909399;margin-bottom:4px; }
+    .resource-value { font-size:24px;font-weight:bold;color:#67c23a;margin-bottom:4px; }
+    .resource-value small { font-size:12px;color:#909399;font-weight:normal; }
+    .preview-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-top:12px; }
+    .hover-bg:hover { background:#e6f7ff !important; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <el-container style="min-height:100vh">
+    <el-header style="background:#fff;border-bottom:1px solid #e4e7ed;display:flex;align-items:center;padding:0 20px">
+      <h2 style="margin:0;font-size:18px">🎨 Prompt Engine</h2>
+      <span style="color:#909399;font-size:12px;margin-left:8px">v0.8.0</span>
+      <el-menu mode="horizontal" :ellipsis="false" style="margin-left:40px;border-bottom:none" :default-active="tab" @select="tab=$event">
+        <el-menu-item index="workbench">Prompt 工作台</el-menu-item>
+        <el-menu-item index="dashboard">数据看板</el-menu-item>
+        <el-menu-item index="settings">配置</el-menu-item>
+      </el-menu>
+    </el-header>
+    <el-main style="background:#f5f7fa;padding:20px">
+
+      <div v-if="tab==='workbench'"><Workbench /></div>
+      <div v-if="tab==='dashboard'"><Dashboard /></div>
+      <div v-if="tab==='settings'"><Settings /></div>
+    </el-main>
+  </el-container>
+</div>
+
+<script>
+const { createApp, ref, reactive, onMounted, computed } = Vue;
+const { ElMessage } = ElementPlus;
+
+
+// ── EN→CN 翻译 (前端纯静态，0 成本) ──
+const EN_CN_DICT = {
+  'a':'一只', 'an':'一个', 'the':'',
+  'one':'一个', 'majestic':'威严的', 'beautiful':'美丽的',
+  'mysterious':'神秘的', 'ancient':'古老的', 'futuristic':'未来派的',
+  'cyberpunk':'赛博朋克', 'fantasy':'奇幻', 'magical':'魔幻的',
+  'cinematic':'电影感的', 'epic':'史诗般的', 'ethereal':'空灵的',
+  'surreal':'超现实的', 'vibrant':'鲜艳的', 'bright':'明亮的',
+  'dark':'黑暗的', 'serene':'平静的', 'cute':'可爱的', 'fierce':'凶猛的',
+  'powerful':'强大的', 'elegant':'优雅的', 'graceful':'优美的',
+  'royal':'皇家的', 'tiny':'微小的', 'huge':'巨大的', 'glowing':'发光的',
+  'cat':'猫', 'dog':'狗', 'bird':'鸟', 'horse':'马', 'tiger':'老虎',
+  'lion':'狮子', 'dragon':'龙', 'phoenix':'凤凰', 'wolf':'狼',
+  'eagle':'鹰', 'butterfly':'蝴蝶', 'fish':'鱼', 'flower':'花',
+  'tree':'树', 'mountain':'山', 'water':'水', 'sky':'天空', 'sea':'海',
+  'ocean':'海洋', 'forest':'森林', 'city':'城市', 'castle':'城堡',
+  'palace':'宫殿', 'warrior':'战士', 'queen':'女王', 'king':'国王',
+  'astronaut':'宇航员', 'robot':'机器人', 'alien':'外星人',
+  'girl':'女孩', 'woman':'女人', 'man':'男人', 'child':'孩子',
+  'feline':'猫科动物', 'mecha':'机甲',
+  'sitting':'端坐', 'standing':'站立', 'walking':'行走',
+  'running':'奔跑', 'flying':'飞翔', 'floating':'漂浮',
+  'looking':'凝视', 'gazing':'注视', 'riding':'骑乘',
+  'on':'在', 'in':'在', 'under':'在...下', 'above':'在...上',
+  'velvet':'天鹅绒', 'silk':'丝绸', 'gold':'金色', 'silver':'银色',
+  'crystal':'水晶', 'diamond':'钻石', 'throne':'宝座',
+  'golden hour':'金色时刻', 'sunset':'日落', 'sunrise':'日出',
+  'moonlight':'月光', 'starlight':'星光', 'twilight':'黄昏',
+  'volumetric':'体积光', 'rays':'光线', 'neon':'霓虹',
+  'candlelight':'烛光', 'soft':'柔和', 'ambient':'环境光',
+  'ultra-detailed':'超精细', 'highly detailed':'高度精细',
+  '8K':'8K', '4K':'4K', 'photorealistic':'照片级真实',
+  'realistic':'写实的', 'painterly':'绘画风', 'illustration':'插画',
+  'watercolor':'水彩', 'oil painting':'油画', 'digital art':'数字艺术',
+  'concept art':'概念艺术', 'matte painting':'哑光绘画',
+  'line art':'线稿', 'manga':'漫画', 'anime':'动漫',
+  'cartoon':'卡通', 'comic':'漫画', '3D':'三维', '2D':'二维',
+  'isometric':'等距视角', 'wide angle':'广角', 'telephoto':'长焦',
+  'macro':'微距', 'close-up':'特写', 'portrait':'肖像', 'headshot':'头像',
+  'bokeh':'散景', 'depth of field':'景深', 'sharp focus':'锐利对焦',
+  'red':'红色', 'blue':'蓝色', 'green':'绿色', 'yellow':'黄色',
+  'orange':'橙色', 'purple':'紫色', 'pink':'粉色', 'black':'黑色',
+  'white':'白色', 'gray':'灰色', 'brown':'棕色', 'golden':'金色的',
+  'emerald':'翠绿色', 'azure':'天蓝色', 'crimson':'深红色', 'ivory':'象牙白',
+  'scarlet':'猩红', 'violet':'紫色', 'warm':'暖色调', 'cool':'冷色调',
+  'composition':'构图', 'symmetric':'对称', 'leading lines':'引导线',
+  'bustling':'熙熙攘攘', 'chaotic':'混乱', 'calm':'平静', 'mood':'氛围',
+  'atmosphere':'气氛', 'peaceful':'宁静', 'dreamy':'梦幻',
+  'and':'与', 'with':'与', 'or':'或', 'very':'非常', 'extremely':'极其',
+  'highly':'高度', 'slightly':'略微', 'gently':'轻柔', 'slowly':'缓慢',
+  'no':'无', 'during':'在...期间', 'after':'在...之后', 'before':'在...之前',
+  'wide shot':'远景', 'medium shot':'中景', 'long shot':'远景',
+  'close up':'特写', 'of':'的', 'traditional':'传统的',
+  'market':'市场', 'deep':'深', 'tones':'色调',
+  'wooden':'木制的', 'architecture':'建筑',
+  'lantern':'灯笼', 'lanterns':'灯笼', 'award-winning':'获奖的',
+  'photography':'摄影', 'shallow':'浅',
+  'wide':'广角', 'shot':'镜头', 'depth':'景深',
+  'award':'获奖', 'winning':'优胜',
+};
+
+function isEnglish(text) {
+  if (!text) return false;
+  let asciiCount = (text.match(/[a-zA-Z]/g) || []).length;
+  return asciiCount / text.length > 0.3;
+}
+
+function translateEN2CN(text) {
+  if (!text) return '';
+  const tokens = text.match(/\b\w+\b|[^\w\s]|\s+/g) || [];
+  return tokens.map(tok => {
+    if (/^\s+$/.test(tok)) return tok;
+    if (!/^[a-zA-Z]+$/.test(tok)) return tok;
+    return EN_CN_DICT[tok.toLowerCase()] || tok;
+  }).join('');
+}
+
+const api = {
+  base: '',
+  async post(path, body) {
+    const r = await fetch(this.base + path, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    return r.json();
+  },
+  async get(path) {
+    const r = await fetch(this.base + path);
+    return r.json();
+  }
+};
+
+// ── Workbench ────────────────────────────────────
+const Workbench = {
+  template: `
+    <el-row :gutter="16">
+      <el-col :span="16">
+        <el-card shadow="never">
+          <template #header><span>📝 Prompt 工作台</span></template>
+
+          <div class="section-desc">
+            输入一段文字描述，选择目标图片生成平台，一键优化、分类、评估。
+            支持 <b>中文</b> 和 <b>英文</b> 输入，自动适配 7 种图片生成平台。
+          </div>
+
+          <el-input v-model="input" type="textarea" :rows="4"
+            placeholder="输入描述，如：a majestic cat sitting on a velvet throne in golden hour light" />
+
+          <div style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <el-select v-model="platform" style="width:140px" placeholder="选择平台">
+              <el-option v-for="p in platforms" :key="p.value" :label="p.label" :value="p.value" />
+            </el-select>
+            <el-select v-model="style" style="width:140px" placeholder="选择风格(可选)" clearable>
+              <el-option value="" label="自动检测(默认)" />
+              <el-option value="landscape" label="🏞️ 风景" />
+              <el-option value="watercolor" label="🎨 水彩" />
+              <el-option value="oil_painting" label="🖼️ 油画" />
+              <el-option value="anime" label="🎬 动漫" />
+              <el-option value="cyberpunk" label="🌃 赛博朋克" />
+              <el-option value="fantasy" label="🧙 奇幻" />
+              <el-option value="minimalist" label="◻️ 极简" />
+              <el-option value="pixel" label="🟦 像素" />
+              <el-option value="photography" label="📷 摄影" />
+              <el-option value="abstract" label="🌀 抽象" />
+              <el-option value="cartoon" label="🎭 卡通" />
+              <el-option value="portrait" label="👤 人像" />
+              <el-option value="realistic" label="🌍 写实" />
+                          </el-select>
+
+            <el-radio-group v-model="mode" size="small" style="margin-right:8px">
+              <el-radio-button label="single">单条</el-radio-button>
+              <el-radio-button label="batch">批量</el-radio-button>
+            </el-radio-group>
+            <el-button v-if="mode==='single'" type="primary" @click="optimize" :loading="loading">
+              <el-icon style="margin-right:4px"><Pointer/></el-icon> 优化 Prompt
+            </el-button>
+            <el-button v-if="mode==='single'" @click="disturbOptimize" :loading="disturbLoading">
+              <el-icon style="margin-right:4px"><DataAnalysis/></el-icon> A/B 多版本
+            </el-button>
+            <el-button v-if="mode==='batch'" type="success" @click="optimizeBatch" :loading="batchRunning">
+              <el-icon style="margin-right:4px"><Files/></el-icon> 批量优化 ({{ inputRows.length }})
+            </el-button>
+            <el-button @click="classify" :loading="classifying">
+              <el-icon style="margin-right:4px"><Search/></el-icon> 风格分类
+            </el-button>
+            <el-button @click="evaluate" :loading="evaluating">
+              <el-icon style="margin-right:4px"><DataAnalysis/></el-icon> 评估对比
+            </el-button>
+            <el-button @click="clear" text>清空</el-button>
+          </div>
+
+          <div style="margin:12px 0;padding:12px;background:#f0f5ff;border-radius:6px;border-left:3px solid #409eff">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:13px;color:#409eff;font-weight:bold">✍️ 扩写</span>
+              <el-input v-model="rewriteInput" style="width:240px" placeholder="输入简短描述" size="small" />
+              <el-button type="primary" size="small" @click="doRewrite" :loading="rewriting">扩写</el-button>
+              <span v-if="rewriteResult" style="font-size:11px;color:#909399">{{ rewriteResult.duration_ms }}ms</span>
+            </div>
+            <div v-if="rewriteResult" style="margin-top:8px;font-size:13px;line-height:1.5">
+              {{ rewriteResult.optimized_prompt }}
+              <el-button text size="small" @click="input=rewriteResult.optimized_prompt; rewriteResult=null">📋 填入输入框</el-button>
+            </div>
+          </div>
+
+          <div style="margin-bottom:8px">
+            <span style="color:#909399;font-size:12px">试试这些示例：</span>
+            <el-tag v-for="ex in examples" :key="ex" size="small" class="example-btn"
+              @click="input=ex;result=null;classResult=null;evalResult=null;error=''"
+              style="cursor:pointer;margin:2px">
+              {{ ex.length > 25 ? ex.slice(0,25)+'…' : ex }}
+            </el-tag>
+          </div>
+
+          
+            <el-divider v-if="batchResults.length" style="margin:20px 0"><span style="font-size:13px;color:#909399">📦 批量结果 ({{ batchResults.length }})</span></el-divider>
+            <el-progress v-if="batchRunning" :percentage="batchProgressPercent" :status="batchProgressPercent === 100 ? 'success' : ''" style="margin-bottom:12px" />
+            <div v-if="batchResults.length" class="preview-grid">
+              <el-card v-for="(item, idx) in batchResults" :key="idx" shadow="never">
+                <template #header>
+                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">
+                    <span>#{{ idx + 1 }} - {{ item.prompt.slice(0, 18) }}{{ item.prompt.length > 18 ? '…' : '' }}</span>
+                    <el-tag v-if="item.error" type="danger" size="small">失败</el-tag>
+                    <el-tag v-else type="success" size="small">{{ item.result?.duration_ms || '...' }}ms</el-tag>
+                  </div>
+                </template>
+                <div v-if="item.error" style="color:#f56c6c;font-size:11px">{{ item.error }}</div>
+                <pre v-else style="background:#f0f5ff;padding:8px;border-radius:4px;white-space:pre-wrap;font-size:11px;line-height:1.4;max-height:100px;overflow:auto">{{ item.result?.optimized_prompt || '' }}</pre>
+                <div style="margin-top:4px;display:flex;gap:4px">
+                  <el-button v-if="item.result" size="small" text @click="copyText(item.result.optimized_prompt)">📋 复制</el-button>
+                </div>
+              </el-card>
+            </div>
+        
+        <el-alert v-if="error && !showGuide" :title="error" type="error" show-icon closable style="margin-bottom:12px" />
+
+            <!-- 输入引导面板 -->
+            <el-card v-if="showGuide" shadow="never" style="margin-bottom:12px;border:1px solid #e6a23c">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div>
+                  <div style="font-size:15px;font-weight:bold;color:#e6a23c">💡 描述太简短了</div>
+                  <div style="font-size:12px;color:#909399;margin-top:4px">试试更详细地描述你想生成的画面</div>
+                </div>
+                <el-button size="small" text @click="showGuide=false">✕</el-button>
+              </div>
+              <div style="margin-bottom:12px">
+                <div style="font-size:13px;color:#606266;margin-bottom:6px">选择主题：</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <el-button v-for="t in guideTopics" :key="t.name" size="small" @click="applyGuideTopic(t)">{{ t.icon }} {{ t.name }}</el-button>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:13px;color:#606266;margin-bottom:6px">或一键使用示例：</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <div v-for="(ex, i) in guideExamples" :key="i" @click="applyGuideExample(ex)" style="cursor:pointer;padding:6px 10px;background:#f5f7fa;border-radius:4px;font-size:13px;line-height:1.4" class="hover-bg">
+                    📝 {{ ex }}
+                  </div>
+                </div>
+              </div>
+            </el-card>
+
+            <el-tabs v-if="result" type="border-card" style="margin-top:12px">
+              <el-tab-pane label="✨ 优化结果">
+                <div style="margin-bottom:8px;color:#909399;font-size:12px">
+                  原始输入：<code>{{ inputText }}</code>
+                </div>
+                <pre style="background:#f0f5ff;padding:16px;border-radius:6px;white-space:pre-wrap;font-size:14px;line-height:1.6;border-left:4px solid #409eff">{{ result.optimized_prompt }}</pre>
+                <div style="margin-top:8px">
+                  <el-tag v-if="result.platform" effect="plain">{{ result.platform }}</el-tag>
+                  <el-tag v-if="result.duration_ms" type="success" effect="plain" style="margin-left:8px">耗时 {{ result.duration_ms }}ms</el-tag>
+                <div style="margin-top:8px">
+                  <el-button size="small" @click="submitFeedback('positive')" :type="feedbackType==='positive'?'success':'default'" :icon="Select">👍 满意</el-button>
+                  <el-button size="small" @click="submitFeedback('negative')" :type="feedbackType==='negative'?'danger':'default'" :icon="Close">👎 不满意</el-button>
+                  <span v-if="feedbackMsg" style="margin-left:8px;font-size:12px;color:#909399">{{ feedbackMsg }}</span>
+                </div>
+                </div>
+
+                <el-collapse v-if="result.optimized_prompt && isEnglish(result.optimized_prompt)" v-model="activeTranslate" style="margin-top:12px">
+                  <el-collapse-item title="🇨🇳 中文翻译（仅供参考，不用于图片生成）" name="translate">
+                    <div style="font-size:13px;color:#909399;margin-bottom:8px">⚠️ 仅为展示。复制英文原文用于图片生成平台。</div>
+                    <pre style="background:#fdf6e3;padding:12px;border-radius:4px;white-space:pre-wrap;font-size:13px;line-height:1.6;border-left:3px solid #f0c674">{{ translateEN2CN(result.optimized_prompt) }}</pre>
+                    <el-button size="small" text @click="copyText(translateEN2CN(result.optimized_prompt))">📋 复制中文</el-button>
+                  </el-collapse-item>
+                </el-collapse>
+              </el-tab-pane>
+
+              <el-tab-pane label="🖼️ 图片预览">
+                <div class="section-desc">
+                  选定模型，实时生成预览图。
+                  <b style="color:#67c23a">Picsum Photos 免费真实图</b>开箱即用。
+                  其余模型需先配置对应 API Key。
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+                  <el-select v-model="previewModel" style="width:200px" placeholder="选择模型">
+                    <el-option v-for="m in imageModelsData" :key="m.id" :label="m.name + (m.requires_key?' 🔑':' 🆓')" :value="m.id" />
+                  </el-select>
+                  <el-button type="success" @click="generatePreview" :loading="previewing">
+                    生成预览
+                  </el-button>
+                  <el-button v-if="previewUrl" @click="previewUrl=''">清除</el-button>
+                </div>
+
+                <div v-if="previewUrl" class="preview-grid">
+                  <div style="border:1px solid #ebeef5;border-radius:6px;overflow:hidden;background:#f5f7fa">
+                    <img :src="previewUrl" style="width:100%;height:200px;object-fit:cover" :alt="result.optimized_prompt.slice(0,50)" />
+                    <div style="padding:6px 8px;font-size:11px;color:#909399">
+                      <el-tag size="small">{{ previewModel }}</el-tag>
+                      <span style="margin-left:6px">1024×1024</span>
+                    </div>
+                  </div>
+                </div>
+                <el-empty v-else-if="!previewing" description="点击「生成预览」查看效果" :image-size="60" />
+              </el-tab-pane>
+
+              <el-tab-pane label="🏷️ 分类结果" v-if="classResult">
+                <div class="section-desc">
+                  引擎自动判断输入 prompt 属于 25 种 MJ 风格维度中的哪一个。
+                  分类采用三级流水线：关键词匹配 → 向量语义搜索 → LLM 兜底。
+                </div>
+                <el-descriptions :column="2" border>
+                <el-descriptions-item label="风格维度">
+                  <el-tag v-for="c in classResult.categories" :key="c" size="small" style="margin:2px">{{ c }}</el-tag>
+                  <span v-if="!classResult.categories?.length">-</span>
+                </el-descriptions-item>
+                <el-descriptions-item label="置信度">
+                  <el-tag :type="classResult.confidence>0.8?'success':classResult.confidence>0.5?'warning':'danger'" size="small">
+                    {{ (classResult.confidence * 100).toFixed(1) }}%
+                  </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="分类方法">{{ classResult.method || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="匹配关键词">{{ classResult.keywords_found ? Object.keys(classResult.keywords_found).join(', ') : '-' }}</el-descriptions-item>
+              </el-descriptions>
+            </el-tab-pane>
+
+            <el-tab-pane label="📊 评估对比" v-if="evalResult">
+              <div class="section-desc">
+                从 5 个维度（清晰度、具体性、创意性、可操作性、平台适配）
+                对比原始 prompt 和优化后的 prompt，展示每项提升幅度。
+              </div>
+              <el-table :data="evalResult.scores" stripe size="small" style="width:100%">
+                <el-table-column prop="dimension" label="评估维度" width="160">
+                  <template #default="{row}">
+                    <span :title="dimHints[row.dimension]">{{ row.dimension }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="before" label="原始得分" width="100">
+                  <template #default="{row}"><el-rate :model-value="row.before" disabled :max="10" show-score :score-template="row.before.toFixed(1)" size="small" /></template>
+                </el-table-column>
+                <el-table-column prop="after" label="优化得分" width="100">
+                  <template #default="{row}"><el-rate :model-value="row.after" disabled :max="10" show-score :score-template="row.after.toFixed(1)" size="small" /></template>
+                </el-table-column>
+                <el-table-column label="提升" width="80">
+                  <template #default="{row}">
+                    <el-tag :type="row.improvement>1?'success':row.improvement>0?'warning':'danger'" size="small">
+                      {{ row.improvement > 0 ? '+' : '' }}{{ row.improvement.toFixed(1) }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <div style="margin-top:12px;text-align:right;font-size:13px;color:#909399">
+                综合提升：<b style="color:#409eff">{{ evalResult.overall || '-' }}</b>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+
+          <el-empty v-if="!result && !error && !loading" description="输入描述后点击「优化 Prompt」开始" style="padding:40px 0" />
+        </el-card>
+      </el-col>
+
+      <el-col :span="8">
+        <el-card shadow="never">
+          <template #header><span>💡 使用说明</span></template>
+          <el-collapse v-model="activeHelps" style="--el-collapse-header-bg-color:transparent">
+            <el-collapse-item title="📌 基本用法" name="basic">
+              <ol style="padding-left:16px;margin:0;line-height:2;color:#606266;font-size:13px">
+                <li>在输入框内输入图片描述（中英文均可）</li>
+                <li>选择目标平台：Midjourney / Stable Diffusion / DALL·E 等</li>
+                <li>点击「优化 Prompt」自动适配平台语法</li>
+                <li>点击「风格分类」自动识别 25 维风格</li>
+                <li>优化后点击「评估对比」量化改进效果</li>
+              </ol>
+            </el-collapse-item>
+            <el-collapse-item title="🎯 平台差异" name="platforms">
+              <div style="font-size:13px;color:#606266;line-height:1.8">
+                <p><b>Midjourney</b> — 自动添加 <code>--ar</code> <code>--v</code> <code>--s</code> 参数，风格后缀</p>
+                <p><b>Stable Diffusion</b> — 权重语法 <code>(word:1.2)</code>，负面提示，英文确保</p>
+                <p><b>DALL·E 3</b> — 自然语言风格，短句结构，句号分隔</p>
+                <p><b>通义万相</b> — 中文描写优化，成语/古诗意境增强</p>
+                <p><b>文心一格</b> — 关键词式策略，四字短语为主</p>
+                <p><b>即梦</b> — 视觉冲击力优先，氛围描写</p>
+                <p><b>Nano Banana Pro</b> — 推荐 512x512，直接描述风格</p>
+              </div>
+            </el-collapse-item>
+            <el-collapse-item title="🎨 25 种风格维度" name="styles">
+              <div style="font-size:13px;color:#606266;line-height:1.8">
+                从设计风格到色彩方案共计 25 个维度，三级分类流水线：<br>
+                <el-tag size="small" type="info">① 关键词匹配</el-tag> →
+                <el-tag size="small" type="success">② 向量语义检索</el-tag> →
+                <el-tag size="small" type="warning">③ LLM 兜底</el-tag>
+              </div>
+            </el-collapse-item>
+            <el-collapse-item title="🔤 DSL 模板语法" name="dsl">
+              <div style="font-size:13px;color:#606266;line-height:1.8">
+                支持在 prompt 中使用模板语法：<br>
+                <code>{option1|option2}</code> — 随机变体<br>
+                <code>__wildcard__</code> — 从通配符池取值<br>
+                <code>{2$$a|b|c}</code> — 随机选 N 个<br><br>
+                <el-tag size="small" type="info">示例</el-tag>
+                <code>A {big|small} {cat|dog} in __colors__</code>
+              </div>
+            </el-collapse-item>
+          </el-collapse>
+        </el-card>
+
+        <el-card shadow="never" style="margin-top:16px">
+          <template #header><span>📋 快速示例</span></template>
+          <div v-for="(group,gi) in exampleGroups" :key="gi" style="margin-bottom:8px">
+            <div style="font-size:12px;color:#909399;margin-bottom:4px">{{ group.title }}</div>
+            <el-tag v-for="ex in group.items" :key="ex" size="small"
+              style="cursor:pointer;margin:2px" @click="input=ex;result=null;classResult=null;evalResult=null;error=''">
+              {{ ex }}
+            </el-tag>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+  `,
+  setup() {
+    const input = ref('');
+    const inputText = ref('');
+    const style = ref('');
+    const rewriteInput = ref('');
+    const rewriteResult = ref(null);
+    const rewriting = ref(false);
+    const keywords = ref([]);
+    const mode = ref('single');  // 'single' | 'batch'
+    const batchResults = ref([]);
+    const batchRunning = ref(false);
+    const batchProgressPercent = ref(0);
+    const platform = ref('generic');
+    const platforms = ref([
+      {value:'midjourney', label:'🎨 Midjourney'},
+      {value:'stable_diffusion', label:'🖌️ Stable Diffusion'},
+      {value:'dalle', label:'🖼️ DALL·E 3'},
+      {value:'tongyi', label:'🏮 通义万相'},
+      {value:'yizhang', label:'📜 文心一格'},
+      {value:'jimeng', label:'⚡ 即梦'},
+      {value:'generic', label:'🍌 Nano Banana Pro / 通用'},
+    ]);
+    const loading = ref(false);
+    const classifying = ref(false);
+    const evaluating = ref(false);
+    const result = ref(null);
+    const classResult = ref(null);
+    const evalResult = ref(null);
+    const error = ref('');
+    const activeTranslate = ref(['translate']);
+    const activeHelps = ref(['basic']);
+    const previewModel = ref('picsum');
+    const imageModelsData = ref([]);
+    const imageModels = ref([]);
+    const previewUrl = ref('');
+    const previewing = ref(false);
+    const feedbackMsg = ref('');
+    const feedbackType = ref(null);
+    const disturbLoading = ref(false);
+    const disturbResults = ref(null);
+    const bestIdx = ref(0);
+    const inputRows = computed(() => {
+      return input.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+    });
+    const speedMode = ref('standard');
+    const showGuide = ref(false);
+    const guideTopics = [
+      {name:'风景',icon:'🏞️',example:'sunset over mountain lake with mist'},
+      {name:'动物',icon:'🐱',example:'a majestic cat sitting on a velvet throne'},
+      {name:'人物',icon:'🧑',example:'portrait of a warrior queen with golden armor'},
+      {name:'科幻',icon:'🌃',example:'cyberpunk city at night with neon lights'},
+      {name:'抽象',icon:'🎨',example:'abstract fluid art with vibrant colors'},
+      {name:'奇幻',icon:'🧙',example:'enchanted forest with glowing mushrooms'},
+    ];
+    const guideExamples = [
+      '一只威严的猫端坐在天鹅绒宝座上',
+      '赛博朋克城市夜景霓虹灯光',
+      '梦幻森林中的魔法光斑',
+      'a majestic white wolf with glowing blue eyes',
+      'sunset over mountain lake with mist aurora borealis',
+    ];
+
+    function applyGuideTopic(t) {
+      input.value = t.example;
+      showGuide.value = false;
+      error.value = '';
+    }
+    function applyGuideExample(ex) {
+      input.value = ex;
+      showGuide.value = false;
+      error.value = '';
+    }
+
+    const dimHints = {clarity:'清晰度',specificity:'具体性',creativity:'创意性',actionability:'可操作性',platform_best:'平台适配'};
+
+    const examples = [
+      'a majestic cat sitting on a velvet throne',
+      'cyberpunk city at night with neon lights',
+      '一只金色的凤凰在夕阳下展翅飞翔',
+      '水彩风格的樱花树下少女',
+      'an astronaut riding a horse on Mars with dramatic lighting',
+    ];
+
+    const exampleGroups = [
+      {title:'风景', items:['sunset over mountain lake with mist','aurora borealis over snow-covered cabin','梦幻森林中的魔法光斑']},
+      {title:'人物', items:['portrait of a warrior queen with golden armor','anime girl with flowing hair in cherry blossom','水墨画风格的古代侠客']},
+      {title:'科幻', items:['cyberpunk hacker in neon-lit alley','steampunk airship above clouds','futuristic city with flying cars at dusk']},
+      {title:'动物', items:['majestic white wolf with glowing blue eyes','孔雀在雨中开屏','golden retriever puppy in flower field']},
+    ];
+
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        ElMessage.success('已复制');
+      }).catch(() => {
+        ElMessage.error('复制失败');
+      });
+    }
+
+    async function submitFeedback(type) {
+      if (!result.value?.optimized_prompt) return;
+      feedbackType.value = type;
+      try {
+        await api.post('/v1/feedback', {
+          entry_type: type,
+          prompt: inputText.value || '',
+          optimized_prompt: result.value.optimized_prompt,
+          platform: platform.value,
+          category: result.value.detected_categories?.categories?.[0]?.value || ''
+        });
+        feedbackMsg.value = '感谢反馈！';
+        setTimeout(() => { feedbackMsg.value = ''; }, 3000);
+      } catch(e) { feedbackMsg.value = '提交失败'; }
+    }
+
+    async function disturbOptimize() {
+      if (!input.value.trim()) return;
+      disturbLoading.value = true; disturbResults.value = null;
+      try {
+        const d = await api.post('/v1/disturb-optimize', {
+          prompt: input.value, platform: platform.value, num_candidates: 2,
+          creative_level: 3  // 模板路径，快速出多版本
+        });
+        if (d.detail) { error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail); }
+        else if (d.candidates && d.candidates.length >= 2) {
+          disturbResults.value = d.candidates;
+          bestIdx.value = 1;  // 默认选中版本2 (最佳)
+        }
+      } catch(e) { error.value = String(e); }
+      finally { disturbLoading.value = false; }
+    }
+
+    async function loadKeywords() {
+      try {
+        const d = await api.get('/v1/keywords');
+        keywords.value = d;
+      } catch(e) {}
+    }
+    loadKeywords();
+
+    async function doRewrite() {
+      if (!rewriteInput.value.trim()) return;
+      rewriting.value = true; rewriteResult.value = null;
+      try {
+        const d = await api.post('/v1/rewrite', {prompt: rewriteInput.value, platform: platform.value});
+        if (d.detail) { error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail); }
+        else { rewriteResult.value = d; }
+      } catch(e) { error.value = String(e); }
+      finally { rewriting.value = false; }
+    }
+
+    async function optimize() {
+      if (!input.value.trim()) return;
+      loading.value = true; result.value = null; classResult.value = null; evalResult.value = null; error.value = '';
+      try {
+        const speedLen = {fast: 150, standard: 300, detailed: 500};
+        const d = await api.post('/v1/optimize', {prompt: input.value, platform: platform.value, style: style.value || null, max_length: speedLen[speedMode.value] || 300});
+                if (d.detail) {
+                  error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail);
+                  showGuide.value = d.detail && typeof d.detail === 'string' && (d.detail.includes('太简短') || d.detail.includes('Too short'));
+                  return;
+                }
+        result.value = d; inputText.value = input.value;
+      } catch(e) { error.value = String(e); }
+      finally { loading.value = false; }
+    }
+
+    async function optimizeBatch() {
+      const prompts = inputRows.value.slice(0, 10);
+      if (prompts.length === 0) {
+        ElMessage.warning('请输入至少一行 prompt（每行一个）');
+        return;
+      }
+      batchRunning.value = true;
+      batchResults.value = [];
+      batchProgressPercent.value = 0;
+      for (let i = 0; i < prompts.length; i++) {
+        try {
+          const speedLen2 = {fast: 150, standard: 300, detailed: 500};
+          const d = await api.post('/v1/optimize', {prompt: prompts[i], platform: platform.value, max_length: speedLen2[speedMode.value] || 300});
+          if (d.detail) {
+            batchResults.value.push({prompt: prompts[i], result: null, error: typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail)});
+          } else {
+            batchResults.value.push({prompt: prompts[i], result: d, error: null});
+          }
+        } catch(e) {
+          batchResults.value.push({prompt: prompts[i], result: null, error: String(e)});
+        }
+        batchProgressPercent.value = Math.round(((i + 1) / prompts.length) * 100);
+      }
+      batchRunning.value = false;
+      ElMessage.success(`批量优化完成：${batchResults.value.filter(r => !r.error).length}/${prompts.length} 成功`);
+    }
+    async function classify() {
+      if (!input.value.trim()) return;
+      classifying.value = true; error.value = '';
+      try {
+        classResult.value = await api.post('/v1/classify', {prompt: input.value});
+      } catch(e) { error.value = String(e); }
+      finally { classifying.value = false; }
+    }
+    async function evaluate() {
+      if (!result.value?.optimized_prompt) {
+        error.value = '请先优化 prompt，再进行评估对比';
+        return;
+      }
+      evaluating.value = true; error.value = '';
+      try {
+        const d = await api.post('/v1/evaluate', {original: inputText.value || result.value.optimized_prompt, optimized: result.value.optimized_prompt});
+        if (d.scores) {
+          evalResult.value = {
+            scores: Object.entries(d.scores).map(([k,v]) => ({dimension: dimHints[k]||k, ...v})),
+            overall: d.overall_improvement?.toFixed(2) || '-'
+          };
+        }
+      } catch(e) { error.value = String(e); }
+      finally { evaluating.value = false; }
+    }
+    function clear() { input.value = ''; result.value = null; classResult.value = null; evalResult.value = null; error.value = ''; }
+
+    // 加载图片模型清单
+    api.get('/v1/image-models').then(m => { imageModelsData.value = m; });
+
+    async function generatePreview() {
+      if (!result.value?.optimized_prompt) return;
+      previewing.value = true; previewUrl.value = '';
+      try {
+        const d = await api.post('/v1/preview', {prompt: result.value.optimized_prompt, model: previewModel.value});
+        if (d.url) previewUrl.value = d.url;
+        else if (d.note) error.value = d.note;
+      } catch(e) { error.value = String(e); }
+      finally { previewing.value = false; }
+    }
+
+    return { input, inputText, mode, batchResults, batchRunning, batchProgressPercent, inputRows,
+             platform, platforms, loading, classifying, evaluating, result, classResult, evalResult, error,
+             activeHelps, activeTranslate, dimHints, examples, exampleGroups, optimize, optimizeBatch, classify, evaluate, clear, copyText,
+             previewModel, imageModelsData, imageModels, previewUrl, previewing, generatePreview,
+             style, rewriteInput, rewriteResult, rewriting, keywords,
+             feedbackMsg, feedbackType, submitFeedback, showGuide, guideTopics, guideExamples, applyGuideTopic, applyGuideExample,
+             disturbLoading, disturbResults, bestIdx, disturbOptimize,
+             speedMode, EN_CN_DICT, isEnglish, translateEN2CN };
+  }
+};
+
+// ── Dashboard ────────────────────────────────────
+const Dashboard = {
+  template: `
+    <el-row :gutter="16">
+      <el-col :span="6" v-for="s in statCards" :key="s.label">
+        <el-card shadow="never">
+          <div style="font-size:28px;font-weight:bold;color:#409eff">{{ s.value }}</div>
+          <div style="color:#909399;font-size:13px;margin-top:4px">{{ s.label }}</div>
+          <div style="color:#c0c4cc;font-size:11px;margin-top:2px">{{ s.hint }}</div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-card shadow="never" style="margin-top:16px">
+      <template #header>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>📚 引擎资源</span>
+          <span style="font-size:12px;color:#909399">提示词引擎内嵌的全部资产</span>
+        </div>
+      </template>
+      <el-row :gutter="16">
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">🎨 平台策略</div>
+            <div class="resource-value">{{ resources.platforms || 0 }} <small>个</small></div>
+            <el-tag v-for="p in (resources.platform_list || [])" :key="p" size="small" style="margin:2px">{{ p }}</el-tag>
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">📚 RAG 案例库</div>
+            <div class="resource-value">{{ resources.rag_cases || 0 }} <small>条</small></div>
+            <div style="font-size:12px;color:#909399">prompts_db (918) + seed_prompts (18)</div>
+          </div>
+          <div class="resource-block" style="margin-top:12px">
+            <div class="resource-label">🏷️ MJ 关键词库</div>
+            <div class="resource-value">{{ resources.mj_keywords || 0 }} <small>个</small></div>
+            <div style="font-size:12px;color:#909399">25 维风格维度</div>
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">🤖 LLM 供应商</div>
+            <div class="resource-value">{{ resources.llm_providers || 0 }} <small>个</small></div>
+            <el-tag size="small" style="margin:2px">OpenAI</el-tag>
+            <el-tag size="small" style="margin:2px">讯飞星火</el-tag>
+            <el-tag size="small" style="margin:2px">Gemini</el-tag>
+          </div>
+          <div class="resource-block" style="margin-top:12px">
+            <div class="resource-label">🔤 DSL 通配符池</div>
+            <div class="resource-value">{{ resources.wildcards || 0 }} <small>个值</small></div>
+            <div style="font-size:12px;color:#909399">10 类：colors/animals/styles/lighting...</div>
+          </div>
+          <div class="resource-block" style="margin-top:12px">
+            <div class="resource-label">📋 模板</div>
+            <div class="resource-value">{{ resources.templates || 0 }} <small>个</small></div>
+            <div style="font-size:12px;color:#909399">midjourney (EN/ZH) + generic</div>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
+
+    <!-- v0.19.0: 缓存统计卡片 -->
+    <el-card shadow="never" style="margin-top:16px">
+      <template #header>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>💾 缓存状态</span>
+          <span style="font-size:12px;color:#909399">SQLite + Memory 双级缓存</span>
+        </div>
+      </template>
+      <el-row :gutter="16">
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">🗄️ SQLite</div>
+            <div class="resource-value">{{ cacheStats.sqlite?.entries || 0 }} <small>条目</small></div>
+            <div style="font-size:12px;color:#909399">累积命中 {{ cacheStats.sqlite?.total_hits || 0 }} 次，TTL {{ cacheStats.sqlite?.ttl_hours || 48 }}h</div>
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">⚡ 内存 (L1)</div>
+            <div class="resource-value">{{ cacheStats.memory?.entries || 0 }} <small>条目</small></div>
+            <div style="font-size:12px;color:#909399">热点缓存，FIFO 淘汰</div>
+          </div>
+        </el-col>
+        <el-col :span="8">
+          <div class="resource-block">
+            <div class="resource-label">🎯 未命中时</div>
+            <div class="resource-value">{{ cacheStats.sqlite?.storage || 'sqlite' }}</div>
+            <div style="font-size:12px;color:#909399">creative_level ≤ 3 模板直出免 LLM</div>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
+
+    <el-row :gutter="16" style="margin-top:16px">
+      <el-col :span="12">
+        <el-card shadow="never">
+          <template #header>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span>🎨 分类分布</span>
+              <span style="font-size:12px;color:#909399">各风格维度被分类的次数占比</span>
+            </div>
+          </template>
+          <div ref="catChart" style="height:280px"></div>
+          <div v-if="noData" style="text-align:center;color:#c0c4cc;padding:40px;font-size:13px">
+            暂无数据。回到工作台优化/分类一些 prompt 后自动统计。
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card shadow="never">
+          <template #header>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span>📊 平台分布</span>
+              <span style="font-size:12px;color:#909399">各平台被调用的次数对比</span>
+            </div>
+          </template>
+          <div ref="platChart" style="height:280px"></div>
+          <div v-if="noData" style="text-align:center;color:#c0c4cc;padding:40px;font-size:13px">
+            暂无数据。回到工作台优化一些 prompt 后自动统计。
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+  `,
+  setup() {
+    const statCards = reactive([
+      {label:'总请求数', value:0, hint:'所有平台累计调用次数'},
+      {label:'成功率', value:'100%', hint:'成功/总请求'},
+      {label:'平均耗时', value:'0ms', hint:'每次优化平均耗时'},
+      {label:'错误数', value:0, hint:'失败的请求数量'},
+    ]);
+    const resources = reactive({});
+    const cacheStats = reactive({});
+    const catChart = ref(null);
+    const platChart = ref(null);
+    const noData = ref(true);
+
+    onMounted(async () => {
+      try {
+        const overview = await api.get('/v1/stats/overview');
+        const res = await api.get('/v1/resources');
+        Object.assign(resources, res);
+        try { const cs = await api.get('/v1/cache/stats'); Object.assign(cacheStats, cs); } catch(e) {}
+        statCards.length = 0;
+        statCards.push(
+          {label:'总请求数', value:overview.total_requests, hint:'所有平台累计调用次数'},
+          {label:'成功率', value:overview.success_rate+'%', hint:'成功/总请求'},
+          {label:'平均耗时', value:overview.avg_time_ms+'ms', hint:'每次优化平均耗时'},
+          {label:'错误数', value:overview.error_count, hint:'失败的请求数量'},
+        );
+
+        const [cats, plats] = await Promise.all([
+          api.get('/v1/stats/categories'),
+          api.get('/v1/stats/platforms')
+        ]);
+
+        if (cats.length === 0 || plats.length === 0) { noData.value = true; }
+
+        if (window.echarts && cats.length > 0) {
+          const ec1 = echarts.init(catChart.value);
+          ec1.setOption({
+            tooltip:{trigger:'item', formatter:'{b}: {c} ({d}%)'},
+            series:[{
+              type:'pie', radius:['30%','70%'],
+              data: cats.map(c=>({name:c.name, value:c.count})),
+              label:{fontSize:11, formatter:'{b}\n{d}%'},
+              emphasis:{itemStyle:{shadowBlur:10,shadowOffsetX:0,shadowColor:'rgba(0,0,0,0.5)'}}
+            }]
+          });
+        }
+        if (window.echarts && plats.length > 0) {
+          const ec2 = echarts.init(platChart.value);
+          ec2.setOption({
+            tooltip:{trigger:'axis'},
+            xAxis:{type:'category', data:plats.map(p=>p.platform), axisLabel:{fontSize:11}},
+            yAxis:{type:'value'},
+            series:[{
+              type:'bar', data:plats.map(p=>p.count),
+              itemStyle:{color:'#409eff', borderRadius:[4,4,0,0]},
+              barWidth:'50%',
+              label:{show:true, position:'top', fontSize:11}
+            }]
+          });
+        }
+      } catch(e) {}
+    });
+    return { statCards, resources, cacheStats, catChart, platChart, noData };
+  }
+};
+
+
+
+
+// ── Settings ─────────────────────────────────────
+const Settings = {
+  template: `
+    <el-row :gutter="16">
+      <el-col :span="12">
+        <el-card shadow="never">
+          <template #header>
+            <div style="display:flex;justify-content:space-between">
+              <span>⚙️ LLM 供应商</span>
+              <span style="font-size:12px;color:#909399">优化和分类使用的 AI 模型</span>
+            </div>
+          </template>
+          <div class="section-desc">
+            prompt-engine 支持多个 LLM 供应商。切换后需重启服务生效。
+          </div>
+          <el-select v-model="provider" style="width:100%">
+            <el-option label="OpenAI — GPT-4o（推荐，稳定）" value="openai" />
+            <el-option label="讯飞星火 — 国内直连（低延迟）" value="xfyun" />
+            <el-option label="Gemini — Google（高质量，免费额度）" value="gemini" />
+            <el-option label="MiniMax — MiniMax-M3（国内可直连）" value="minimax" />
+          </el-select>
+          <div style="margin-top:12px;padding:8px 12px;background:#f0f5ff;border-radius:4px;font-size:13px;color:#409eff">
+            💡 建议：国内市场使用讯飞星火，海外使用 OpenAI 或 Gemini
+          </div>
+        </el-card>
+
+        <el-card shadow="never" style="margin-top:16px">
+          <template #header>
+            <div style="display:flex;justify-content:space-between">
+              <span>🔤 DSL 通配符池</span>
+              <span style="font-size:12px;color:#909399">供 {__wildcard__} 语法使用的值池</span>
+            </div>
+          </template>
+          <div class="section-desc">
+            DSL 模板语法中的 <code>__wildcard__</code> 从通配符池中随机取值。
+            可在 <code>templates/wildcards.yaml</code> 中添加或修改。
+          </div>
+          <el-table :data="wildcards" stripe size="small">
+            <el-table-column prop="name" label="名称" />
+            <el-table-column prop="count" label="值数量" width="100" />
+            <el-table-column label="预览" min-width="200">
+              <template #default="{row}"><span style="color:#909399;font-size:12px">{{ row.sample || '-' }}</span></template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+
+      <el-col :span="12">
+        <el-card shadow="never">
+          <template #header>
+            <div style="display:flex;justify-content:space-between">
+              <span>📋 平台策略</span>
+              <span style="font-size:12px;color:#909399">7 个图片生成平台适配器</span>
+            </div>
+          </template>
+          <div class="section-desc">
+            每个策略包含 <code>build_system_prompt()</code>（生成系统提示词）和
+            <code>post_process()</code>（格式清洗），确保输出的 prompt 格式正确。
+          </div>
+          <el-table :data="platforms" stripe size="small">
+            <el-table-column prop="name" label="平台" width="150" />
+            <el-table-column prop="status" label="状态" width="80">
+              <template #default="{row}"><el-tag size="small" :type="row.status==='就绪'?'success':'warning'">{{row.status}}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="desc" label="策略说明" />
+          </el-table>
+        </el-card>
+
+        <el-card shadow="never" style="margin-top:16px">
+          <template #header>
+            <div style="display:flex;justify-content:space-between">
+              <span>🖼️ 图片生成模型</span>
+              <span style="font-size:12px;color:#909399">点击展开，配置 API Key</span>
+            </div>
+          </template>
+          <div class="section-desc">
+            prompt-engine 内置 16+ 主流图片生成模型。
+            <b>Picsum Photos</b> 完全免费真实图片，开箱即用。
+            其他模型需在下方填写对应 API Key（重启服务生效）。
+          </div>
+          <el-table :data="imageModels" stripe size="small" :show-header="true">
+            <el-table-column prop="name" label="模型" width="140" />
+            <el-table-column prop="provider" label="供应商" width="100">
+              <template #default="{row}"><el-tag size="small" effect="plain">{{row.provider}}</el-tag></template>
+            </el-table-column>
+            <el-table-column label="费用" width="100">
+              <template #default="{row}">
+                <el-tag size="small" :type="row.requires_key?'warning':'success'" effect="plain">
+                  {{row.requires_key?'需 API Key':'免费'}}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="description" label="说明" min-width="200" />
+          </el-table>
+          <el-collapse style="margin-top:12px">
+            <el-collapse-item title="🔑 配置 API Key" name="apikey">
+              <div style="margin-bottom:12px">
+                <div style="font-size:13px;color:#606266;margin-bottom:6px">
+                  为当前选定的 LLM 供应商配置 API Key（重启后端服务生效）：
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <el-select v-model="provider" style="width:160px" size="small">
+                    <el-option label="OpenAI" value="openai" />
+                    <el-option label="讯飞星火" value="xfyun" />
+                    <el-option label="Gemini" value="gemini" />
+                    <el-option label="MiniMax" value="minimax" />
+                  </el-select>
+                  <el-input v-model="apiKeyInput" type="password" show-password size="small"
+                    placeholder="粘贴 API Key…" style="flex:1;min-width:200px;max-width:360px" />
+                  <el-button type="primary" size="small" @click="saveApiKey" :loading="apiKeySaving"
+                    :disabled="!provider || !apiKeyInput">
+                    保存到 .env
+                  </el-button>
+                  <el-tag v-if="apiKeySaved" type="success" size="small">已保存 ✓</el-tag>
+                </div>
+                <div v-if="configuredKeys.length" style="margin-top:8px;font-size:12px;color:#67c23a">
+                  ✓ 已配置：{{ configuredKeys.join('、') }}
+                </div>
+              </div>
+              <el-divider style="margin:12px 0" />
+              <div style="font-size:12px;color:#909399">
+                API Key 将写入项目根目录 <code>.env</code>，从环境变量加载，重启后端服务后生效。
+              </div>
+            </el-collapse-item>
+          </el-collapse>
+        </el-card>
+
+        <el-card shadow="never" style="margin-top:16px">
+          <template #header>
+            <div style="display:flex;justify-content:space-between">
+              <span>ℹ️ 系统信息</span>
+              <span style="font-size:12px;color:#909399">引擎版本和依赖</span>
+            </div>
+          </template>
+          <el-descriptions :column="1" border size="small">
+            <el-descriptions-item label="版本">v0.8.0</el-descriptions-item>
+            <el-descriptions-item label="API 端点">20 个 REST 端点</el-descriptions-item>
+            <el-descriptions-item label="测试">190 个用例，全部通过</el-descriptions-item>
+            <el-descriptions-item label="RAG 种子">awesome-gpt-image-2 + gpt4o-image-prompts (1556 条)</el-descriptions-item>
+            <el-descriptions-item label="风格维度">25 个 MJ 风格维度（三级分类流水线）</el-descriptions-item>
+            <el-descriptions-item label="集成方式">SDK / REST / MCP / CLI / Agent Skill</el-descriptions-item>
+          </el-descriptions>
+        </el-card>
+      </el-col>
+    </el-row>
+  `,
+  setup() {
+    const provider = ref('openai');
+    const imageModels = ref([]);
+    const configuredKeys = ref([]);
+    const apiKeyInput = ref('');
+    const apiKeySaved = ref(false);
+    const apiKeySaving = ref(false);
+
+    onMounted(async () => {
+      try {
+        const m = await api.get('/v1/image-models');
+        // API 直接返回数组，或返回 {models: [...]} 包装
+        imageModels.value = Array.isArray(m) ? m : (m.models || m.data || []);
+      } catch(e) {
+        // 完整的 Fallback 16 model list
+        imageModels.value = [
+          {id:'picsum',name:'Picsum Photos (推荐)',provider:'Picsum',requires_key:false,description:'✅ 免费真实图片，开箱即用'},
+          {id:'MiniMax',name:'MiniMax image-01',provider:'MiniMax',requires_key:true,description:'MiniMax image-01 图像生成（国内可直连）'},
+          {id:'vidu',name:'Vidu',provider:'Vidu',requires_key:true,description:'Vidu 视频/图像生成（生数科技）'},
+          {id:'dall-e-3',name:'DALL-E 3',provider:'OpenAI',requires_key:true,description:'OpenAI 高质量图，1024x1024'},
+          {id:'dall-e-2',name:'DALL-E 2',provider:'OpenAI',requires_key:true,description:'OpenAI 经典版，512x512'},
+          {id:'gpt-image-1',name:'GPT-Image-1',provider:'OpenAI',requires_key:true,description:'OpenAI 多模态图像生成，2025 最新'},
+          {id:'flux-pro',name:'Flux Pro',provider:'Replicate',requires_key:true,description:'Black Forest Labs 旗舰图模型'},
+          {id:'flux-schnell',name:'Flux Schnell',provider:'Replicate',requires_key:true,description:'Flux 快速版，1-4 步出图'},
+          {id:'sdxl',name:'Stable Diffusion XL',provider:'Stability',requires_key:true,description:'Stability AI SDXL 高质量'},
+          {id:'sd3.5',name:'Stable Diffusion 3.5',provider:'Stability',requires_key:true,description:'Stability AI 最新 SD3.5'},
+          {id:'ideogram',name:'Ideogram v2',provider:'Together',requires_key:true,description:'Ideogram 文字渲染专家'},
+          {id:'playground',name:'Playground v2.5',provider:'Together',requires_key:true,description:'Playground 美学风格'},
+          {id:'kandinsky',name:'Kandinsky 3',provider:'Replicate',requires_key:true,description:'Kandinsky 多语言支持'},
+          {id:'midjourney-v6',name:'Midjourney v6',provider:'Replicate',requires_key:true,description:'Midjourney v6 via Replicate'},
+          {id:'imagen-3',name:'Imagen 3',provider:'Together',requires_key:true,description:'Google Imagen 3'},
+          {id:'aurora',name:'Aurora',provider:'xai',requires_key:true,description:'xAI Grok Aurora 图像'},
+        ];
+      }
+      try {
+        const status = await api.get('/v1/config/api-key');
+        configuredKeys.value = status.configured || [];
+      } catch(e) {}
+    });
+
+    async function saveApiKey() {
+      if (!provider.value || !apiKeyInput.value.trim()) return;
+      apiKeySaving.value = true;
+      try {
+        await api.post('/v1/config/api-key', {provider: provider.value, api_key: apiKeyInput.value.trim()});
+        apiKeySaved.value = true;
+        configuredKeys.value.push(provider.value + '_key');
+        apiKeyInput.value = '';
+        setTimeout(() => { apiKeySaved.value = false; }, 3000);
+      } catch(e) { alert('保存失败: ' + String(e)); }
+      finally { apiKeySaving.value = false; }
+    }
+    const wildcards = reactive([
+      {name:'colors', count:10, sample:'red, green, golden...'},
+      {name:'animals', count:10, sample:'cat, dog, dragon...'},
+      {name:'art_styles', count:10, sample:'watercolor, cyberpunk...'},
+      {name:'lighting', count:10, sample:'golden hour, volumetric...'},
+      {name:'materials', count:10, sample:'marble, velvet, glass...'},
+    ]);
+    const platforms = reactive([
+      {name:'Midjourney', status:'就绪', desc:'MJ 参数映射 + 风格后缀'},
+      {name:'Stable Diffusion', status:'就绪', desc:'权重语法 + 负面提示 + 英文确保'},
+      {name:'DALL·E 3', status:'就绪', desc:'自然语言风格 + 短句结构'},
+      {name:'通义万相', status:'就绪', desc:'中文描写 + 成语/古诗意境'},
+      {name:'文心一格', status:'就绪', desc:'关键词式 + 四字短语'},
+      {name:'即梦', status:'就绪', desc:'视觉冲击力 + 氛围描写'},
+      {name:'Nano Banana Pro', status:'就绪', desc:'风格直描 + 推荐分辨率'},
+    ]);
+    return { provider, imageModels, configuredKeys, apiKeyInput, apiKeySaved, apiKeySaving, saveApiKey, wildcards, platforms };
+  }
+};
+
+const app = createApp({
+  components: { Workbench, Dashboard, Settings },
+  setup() {
+    const tab = ref('workbench');
+    return { tab };
+  }
+});
+app.use(ElementPlus);
+app.mount('#app');;
+</script>
+</body>
+</html>

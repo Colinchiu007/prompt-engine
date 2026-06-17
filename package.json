@@ -1,0 +1,9 @@
+{
+  "name": "prompt-engine",
+  "version": "0.6.0",
+  "private": true,
+  "description": "Scripts for prompt-engine agent skill management",
+  "scripts": {
+    "install:skill": "cd agents/skills/prompt-engine && node bin/install.mjs"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "prompt-engine-skill",
+  "version": "0.5.0",
+  "description": "Prompt Engine Agent Skill - optimize and classify image prompts",
+  "type": "module",
+  "scripts": {
+    "install:skill": "node bin/install.mjs",
+    "pack:skill": "npm pack"
+  },
+  "files": [
+    "SKILL.md",
+    "bin/",
+    "references/"
+  ]
+}
