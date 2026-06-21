@@ -1,0 +1,14 @@
+{
+  "owner": "Colinchiu007",
+  "git_status_check": "strict",
+  "safe_to_delete": false,
+  "project_name": "prompt-engine",
+  "project_type": "llm_app",
+  "created_at": "2026-06-21",
+  "critical_paths": {
+    "prompts": "src/prompts/",
+    "skills": "src/skills/",
+    "core_logic": "src/core/"
+  },
+  "description": "# Prompt Engine — 图片生成提示词优化引擎"
+}
