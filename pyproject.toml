@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prompt-engine"
-version = "0.21.0"
+version = "0.21.1"
 description = "Image generation prompt optimization engine - SDK, REST API & MCP Server"
 authors = [{ name = "Prompt Engine Team" }]
 license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "pyyaml>=6.0",
     "pydantic>=2.0",

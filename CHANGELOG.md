@@ -2,6 +2,26 @@
 
 本项目更新日志。
 
+## [v0.21.1] — 2026-06-25
+
+### P3 架构迁移
+
+- **services 模块** — 从 `platform-orchestrator/services/prompt_service.py` 迁移至 `prompt_engine.services`。提供 `optimize_prompt()` / `optimize_prompts_batch()` 高层次场景→提示词优化服务。旧路径已加废弃 shim，通过 `prompt_engine.services` 代理。
+- **`prompt_engine/__init__.py`** — 新增 `optimize_prompt`, `optimize_prompts_batch`, `OptimizePromptResult` 惰性导出
+
+### 变更文件
+
+| 文件 | 说明 |
+|------|------|
+| `prompt_engine/services/__init__.py` | 新增 — services 模块入口 |
+| `prompt_engine/services/prompt_service.py` | 新增 — 从 orchestrator 迁移 |
+| `prompt_engine/__init__.py` | 更新 — 惰性导出 services |
+| `docs/PRD.md` | 更新 — 新增 3.2 services 模块说明 |
+| `platform-orchestrator/services/prompt_service.py` | 更新 — 改为废弃 shim |
+| `platform-orchestrator/services/__init__.py` | 更新 — 指向 prompt_engine.services |
+| `platform-orchestrator/routers/prompt.py` | 更新 — 导入源切换 |
+| `platform-orchestrator/routers/video.py` | 更新 — 导入源切换 |
+
 ## [v0.21.0] — 2026-06-16
 
 ### P0 Bug 修复
