@@ -1,7 +1,13 @@
 """A/B 测试候选生成测试"""
+import uuid
 from unittest.mock import MagicMock, patch
 from prompt_engine.models import OptimizeRequest, OptimizeResult, PlatformType, StyleType
 from prompt_engine.optimizer import Optimizer
+
+
+def _unique_prompt(base="test"):
+    """Generate a cache-busting unique prompt."""
+    return f"{base} {uuid.uuid4().hex[:8]}"
 
 
 class TestABCandidates:
@@ -10,11 +16,15 @@ class TestABCandidates:
         """单候选时 candidates 为空"""
         mock_call.return_value = ("A fluffy cat", 100)
         optimizer = Optimizer()
-        req = OptimizeRequest(prompt="a cat", platform=PlatformType.GENERIC, num_candidates=1)
+        req = OptimizeRequest(
+            prompt=_unique_prompt("a cat"),
+            platform=PlatformType.GENERIC,
+            num_candidates=1,
+        )
         result = optimizer.optimize(req)
         assert isinstance(result, OptimizeResult)
         assert result.candidates == []  # 单候选不返回数组
-        # post_process 可能注入 MJ 关键词
+        # post_process 可能注入关键词
         assert "A fluffy cat" in result.optimized_prompt
 
     @patch.object(Optimizer, "_call_llm")
@@ -26,7 +36,11 @@ class TestABCandidates:
             ("Version C: A whimsical cat", 110),
         ]
         optimizer = Optimizer()
-        req = OptimizeRequest(prompt="a cat", platform=PlatformType.GENERIC, num_candidates=3)
+        req = OptimizeRequest(
+            prompt=_unique_prompt("multi cat"),
+            platform=PlatformType.GENERIC,
+            num_candidates=3,
+        )
         result = optimizer.optimize(req)
         assert isinstance(result, OptimizeResult)
         assert len(result.candidates) == 3
@@ -41,7 +55,7 @@ class TestABCandidates:
         mock_call.return_value = ("variant result", 100)
         optimizer = Optimizer()
         result = optimizer._call_llm("test prompt", "user input", variant=1)
-        # mock 直接返回，验证调用了 2 次（variant 0 + variant 1 的循环）
+        # mock 直接返回，验证调用了 1 次
         assert result == ("variant result", 100)
         assert mock_call.call_count == 1
 
@@ -55,7 +69,7 @@ class TestABCandidates:
         ]
         optimizer = Optimizer()
         req = OptimizeRequest(
-            prompt="a forest",
+            prompt=_unique_prompt("a forest"),
             platform=PlatformType.GENERIC,
             num_candidates=3,
             creative_level=8,
