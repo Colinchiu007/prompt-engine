@@ -1,6 +1,7 @@
 """Tests for Style Category Classifier."""
 import sys
-sys.path.insert(0, r"C:\Users\邱领\projects\prompt-engine")
+import pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 import pytest
 from prompt_engine.classifier import StyleCategoryClassifier, StyleCategory, _keyword_match

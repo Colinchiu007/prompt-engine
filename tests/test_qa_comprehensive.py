@@ -1,8 +1,8 @@
 """QA 综合检查 — v0.15.0 PROJECT-011"""
-import os, re, subprocess
+import os, pathlib, re, subprocess
 import urllib.request, urllib.error
 
-REPO = r"C:\\Users\\邱领\\projects\\prompt-engine"
+REPO = str(pathlib.Path(__file__).resolve().parent.parent)
 SERVER = "http://127.0.0.1:8000"
 
 

@@ -43,7 +43,7 @@ jobs:
             --output=team/inbox/changelog-draft-${PR_NUMBER}.md
 
       - name: 上传 CHANGELOG 草稿
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: changelog-draft-${{ github.event.pull_request.number }}
