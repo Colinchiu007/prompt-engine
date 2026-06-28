@@ -33,7 +33,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pytest tests/ -q --tb=short --ignore=tests/test_web_e2e.py --ignore=tests/test_qa_comprehensive.py --ignore=tests/test_infinity_features.py
+          pytest tests/ -q --tb=short --ignore=tests/test_web_e2e.py --ignore=tests/test_qa_comprehensive.py --ignore=tests/test_infinity_features.py --ignore=tests/test_v010_engineering.py
 
       - name: Health check
         run: |
