@@ -79,17 +79,17 @@ class TestStrategyIntegration:
 class TestOptimizerErrorPaths:
     """测试错误路径 — 异常时返回 fallback"""
 
-    @patch.object(Optimizer, "_call_llm")
+    @patch("prompt_engine.optimizer.Optimizer._call_llm")
     def test_optimize_fallback_on_error(self, mock_call):
         mock_call.side_effect = RuntimeError("API timeout")
+        from prompt_engine.optimizer import Optimizer
         optimizer = Optimizer()
-        req = OptimizeRequest(prompt="test", platform=PlatformType.MIDJOURNEY)
+        req = OptimizeRequest(prompt="test", platform=PlatformType.GENERIC, creative_level=8)
         result = optimizer.optimize(req)
         # 出错时应返回原 prompt 作为 fallback
         assert result.error is not None
         assert "timeout" in result.error.lower() or "api" in result.error.lower()
         assert result.optimized_prompt == "test"
-        assert result.error is not None
 
     @patch.object(Optimizer, "_call_llm")
     def test_optimize_max_length_truncation(self, mock_call):

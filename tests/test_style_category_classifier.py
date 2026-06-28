@@ -1,7 +1,6 @@
 """Tests for Style Category Classifier."""
 import sys
-import pathlib
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+sys.path.insert(0, r"C:\Users\邱领\projects\prompt-engine")
 
 import pytest
 from prompt_engine.classifier import StyleCategoryClassifier, StyleCategory, _keyword_match
@@ -112,6 +111,8 @@ class TestStyleCategoryClassifierRAG:
     def test_rag_index_exists(self):
         from prompt_engine.classifier import StyleCategoryClassifier
         c = StyleCategoryClassifier()
+        # 触发惰性构建
+        c._vector_search("test query")
         assert c._rag_index is not None
 
     def test_vector_search_returns_categories(self):

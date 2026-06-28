@@ -103,7 +103,7 @@ class TestGenericStrategy:
     def test_build_system_prompt_generic(self):
         from prompt_engine.strategies.generic import GenericStrategy
         prompt = GenericStrategy.build_system_prompt()
-        assert "AI image prompt expert" in prompt
+        assert "expert prompt engineer" in prompt
         assert "platform-agnostic" in prompt
 
     def test_build_system_prompt_creative_level(self):
