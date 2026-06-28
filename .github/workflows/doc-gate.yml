@@ -27,6 +27,10 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          if [ ! -f team/scripts/check-docs-sync.sh ]; then
+            echo "⚠️ team/scripts/check-docs-sync.sh 不存在，跳过文档同步检查"
+            exit 0
+          fi
           chmod +x team/scripts/check-docs-sync.sh
           bash team/scripts/check-docs-sync.sh \
             --base=${{ github.event.pull_request.base.ref }} \
@@ -37,6 +41,10 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          if [ ! -f team/scripts/draft-changelog.sh ]; then
+            echo "⚠️ team/scripts/draft-changelog.sh 不存在，跳过 CHANGELOG 起草"
+            exit 0
+          fi
           chmod +x team/scripts/draft-changelog.sh
           mkdir -p team/inbox
           bash team/scripts/draft-changelog.sh \

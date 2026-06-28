@@ -1,5 +1,12 @@
 """Dashboard 种子数据测试"""
 from prompt_engine.api.rest import seed_demo_data, get_stats_store
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _seed():
+    """每次测试前自动注入种子数据"""
+    seed_demo_data(reset_first=True)
 
 
 class TestSeedData:

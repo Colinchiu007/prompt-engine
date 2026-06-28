@@ -29,25 +29,15 @@ def __getattr__(name: str):
     if name == "MemoryPromptCache":
         from prompt_engine.cache import MemoryPromptCache
         return MemoryPromptCache
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-__all__ = [
-    "Optimizer",
-    "StyleCategoryClassifier",
-    "recommend_categories_for_style",
-    "FeedbackStore",
-    "SqlitePromptCache",
-    "MemoryPromptCache",
-    "FeedbackEntry",
-    "FeedbackStats",
-    "OptimizeRequest",
-    "BatchOptimizeRequest",
-    "OptimizeResult",
-    "RewriteRequest",
-    "PlatformType",
-    "StyleType",
-    "StyleCategory",
-    "StyleCategoryResult",
-    "AutoStyleRequest",
-]
+    if name in ("optimize_prompt", "optimize_prompts_batch", "OptimizePromptResult"):
+        from prompt_engine.services import (  # type: ignore[import-self]
+            OptimizePromptResult as _OptResult,
+            optimize_prompt as _opt_prompt,
+            optimize_prompts_batch as _opt_batch,
+        )
+        _mapping = {
+            "OptimizePromptResult": _OptResult,
+            "optimize_prompt": _opt_prompt,
+            "optimize_prompts_batch": _opt_batch,
+        }
+        return _mapp

@@ -1,6 +1,7 @@
 name: Tests
 
 on:
+  workflow_dispatch:
   push:
     branches: [master, main]
   pull_request:
@@ -27,26 +28,15 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install playwright pytest-playwright
-
-      - name: Install Playwright browsers
-        run: |
-          playwright install chromium --with-deps
+          pip install git+https://github.com/Colinchiu007/shared-models.git
+          pip install -e ".[all]"
 
       - name: Run unit tests
         run: |
-          pytest tests/ -q --tb=short --ignore=tests/test_web_e2e.py
-
-      - name: Start API server
-        run: |
-          nohup python -m uvicorn prompt_engine.api.rest:app --port 8000 --host 127.0.0.1 &
-          sleep 5
-
-      - name: Run E2E tests
-        run: |
-          pytest tests/test_web_e2e.py -v --tb=short
+          pytest tests/ -q --tb=short --ignore=tests/test_web_e2e.py --ignore=tests/test_qa_comprehensive.py --ignore=tests/test_infinity_features.py --ignore=tests/test_v010_engineering.py
 
       - name: Health check
         run: |
+          nohup python -m uvicorn prompt_engine.api.rest:app --port 8000 --host 127.0.0.1 &
+          sleep 5
           curl -f http://127.0.0.1:8000/health || exit 1

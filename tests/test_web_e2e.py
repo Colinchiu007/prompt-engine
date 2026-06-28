@@ -94,7 +94,7 @@ class TestWebE2E:
         print(f"\nECharts loaded: {echarts_loaded}")
         print(f"el-main content: {main_html_len}b, el-card: {el_count}")
         html = page.content()
-        with open("C:/Users/邱领/AppData/Local/Temp/dash_after.html", "w", encoding="utf-8") as f:
+        with open(os.path.join(os.environ.get("TMPDIR", os.path.join(os.path.expanduser("~"), "AppData/Local/Temp") if os.name == "nt" else "/tmp"), "dash_after.html"), "w", encoding="utf-8") as f:
             f.write(html)
         assert el_count > 0, f"Dashboard has 0 cards. Errors: {errs}, console: {msgs[-5:]}"
 

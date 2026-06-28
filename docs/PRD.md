@@ -193,6 +193,19 @@ optimizer.optimize()
 | `/v1/feedback/recent` | GET | 最近反馈 |
 | `/v1/feedback/apply` | POST | 应用权重 |
 
+### 3.2 services 模块（v0.21.0+）
+
+`prompt_engine.services` 提供高层次场景→提示词优化服务，从 `platform-orchestrator` 迁移而来：
+
+| 函数 | 说明 |
+|------|------|
+| `optimize_prompt(text, segments, ...)` | 场景文本 → 图像提示词。先试 Optimizer，失败退化为直接 LLM 调用 |
+| `optimize_prompts_batch(scenes, ...)` | 批量场景优化 |
+
+依赖：`httpx`（LLM 回退调用），可选 `prompt_engine.optimizer`
+
+旧路径 `platform-orchestrator/services/prompt_service.py` 已废弃。
+
 ### 3.2 CLI 子命令
 
 | 命令 | 说明 | 示例 |
