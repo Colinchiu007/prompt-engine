@@ -49,4 +49,6 @@ jobs:
         run: |
           pytest tests/test_web_e2e.py -v --tb=short
 
-      - name: Health ch
+      - name: Health check
+        run: |
+          curl -f http://127.0.0.1:8000/health || exit 1
