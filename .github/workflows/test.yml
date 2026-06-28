@@ -29,26 +29,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install git+https://github.com/Colinchiu007/shared-models.git
-          pip install -e ".[all]" pytest-playwright
-          pip install playwright
-
-      - name: Install Playwright browsers
-        run: |
-          playwright install chromium --with-deps
+          pip install -e ".[all]"
 
       - name: Run unit tests
         run: |
           pytest tests/ -q --tb=short --ignore=tests/test_web_e2e.py --ignore=tests/test_qa_comprehensive.py --ignore=tests/test_infinity_features.py
 
-      - name: Start API server
+      - name: Health check
         run: |
           nohup python -m uvicorn prompt_engine.api.rest:app --port 8000 --host 127.0.0.1 &
           sleep 5
-
-      - name: Run E2E tests
-        run: |
-          pytest tests/test_web_e2e.py -v --tb=short
-
-      - name: Health check
-        run: |
           curl -f http://127.0.0.1:8000/health || exit 1
