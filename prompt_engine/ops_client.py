@@ -22,10 +22,24 @@ async def fetch_official_keys(
     Falls back to empty list if OpsCenter is unreachable.
     """
     import httpx
+    import jwt as pyjwt
+    import datetime as dt
+    secret = os.environ.get("PO_SECRET_KEY", os.environ.get("OPS_SECRET_KEY", "fallback"))
+    token = pyjwt.encode({
+        "user_id": "prompt-engine",
+        "username": "prompt-engine",
+        "role": "admin",
+        "exp": dt.datetime.utcnow() + dt.timedelta(minutes=5),
+    }, secret, algorithm="HS256")
+
     url = f"{ops_url or OPS_CENTER_URL}/api/v1/secrets"
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(url, params={"provider": provider})
+            resp = await client.get(
+                url,
+                params={"provider": provider},
+                headers={"Authorization": f"Bearer {token}"},
+            )
             if resp.status_code == 200:
                 keys = resp.json().get("keys", [])
                 # Filter by tier_access <= user_tier and is_active
