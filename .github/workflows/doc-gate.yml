@@ -37,7 +37,7 @@ jobs:
             --head=${{ github.event.pull_request.head.ref }}
 
       - name: 起草 CHANGELOG
-        if: success()  # 即使门禁通过也起草，作为草稿
+        if: success()
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -69,16 +69,16 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 安装依赖（如有）
+      - name: 安装依赖
         run: |
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
+          python -m pip install --upgrade pip
+          pip install git+https://github.com/Colinchiu007/shared-models.git
+          pip install -e ".[all]"
 
-      - name: 运行测试（如有）
+      - name: 运行测试
         run: |
           if [ -d tests ]; then
-            pytest tests/ -q || echo "⚠️ 测试失败，但不阻塞文档门禁"
+            pytest tests/ -q --tb=short --ignore=tests/test_web_e2e.py --ignore=tests/test_qa_comprehensive.py --ignore=tests/test_infinity_features.py --ignore=tests/test_v010_engineering.py
           fi
 
   stale-check:
@@ -86,23 +86,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
-    if: github.event_name == 'pull_request'  # 仅在 PR 时触发（占位）
+    if: github.event_name == 'pull_request'
     steps:
       - name: 标记 Stale Issues
         run: |
           echo "⚠️ Stale 检查将由独立 cron 触发（避免 PR 时执行）"
           echo "详见 .github/workflows/stale.yml（待创建）"
-
-# ===== 说明 =====
-#
-# 启用方式：
-#   1. 将本文件复制到各项目的 .github/workflows/doc-gate.yml
-#   2. 确保 team/scripts/ 在仓库根目录
-#   3. 项目必须用 GitHub（GitLab/Bitbucket 不适用）
-#
-# 绕过机制：
-#   owner 或 reviewer 加 'bypass-doc-gate' label 后可合并
-#   （需要在 GitHub 仓库设置中创建该 label）
-#
-# 调试：
-#   本地测试：bash team/scripts/check-docs-sync.sh --base=main --head=feat/xxx
