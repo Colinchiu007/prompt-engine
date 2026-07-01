@@ -15,6 +15,7 @@ from prompt_engine.models import (
 from prompt_engine.evaluator import evaluate as evaluate_prompt, EvaluationResult
 from prompt_engine.feedback import get_feedback_store
 from typing import TYPE_CHECKING
+from prompt_engine import storyboard  # noqa: F401 — storyboard strategies auto-register
 app = FastAPI(
     title="Prompt Engine API",
     description="图片生成提示词优化引擎 - REST API",
@@ -692,6 +693,62 @@ async def cache_stats():
         "sqlite": sqlite_stats,
         "memory": {"entries": optimizer._mem_cache.size},
     }
+
+
+# ── storyboard 故事板端点 ───────────────────
+
+
+@app.get("/v1/storyboard/strategies")
+async def list_storyboard_strategies():
+    """列出所有可用的分镜策略"""
+    from prompt_engine.storyboard import list_storyboard_strategies as _list
+    return {"strategies": _list(), "count": len(_list())}
+
+
+@app.post("/v1/storyboard/compose")
+async def storyboard_compose(request: dict):
+    """批量场景 → 分镜 prompt 生成
+
+    Request:
+    {
+        "scenes": ["场景1文字", "场景2文字", ...],
+        "full_text": "原始完整文案",
+        "strategy": "xiaohei_storyboard",
+        "options": { "creative_level": 5 }
+    }
+    """
+    scenes = request.get("scenes", [])
+    full_text = request.get("full_text", "")
+    strategy_name = request.get("strategy", "xiaohei_storyboard")
+    options = request.get("options", {})
+
+    if not scenes:
+        raise HTTPException(status_code=400, detail="scenes 不能为空")
+
+    from prompt_engine.storyboard import get_storyboard_strategy, list_storyboard_strategies
+
+    strategy_cls = get_storyboard_strategy(strategy_name)
+    if not strategy_cls:
+        available = [s["name"] for s in list_storyboard_strategies()]
+        raise HTTPException(
+            status_code=404,
+            detail=f"未知策略: {strategy_name}，可选: {available}"
+        )
+
+    # compose_batch_with_meta → 含元数据；fallback compose_batch
+    if hasattr(strategy_cls, "compose_batch_with_meta"):
+        results = strategy_cls.compose_batch_with_meta(scenes, full_text, **options)
+        return {
+            "strategy": strategy_name,
+            "prompts": [r["prompt"] for r in results],
+            "metaphors": [r.get("metaphor", {}) for r in results],
+        }
+    else:
+        prompts = strategy_cls.compose_batch(scenes, full_text, **options)
+        return {
+            "strategy": strategy_name,
+            "prompts": prompts,
+        }
 
 
 if _web_dir.exists():
