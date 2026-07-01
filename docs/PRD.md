@@ -315,7 +315,7 @@ FeedbackEntry
 | 测试模块 | 用例数 | 说明 |
 |----------|--------|------|
 | 分类器 | 30 | keyword_match, vector_rag, LLM, 边界, RAG, 反向推荐 |
-| 策略 | 17 | 7 平台 system_prompt + post_process |
+| 策略 | 18 | 7 平台 system_prompt + post_process<br>+ xiaohei_storyboard 分镜 |
 | 策略集成 | 14 | 端到端集成测试 |
 | A/B 候选 | 3 | 单/多候选 |
 | 批量 | 3 | 批量优化 |
@@ -362,6 +362,7 @@ FeedbackEntry
 | F10 | 资源展示 | `/v1/resources` 端点, 引擎资产全展示 |
 | F11 | 图片预览 | `/v1/preview` + `/v1/image-models`, Pollinations 免费 |
 | F12 | 模型 API 配置 | Settings 面板, 6 供应商环境变量 |
+| F13 | 小黑分镜策略 | xiaohei_storyboard 8 种构图 + 3 步隐喻 + `@register` 注册 |
 
 ---
 

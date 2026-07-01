@@ -9,5 +9,6 @@ from prompt_engine.strategies import tongyi            # noqa: F401
 from prompt_engine.strategies import yizhang           # noqa: F401
 from prompt_engine.strategies import jimeng            # noqa: F401
 from prompt_engine.strategies import generic           # noqa: F401
+from prompt_engine.strategies import xiaohei_storyboard  # noqa: F401
 
 __all__ = ["BaseStrategy", "register", "get_strategy", "list_strategies"]

@@ -1,0 +1,9 @@
+{
+  "tests/test_qa_comprehensive.py": true,
+  "tests/test_ab.py::TestABCandidates::test_optimize_multiple_candidates": true,
+  "tests/test_strategy_integration.py::TestOptimizerErrorPaths::test_optimize_fallback_on_error": true,
+  "tests/test_optimizer.py::TestOptimizer::test_optimize_generic": true,
+  "tests/test_optimizer.py::TestOptimizer::test_optimize_midjourney": true,
+  "04-tests/test_infinity_features.py": true,
+  "04-tests/test_qa_comprehensive.py": true
+}
