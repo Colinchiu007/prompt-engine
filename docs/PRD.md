@@ -315,8 +315,9 @@ FeedbackEntry
 | 测试模块 | 用例数 | 说明 |
 |----------|--------|------|
 | 分类器 | 30 | keyword_match, vector_rag, LLM, 边界, RAG, 反向推荐 |
-| 策略 | 17 | 7 平台 system_prompt + post_process |
+| 策略 | 18 | 7 平台 system_prompt + post_process |
 | 策略集成 | 14 | 端到端集成测试 |
+| 故事板 | 46 | StoryboardStrategy ABC + xiaohei 三步隐喻 + REST 端点 |
 | A/B 候选 | 3 | 单/多候选 |
 | 批量 | 3 | 批量优化 |
 | 配置 | 2 | 配置加载 |
@@ -332,7 +333,7 @@ FeedbackEntry
 | 看板 API | 4 | 统计端点测试 |
 | gpt4o 数据 | 4 |
 | 资源/预览/模型 | 9 | 资源展示+图片预览+模型清单 | 1050 案例解析+注入 |
-| **合计** | **224** | 全部 mock 隔离, ~25s |
+| **合计** | **270** | 全部 mock 隔离, ~25s |
 
 ---
 
@@ -362,6 +363,7 @@ FeedbackEntry
 | F10 | 资源展示 | `/v1/resources` 端点, 引擎资产全展示 |
 | F11 | 图片预览 | `/v1/preview` + `/v1/image-models`, Pollinations 免费 |
 | F12 | 模型 API 配置 | Settings 面板, 6 供应商环境变量 |
+| F13 | 小黑分镜策略 | 46 测试 ALL GREEN: ABC 注册表 + xiaohei 三步隐喻 + REST `/v1/storyboard/*` |
 
 ---
 
@@ -374,3 +376,133 @@ FeedbackEntry
 | 反馈数据稀疏 | 权重效果有限 | 默认 1.0 安全回退 |
 | sklearn 依赖 | 安装体积增加 | 缺失时静默降级 |
 | BitwiseClassifier 未集成 | 比特级分类未用 | 当前三级流水线足够 |
+
+
+---
+
+## 八、平台优先级矩阵
+
+> **背景**：原 PRD 列出 6 大平台但未明确优先级，且文心一格已下线需标注。
+
+### 8.1 平台支持状态
+
+| 平台 | 优先级 | 状态 | 策略文件 | 备注 |
+|------|--------|------|----------|------|
+| **Midjourney** | P0 | 可用 | `midjourney` | 主力平台，参数映射最完善（--ar/--s/--v） |
+| **Stable Diffusion** | P0 | 可用 | `stable_diffusion` | 权重语法支持（masterpiece:1.2） |
+| **DALL-E** | P1 | 可用 | `dalle` | 自然语言段落式 prompt |
+| **通义万相** | P1 | 可用 | `tongyi` | 中文描写，阿里云 API |
+| **即梦** | P2 | 可用 | `jimeng` | 视觉冲击力导向 |
+| **文心一格** | — | **已下线** | `yizhang`（保留） | 百度已于 2026 年 5 月下线该产品，策略文件保留但不再维护 |
+| **通用（Generic）** | P3 | 可用 | `generic` | 不适配特定平台时的兜底模板 |
+
+### 8.2 平台选路规则
+
+1. 用户指定平台 → 直接匹配策略文件
+2. 用户未指定 → 按 `MJ > SD > DALL-E > 通义 > 即梦` 顺序，取第一个可用
+3. 所有平台策略不可用 → 降级到 `generic` 通用模板
+4. 文心一格相关请求 → 自动路由到 `generic` 并记录 warning 日志
+
+### 8.3 策略文件版本要求
+
+每个平台策略文件必须包含：
+- `platform_name`: 平台标识
+- `system_prompt`: 系统提示词模板
+- `post_processor`: 后处理函数（可选）
+- `supported_params`: 支持的参数列表
+- `status`: `active` | `deprecated` | `experimental`
+
+---
+
+## 九、"小黑分镜"业务定位
+
+> **背景**：F13 迭代新增了"小黑分镜"策略，但业务定位模糊，需明确。
+
+### 9.1 定位声明
+
+**"小黑分镜"** 是 prompt-engine 的 **视频分镜提示词生成模块**，定位如下：
+
+- **核心功能**：将文本内容转换为适用于 AI 视频生成的分镜提示词序列
+- **目标场景**：短视频制作、图文转视频、内容二次创作
+- **与主线的关系**：独立于图片 prompt 优化流水线，但复用分类器和注入引擎
+
+### 9.2 三步隐喻流程
+
+| 步骤 | 名称 | 输入 | 输出 | 说明 |
+|------|------|------|------|------|
+| Step 1 | **场景提取** | 文本段落 | 场景列表 | 识别叙事结构，提取关键场景 |
+| Step 2 | **视觉隐喻** | 场景列表 | 视觉描述 | 每个场景转换为画面描述（风格、构图、光影） |
+| Step 3 | **提示词合成** | 视觉描述 | 分镜 prompt 序列 | 按时间轴组织，含转场提示 |
+
+### 9.3 接口定义
+
+```
+POST /v1/storyboard/optimize
+POST /v1/storyboard/classify
+GET  /v1/storyboard/templates
+```
+
+### 9.4 与 content-aggregator 的集成
+
+小黑分镜通过 `PromptEngineExporter`（smart-sentence-splitter v0.6.1+）接收分句结果，自动生成分镜提示词。
+
+---
+
+## 十、LLM 调用成本预算
+
+> **背景**：原 PRD 无成本控制机制，存在无限调用风险。
+
+### 10.1 成本预算矩阵
+
+| 用途 | 模型 | 单次调用成本 | 日均调用量 | 日成本 | 月成本 |
+|------|------|-------------|-----------|--------|--------|
+| 分类兜底（llm_classify） | GPT-4o-mini | ~0.001 CNY | 100 次 | 0.1 CNY | 3 CNY |
+| 优化改写（optimize） | DeepSeek-V3 | ~0.01 CNY | 200 次 | 2 CNY | 60 CNY |
+| 逆向工程（reverse_engineer） | GPT-4o | ~0.05 CNY | 50 次 | 2.5 CNY | 75 CNY |
+| 小黑分镜 | DeepSeek-V3 | ~0.02 CNY | 100 次 | 2 CNY | 60 CNY |
+| **合计** | — | — | — | **6.6 CNY** | **198 CNY** |
+
+### 10.2 成本控制机制
+
+| 机制 | 阈值 | 行为 |
+|------|------|------|
+| **单用户日限额** | 50 次 LLM 调用/天 | 超限返回 HTTP 429 + `X-RateLimit-Reset` 头 |
+| **全局日预算** | 100 CNY/天 | 触发后仅保留 P0 平台（MJ/SD）的优化能力 |
+| **月预算上限** | 200 CNY/月 | 触发后暂停逆向工程功能，仅保留分类+优化 |
+| **单次 token 上限** | 2000 output tokens | 超限截断并记录 warning |
+| **超时熔断** | 连续 3 次超时 | 自动禁用该 provider 10 分钟 |
+
+### 10.3 成本监控
+
+- 每次 LLM 调用记录到 `llm_usage_log` 表：`model, tokens_in, tokens_out, cost_estimate, timestamp`
+- 日报自动生成：`GET /v1/ops/cost-report`（需 admin 权限）
+- 超预算通知：通过 orchestrator 的告警通道发送
+
+---
+
+## 十一、API 认证机制
+
+### 11.1 认证方式
+
+| 端点类别 | 认证方式 | 说明 |
+|----------|----------|------|
+| `/v1/optimize`, `/v1/classify` | API Key（Header） | `Authorization: Bearer <API_KEY>` |
+| `/v1/storyboard/*` | API Key（Header） | 同上 |
+| `/v1/ops/*` | JWT Token | 需要 admin 角色 |
+| `/v1/feedback` | 可选 API Key | 匿名反馈允许，绑定 API Key 可追溯 |
+| `/v1/health` | 无需认证 | 健康检查端点 |
+
+### 11.2 API Key 管理
+
+- **生成**: 通过 `POST /v1/admin/api-keys` 生成（需 admin JWT）
+- **格式**: `pe_` 前缀 + 32 位随机字符串
+- **存储**: SHA-256 哈希后存入数据库，原始 Key 仅在生成时返回一次
+- **轮换**: 支持手动轮换，旧 Key 有 24h 宽限期
+- **撤销**: `DELETE /v1/admin/api-keys/{key_id}`
+
+### 11.3 与系统集成
+
+prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系接入：
+- 用户通过 orchestrator SSO 登录后获取 JWT
+- 调用 prompt-engine 时携带 JWT，由 orchestrator 签发
+- prompt-engine 验证 JWT 签名（共享密钥 `PO_SECRET_KEY`）
