@@ -1,0 +1,7 @@
+# .clinerules — prompt-engine 特定硬约束
+
+- rule: "__init__.py 使用 __getattr__ 惰性导入 Optimizer/Classifier，避免启动时 LLM 连接"
+- rule: "三级分类流水线顺序不可更改：keyword_match → vector_rag → llm_classify"
+- rule: "测试必须全部 mock 隔离，不依赖真实 API Key"
+- rule: "25 个 StyleCategory 枚举在 models.py，不新增不删除"
+- rule: "权重系统使用 keyword_weights.json 持久化，_get_weights() 惰性加载"
