@@ -130,6 +130,8 @@ class OptimizeRequest(BaseModel):
     style: Optional[StyleType] = Field(default=None, description="艺术风格")
     creative_level: int = Field(default=5, ge=1, le=10, description="创意程度 1-10")
     max_length: int = Field(default=300, ge=50, le=2000, description="优化结果最大字符数")
+    user_tier: int = Field(default=0, ge=0, le=3, description="用户会员等级 0=未指定 1=免费 2=标准 3=专业")
+    user_own_key: Optional[str] = Field(default=None, description="用户自带的 API Key（优先级最高）")
     negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词，避免的元素")
     num_candidates: int = Field(default=1, ge=1, le=5, description="候选版本数量，用于 A/B 测试")
     auto_detect_style: bool = Field(
@@ -172,6 +174,7 @@ class OptimizeResult(BaseModel):
     tokens_used: int = Field(default=0, description="消耗的 token 数")
     duration_ms: float = Field(default=0.0, description="优化耗时（毫秒）")
     candidates: list[str] = Field(default_factory=list, description="多候选版本（A/B 测试时返回）")
+    key_source: str = Field(default="config", description="Key 来源: user/official/config")
     error: Optional[str] = Field(default=None, description="出错时的错误信息")
     detected_categories: Optional[StyleCategoryResult] = Field(
         default=None,

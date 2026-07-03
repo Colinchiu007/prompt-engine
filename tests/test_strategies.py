@@ -14,7 +14,8 @@ class TestStrategyRegistry:
         assert "yizhang" in strategies
         assert "jimeng" in strategies
         assert "generic" in strategies
-        assert len(strategies) == 7
+        assert "xiaohei_storyboard" in strategies
+        assert len(strategies) == 8
 
     def test_get_midjourney(self):
         cls = get_strategy("midjourney")
