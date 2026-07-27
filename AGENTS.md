@@ -49,3 +49,15 @@ prompt-engine: prompt-engine
 本文档只包含开发流程框架。详细规范已拆分到 `references/` 子目录：
 
 - **[references/architecture.md](references/architecture.md)** — 硬约束与编码规范
+
+---
+
+## 质量节拍强制执行
+
+本仓库已启用质量节拍（quality-rhythm）门禁系统。每次新任务自动执行：
+1. 判断变更类型（14种全覆盖）
+2. 评估变更规模
+3. 路由到对应 Phase
+4. 用户确认后开始
+
+**视觉测试强制：** UI 文件变更时自动提示视觉回归测试。

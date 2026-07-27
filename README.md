@@ -282,6 +282,24 @@ Return all 25 MJ style dimensions with Chinese names.
 
 编辑 `config.yaml`：
 
+### 使用 AI Router 自动选模
+
+Prompt Engine 通过现有 OpenAI 兼容 Provider 接入 AI Router。只有显式设置
+`LLM_PROVIDER=ai_router` 时才启用，默认 MiniMax 配置不会被改写。
+
+```bash
+LLM_PROVIDER=ai_router
+AI_ROUTER_PROJECT_KEY=<项目内部凭证>
+AI_ROUTER_BASE_URL=https://ai-router.truevideo.top/v1
+AI_ROUTER_MODEL=auto
+```
+
+`AI_ROUTER_MODEL=auto` 会让中间层根据任务能力、项目策略、成本、质量和延迟选择模型。
+视觉理解请求仍走 `/v1/chat/completions`；图片生成使用 AI Router 的
+`/v1/images/generations`，不由 Prompt Engine 的文本 Provider 代替。
+
+### 直接连接模型供应商
+
 ```yaml
 llm:
   provider: openai_compat          # 供应商: openai_compat | xfyun
@@ -335,7 +353,18 @@ platforms:
     enabled: true
 ```
 
-支持通过环境变量注入敏感信息：`export OPENAI_API_KEY=sk-xxx`
+也可以完全通过环境变量覆盖当前选中的 Provider：
+
+- MiniMax：`MINIMAX_API_KEY`、`MINIMAX_BASE_URL`、`MINIMAX_MODEL`、`MINIMAX_TIMEOUT`
+- OpenAI 兼容：`OPENAI_COMPAT_API_KEY`、`OPENAI_COMPAT_BASE_URL`、`OPENAI_COMPAT_MODEL`、`OPENAI_COMPAT_TIMEOUT`
+- 讯飞：`XFYUN_API_KEY`、`XFYUN_BASE_URL`、`XFYUN_MODEL`
+- 自定义配置文件：`CONFIG_PATH`
+
+`OPENAI_API_KEY` 仍可供现有 `config.yaml` 占位符使用；显式设置
+`OPENAI_COMPAT_API_KEY` 时，后者优先。OpsCenter 集成为可选项，只有配置
+至少 32 个字符的 `PO_SECRET_KEY` 或兼容变量 `OPS_SECRET_KEY` 后才会访问；缺少或使用弱密钥时不会签发管理员 JWT。
+默认只允许 `http://127.0.0.1:8010` 等本机来源；使用远程或容器内 OpsCenter 时，
+还必须通过 `OPS_CENTER_ALLOWED_ORIGINS` 按 `scheme://host:port` 精确列入白名单。
 
 ## 项目结构
 
