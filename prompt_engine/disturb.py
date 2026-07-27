@@ -72,15 +72,24 @@ def disturb_prompt(
         扰动后的 prompt（与原 prompt 不同）
     """
     prompt = prompt.strip()
-    if not prompt:
+    if not prompt or strength <= 0:
         return prompt
 
     words = prompt.split()
     disturbed_words = list(words)
-    num_to_change = max(1, int(len(words) * strength))
+    bounded_strength = min(strength, 1.0)
+    num_to_change = max(1, int(len(words) * bounded_strength))
 
-    # 随机选择要扰动的词
-    change_indices = random.sample(range(len(words)), min(num_to_change, len(words)))
+    # 优先抽取确实有替代词的位置，避免正强度请求随机返回原文。
+    replaceable_indices = [
+        index
+        for index, word in enumerate(words)
+        if any(candidate != word.lower() for candidate in EN_SYNONYMS.get(word.lower(), []))
+    ]
+    change_indices = random.sample(
+        replaceable_indices,
+        min(num_to_change, len(replaceable_indices)),
+    )
 
     for idx in change_indices:
         original = words[idx].lower()
@@ -89,9 +98,9 @@ def disturb_prompt(
                 synonyms = EN_SYNONYMS[original]
                 candidate = random.choice([s for s in synonyms if s != original])
                 # 保留原词的大小写风格
-                if prompt[idx].isupper():
+                if words[idx].isupper():
                     candidate = candidate.upper()
-                elif prompt[idx].islower():
+                elif words[idx].islower():
                     candidate = candidate.lower()
                 disturbed_words[idx] = candidate
                 break
@@ -99,12 +108,12 @@ def disturb_prompt(
     result = " ".join(disturbed_words)
     # 确保扰动后的结果与原 prompt 不同
     if result == prompt and strength > 0:
-        # 如果没变化，随机调整词序
-        shuffled = list(words)
-        random.shuffle(shuffled)
-        result = " ".join(shuffled)
-        if result == prompt:
-            result = prompt  # 万一 shuffle 也没变
+        # 没有可替换词时轮转词序；单词或全重复输入无法安全扰动则保留原文。
+        if len(words) > 1:
+            rotated = words[1:] + words[:1]
+            candidate = " ".join(rotated)
+            if candidate != prompt:
+                result = candidate
 
     return result
 
