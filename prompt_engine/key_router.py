@@ -51,6 +51,7 @@ class KeyRouter:
         # Try env var directly
         env_map = {
             "openai": "OPENAI_API_KEY",
+            "ai_router": "AI_ROUTER_PROJECT_KEY",
             "deepseek": "DEEPSEEK_API_KEY",
             "minimax": "MINIMAX_API_KEY",
             "xfyun": "XFYUN_API_KEY",

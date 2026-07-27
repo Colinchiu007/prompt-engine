@@ -50,7 +50,7 @@ class TestLoadConfig:
         assert "engine" in cfg
         assert "server" in cfg
         assert "platforms" in cfg
-        assert cfg["llm"]["provider"] in ("openai_compat", "xfyun", "minimax")
+        assert cfg["llm"]["provider"] in ("ai_router", "openai_compat", "xfyun", "minimax")
         assert cfg["engine"]["default_platform"] == "generic"
         assert cfg["server"]["port"] == 8013
 
@@ -89,3 +89,78 @@ class TestLoadConfig:
     def test_config_not_found(self):
         with pytest.raises(FileNotFoundError):
             load_config("/nonexistent/path/config.yaml")
+
+    def test_config_path_environment_variable(self, monkeypatch):
+        """未传显式路径时应读取 CONFIG_PATH。"""
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            suffix=".yaml",
+            dir=Path(__file__).parent,
+            delete=False,
+            encoding="utf-8",
+        ) as handle:
+            yaml.safe_dump(
+                {
+                    "llm": {"provider": "minimax", "minimax": {}},
+                    "engine": {"default_platform": "custom"},
+                },
+                handle,
+            )
+            config_path = handle.name
+        monkeypatch.setenv("CONFIG_PATH", config_path)
+        monkeypatch.delenv("LLM_PROVIDER", raising=False)
+
+        try:
+            cfg = load_config()
+        finally:
+            os.unlink(config_path)
+
+        assert cfg["engine"]["default_platform"] == "custom"
+
+    def test_minimax_environment_overrides_selected_profile(self, monkeypatch):
+        """MiniMax 示例环境变量应覆盖默认配置并保留数值类型。"""
+        monkeypatch.setenv("LLM_PROVIDER", "minimax")
+        monkeypatch.setenv("MINIMAX_API_KEY", "minimax-test-key")
+        monkeypatch.setenv("MINIMAX_BASE_URL", "https://minimax.example/v1")
+        monkeypatch.setenv("MINIMAX_MODEL", "MiniMax-Test")
+        monkeypatch.setenv("MINIMAX_TIMEOUT", "45")
+
+        cfg = load_config()
+
+        assert cfg["llm"]["minimax"] == {
+            "api_key": "minimax-test-key",
+            "base_url": "https://minimax.example/v1",
+            "model": "MiniMax-Test",
+            "temperature": 0.7,
+            "max_tokens": 500,
+            "timeout": 45,
+        }
+
+    def test_openai_compat_environment_overrides_selected_profile(self, monkeypatch):
+        """OpenAI 兼容示例环境变量应覆盖对应配置。"""
+        monkeypatch.setenv("LLM_PROVIDER", "openai_compat")
+        monkeypatch.setenv("OPENAI_COMPAT_API_KEY", "openai-test-key")
+        monkeypatch.setenv("OPENAI_COMPAT_BASE_URL", "https://openai.example/v1")
+        monkeypatch.setenv("OPENAI_COMPAT_MODEL", "openai-test-model")
+        monkeypatch.setenv("OPENAI_COMPAT_TIMEOUT", "30")
+
+        cfg = load_config()
+
+        assert cfg["llm"]["openai_compat"] == {
+            "api_key": "openai-test-key",
+            "base_url": "https://openai.example/v1",
+            "model": "openai-test-model",
+            "temperature": 0.7,
+            "max_tokens": 500,
+            "timeout": 30,
+        }
+
+    def test_provider_name_environment_override_is_normalized(self, monkeypatch):
+        """Provider 名称应兼容环境变量中常见的空格和大小写。"""
+        monkeypatch.setenv("LLM_PROVIDER", " AI_ROUTER ")
+        monkeypatch.setenv("AI_ROUTER_PROJECT_KEY", "router-test-key")
+
+        cfg = load_config()
+
+        assert cfg["llm"]["provider"] == "ai_router"
+        assert cfg["llm"]["ai_router"]["api_key"] == "router-test-key"

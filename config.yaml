@@ -2,12 +2,20 @@
 # 通过环境变量 CONFIG_PATH 可指定自定义路径
 
 llm:
-  # 供应商: openai_compat | xfyun | minimax
+  # 供应商: ai_router | openai_compat | xfyun | minimax
   provider: minimax
   openai_compat:
     api_key: "${OPENAI_API_KEY}"
     base_url: "https://openrouter.ai/api/v1"
     model: "deepseek/deepseek-chat"
+    temperature: 0.7
+    max_tokens: 500
+    timeout: 60
+  # 仅当 LLM_PROVIDER=ai_router 时启用；默认 Provider 仍为 MiniMax
+  ai_router:
+    api_key: "${AI_ROUTER_PROJECT_KEY}"
+    base_url: "https://ai-router.truevideo.top/v1"
+    model: "auto"
     temperature: 0.7
     max_tokens: 500
     timeout: 60

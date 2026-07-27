@@ -28,6 +28,7 @@ def create_provider(name: str, **kwargs) -> BaseLLMProvider:
 # 导入并注册各供应商
 from prompt_engine.llm.openai_compat import OpenAICompatProvider
 _PROVIDERS["openai_compat"] = OpenAICompatProvider
+_PROVIDERS["ai_router"] = OpenAICompatProvider
 
 from prompt_engine.llm.xfyun import XfyunProvider
 _PROVIDERS["xfyun"] = XfyunProvider
