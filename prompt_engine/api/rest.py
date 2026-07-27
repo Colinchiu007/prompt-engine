@@ -1,8 +1,11 @@
 """FastAPI REST 服务层"""
+import hashlib
+import hmac
 import logging
+import os
 from functools import lru_cache
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 
 logger = logging.getLogger(__name__)
 from prompt_engine.classifier import StyleCategoryClassifier
@@ -376,6 +379,7 @@ async def list_keywords(platform: str = "midjourney"):
 
 import os
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from pathlib import Path
 
 _web_dir = Path(__file__).parent.parent / "web"
@@ -621,6 +625,57 @@ async def image_preview(request: dict):
 
 # ── API Key 管理端点 ─────────────────────────────────
 ENV_FILE = Path(__file__).parent.parent.parent / ".env"
+MIN_ADMIN_TOKEN_LENGTH = 32
+PROVIDER_KEY_ENV_VARS = {
+    "ai_router": "AI_ROUTER_PROJECT_KEY",
+    "minimax": "MINIMAX_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "xfyun": "XFYUN_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "replicate": "REPLICATE_API_KEY",
+    "stability": "STABILITY_API_KEY",
+    "together": "TOGETHER_API_KEY",
+    "vidu": "VIDU_API_KEY",
+}
+MANAGED_KEY_ENV_VARS = frozenset(PROVIDER_KEY_ENV_VARS.values())
+
+
+def _is_placeholder_secret(value: str) -> bool:
+    """识别示例文件中的占位值，避免把它们当作已配置凭据。"""
+    normalized = value.strip().lower()
+    return (
+        not normalized
+        or normalized in {"your_...", "your_k...here", "changeme", "placeholder"}
+        or normalized.startswith(("your_", "replace_with_", "example_", "<"))
+    )
+
+
+def _require_admin_token(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> None:
+    """校验 API Key 管理端点使用的 Bearer 管理令牌。"""
+    expected = os.environ.get("PROMPT_ENGINE_ADMIN_TOKEN", "").strip()
+    if (
+        len(expected) < MIN_ADMIN_TOKEN_LENGTH
+        or _is_placeholder_secret(expected)
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="未配置有效的 Prompt Engine 管理令牌",
+        )
+
+    parts = authorization.split(" ") if authorization else []
+    if len(parts) != 2 or parts[0] != "Bearer" or not parts[1]:
+        raise HTTPException(
+            status_code=401,
+            detail="需要 Bearer 管理令牌",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    actual_digest = hashlib.sha256(parts[1].encode("utf-8")).digest()
+    expected_digest = hashlib.sha256(expected.encode("utf-8")).digest()
+    if not hmac.compare_digest(actual_digest, expected_digest):
+        raise HTTPException(status_code=403, detail="管理令牌无效")
 
 
 def _get_configured_keys() -> dict:
@@ -633,12 +688,15 @@ def _get_configured_keys() -> dict:
                 if line and not line.startswith("#") and "=" in line:
                     key, _, val = line.partition("=")
                     val = val.strip()
-                    if val and val not in ("your_...", "your_k...here"):
+                    if key in MANAGED_KEY_ENV_VARS and not _is_placeholder_secret(val):
                         configured[key] = True
     return configured
 
 
-@app.get("/v1/config/api-key")
+@app.get(
+    "/v1/config/api-key",
+    dependencies=[Depends(_require_admin_token)],
+)
 async def get_api_keys_status():
     """返回哪些 key 已配置（不明文返回 key 内容）。"""
     configured = _get_configured_keys()
@@ -648,29 +706,33 @@ async def get_api_keys_status():
     }
 
 
-@app.post("/v1/config/api-key")
+@app.post(
+    "/v1/config/api-key",
+    dependencies=[Depends(_require_admin_token)],
+)
 async def set_api_key(request: dict):
     """更新 .env 中的 API Key（不明文落盘后返回）。"""
     provider = request.get("provider", "")
     api_key = request.get("api_key", "")
 
+    if not isinstance(provider, str) or not isinstance(api_key, str):
+        raise HTTPException(status_code=400, detail="provider 和 api_key 必须是字符串")
+
+    provider = provider.strip().lower()
     if not provider or not api_key:
         raise HTTPException(status_code=400, detail="provider 和 api_key 均不能为空")
+    if api_key != api_key.strip() or any(
+        ord(character) < 32 or ord(character) == 127
+        for character in api_key
+    ):
+        raise HTTPException(status_code=400, detail="api_key 不得包含边界空白或控制字符")
 
-    # 构造环境变量名
-    key_map = {
-        "minimax": "MINIMAX_API_KEY",
-        "openai": "OPENAI_API_KEY",
-        "xfyun": "XFYUN_API_KEY",
-        "gemini": "GEMINI_API_KEY",
-        "replicate": "REPLICATE_API_KEY",
-        "stability": "STABILITY_API_KEY",
-        "together": "TOGETHER_API_KEY",
-        "vidu": "VIDU_API_KEY",
-    }
-    env_var = key_map.get(provider.lower())
+    env_var = PROVIDER_KEY_ENV_VARS.get(provider)
     if not env_var:
-        raise HTTPException(status_code=400, detail=f"未知 provider: {provider}，支持: {list(key_map.keys())}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"未知 provider: {provider}，支持: {list(PROVIDER_KEY_ENV_VARS.keys())}",
+        )
 
     # 读写 .env
     env_lines = []
@@ -773,6 +835,11 @@ async def storyboard_compose(request: dict):
 
 
 if _web_dir.exists():
+    @app.get("/", include_in_schema=False)
+    async def web_root():
+        """将服务根路径导向内置 Web 控制台。"""
+        return RedirectResponse(url="/web/")
+
     app.mount("/web", StaticFiles(directory=str(_web_dir), html=True), name="web")
 
 
@@ -784,4 +851,3 @@ def _ensure_seeded():
     if not _seeded:
         seed_demo_data()
         _seeded = True
-
