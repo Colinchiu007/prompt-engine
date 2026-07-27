@@ -1,6 +1,6 @@
 """
 前端 Web 看板 E2E 测试 — Playwright
-启动要求：uvicorn 跑在 8090
+启动要求：uvicorn 跑在 8094，或通过 TEST_SERVER_URL 指定已有服务
 """
 import os
 import pytest
@@ -20,7 +20,11 @@ def browser():
 @pytest.fixture(scope="module")
 def page(browser):
     page = browser.new_page()
-    page.goto(SERVER_URL, wait_until="networkidle", timeout=15000)
+    page.goto(SERVER_URL, wait_until="domcontentloaded", timeout=30000)
+    page.locator("button:has-text('优化 Prompt')").wait_for(
+        state="visible",
+        timeout=30000,
+    )
     yield page
     page.close()
 
@@ -32,7 +36,11 @@ class TestWebE2E:
         """页面无 JS 错误"""
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.reload(wait_until="networkidle", timeout=10000)
+        page.reload(wait_until="domcontentloaded", timeout=30000)
+        page.locator("button:has-text('优化 Prompt')").wait_for(
+            state="visible",
+            timeout=30000,
+        )
         assert not errors, f"Page errors: {errors}"
 
     def test_workbench_mounts(self, page):
@@ -53,7 +61,11 @@ class TestWebE2E:
         errs = []
         page.on("console", lambda m: msgs.append((m.type, m.text)))
         page.on("pageerror", lambda e: errs.append(str(e)))
-        page.reload(wait_until="networkidle")
+        page.reload(wait_until="domcontentloaded", timeout=30000)
+        page.locator("button:has-text('优化 Prompt')").wait_for(
+            state="visible",
+            timeout=30000,
+        )
         page.wait_for_timeout(2000)
         page.click("text=数据看板")
         page.wait_for_timeout(3000)
