@@ -4,8 +4,25 @@ from pathlib import Path
 from typing import Optional
 import yaml
 
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+    load_dotenv = None
+
 
 _DEFAULT_CONFIG_PATH = Path(__file__).parent.parent / "config.yaml"
+
+# 项目根 .env：桌面 Bridge 启动时不注入 LLM Key（BasePythonBridge 只透传宿主 env），
+# 引擎必须在解析环境占位符前自行加载，否则会以字面量占位符当 key 调用供应商
+# （MiniMax 401 "Please carry the API secret key ... (1004)"）。
+_ENV_FILE = Path(__file__).parent.parent / ".env"
+
+
+def _ensure_env_loaded() -> None:
+    """启动时加载项目根 .env（已存在的进程环境变量优先，不覆盖）。"""
+    if load_dotenv is None:
+        return
+    load_dotenv(_ENV_FILE, override=False)
 
 _PROVIDER_ENV_OVERRIDES = {
     "ai_router": {
@@ -84,6 +101,7 @@ def _apply_runtime_overrides(config: dict) -> dict:
 
 def load_config(path: Optional[str] = None) -> dict:
     """加载配置，默认读取项目根目录 config.yaml"""
+    _ensure_env_loaded()
     configured_path = path or os.environ.get("CONFIG_PATH")
     config_path = Path(configured_path) if configured_path else _DEFAULT_CONFIG_PATH
     if not config_path.exists():

@@ -165,6 +165,35 @@ class TestLoadConfig:
         assert cfg["llm"]["provider"] == "ai_router"
         assert cfg["llm"]["ai_router"]["api_key"] == "router-test-key"
 
+class TestDotenvLoading:
+    def test_load_config_reads_project_dotenv(self, monkeypatch, tmp_path):
+        """引擎必须自行加载项目根 .env：桌面 Bridge 启动时不注入 LLM Key，
+        若只依赖 os.environ，占位符会被原样当 key 调用供应商（MiniMax 401）。"""
+        import prompt_engine.config as cfg_module
+
+        monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
+        env_file = tmp_path / ".env"
+        env_file.write_text("MINIMAX_API_KEY=sk-dotenv-test-abc\n", encoding="utf-8")
+        monkeypatch.setattr(cfg_module, "_ENV_FILE", str(env_file))
+
+        cfg = cfg_module.load_config()
+        assert cfg["llm"]["provider"] == "minimax"
+        assert cfg["llm"]["minimax"]["api_key"] == "sk-dotenv-test-abc"
+        assert cfg["llm"]["minimax"]["api_key"] != "$" + "{MINIMAX_API_KEY}"
+
+    def test_existing_environment_takes_precedence_over_dotenv(self, monkeypatch, tmp_path):
+        """进程环境变量优先于 .env（override=False），允许外部注入覆盖。"""
+        import prompt_engine.config as cfg_module
+
+        monkeypatch.setenv("MINIMAX_API_KEY", "sk-env-priority")
+        env_file = tmp_path / ".env"
+        env_file.write_text("MINIMAX_API_KEY=sk-dotenv-ignored\n", encoding="utf-8")
+        monkeypatch.setattr(cfg_module, "_ENV_FILE", str(env_file))
+
+        cfg = cfg_module.load_config()
+        assert cfg["llm"]["minimax"]["api_key"] == "sk-env-priority"
+
+
 class TestMinimaxMaxTokens:
     def test_minimax_default_max_tokens_from_config(self, monkeypatch):
         """config.yaml 默认 max_tokens=1500（推理模型预算，避免 <think> 耗尽输出）"""
