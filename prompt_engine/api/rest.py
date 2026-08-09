@@ -1,4 +1,5 @@
 """FastAPI REST 服务层"""
+import asyncio
 import hashlib
 import hmac
 import logging
@@ -43,7 +44,9 @@ async def optimize(request: OptimizeRequest):
     _validate_prompt(request.prompt)
     try:
         optimizer = get_optimizer()
-        result = optimizer.optimize(request)
+        # to_thread：optimize 内部包含 LLM 网络调用，直接同步执行会阻塞事件循环，
+        # 使 /health 等轻量接口在优化期间无法响应（Bridge watchdog 会误判 unhealthy 并重启，打断在途请求）。
+        result = await asyncio.to_thread(optimizer.optimize, request)
 
         # If user context provided, use KeyRouter for dynamic provider selection
         if request.user_tier > 0:
@@ -61,7 +64,7 @@ async def optimize(request: OptimizeRequest):
                 provider_key, user_tier=request.user_tier, user_own_key=request.user_own_key
             )
             # Re-run optimize with dynamic provider
-            result = optimizer.optimize_with_key_router(request, dynamic_provider)
+            result = await asyncio.to_thread(optimizer.optimize_with_key_router, request, dynamic_provider)
             result.key_source = dynamic_provider._key_source
             return result
 
@@ -93,7 +96,7 @@ async def reverse_engineer(request: ReverseRequest):
     """图片逆向工程：从图片 URL 生成提示词（需要视觉模型支持）"""
     try:
         optimizer = get_optimizer()
-        result = optimizer.reverse_engineer(request)
+        result = await asyncio.to_thread(optimizer.reverse_engineer, request)
         if result.error:
             raise HTTPException(status_code=502, detail=result.error)
         return result
@@ -129,7 +132,7 @@ async def rewrite(request: RewriteRequest):
             platform=request.platform,
             max_length=request.max_length,
         )
-        result = optimizer.rewrite(opt_req)
+        result = await asyncio.to_thread(optimizer.rewrite, opt_req)
         if result.error:
             raise HTTPException(status_code=502, detail=result.error)
         return result
@@ -145,7 +148,7 @@ async def disturb_optimize(request: OptimizeRequest):
     """扰动增强优化：对 prompt 做扰动后多次优化取最佳（灵感: Infinity BSC）"""
     try:
         optimizer = get_optimizer()
-        result = optimizer.disturb_and_optimize(request)
+        result = await asyncio.to_thread(optimizer.disturb_and_optimize, request)
         if result.error:
             raise HTTPException(status_code=502, detail=result.error)
         return result
