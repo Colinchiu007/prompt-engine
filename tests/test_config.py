@@ -89,3 +89,9 @@ class TestLoadConfig:
     def test_config_not_found(self):
         with pytest.raises(FileNotFoundError):
             load_config("/nonexistent/path/config.yaml")
+class TestMinimaxMaxTokens:
+    def test_minimax_default_max_tokens_from_config(self):
+        """config.yaml 默认 max_tokens=1500（推理模型预算，避免 <think> 耗尽输出）"""
+        from prompt_engine.config import load_config
+        cfg = load_config()
+        assert cfg["llm"]["minimax"]["max_tokens"] == 1500

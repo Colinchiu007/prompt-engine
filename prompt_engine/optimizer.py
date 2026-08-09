@@ -1,5 +1,6 @@
 """Optimizer — 核心编排器（支持 RAG few-shot 注入）"""
 import logging
+import re
 import time
 from pathlib import Path
 from typing import Optional
@@ -34,6 +35,24 @@ from prompt_engine.rag_retriever import RAGRetriever
 from prompt_engine.prompt_builder import PromptBuilder
 
 logger = logging.getLogger(__name__)
+
+
+def strip_reasoning_blocks(text: str) -> str:
+    """剥离模型输出中的推理块（<think>...</think>），返回实际提示词内容。
+
+    带推理能力的模型（如 MiniMax-M3）可能把思考过程写进返回内容：
+    - 完整推理块 `<think>...</think>`：移除后保留 `</think>` 之后的内容；
+    - 无闭合标签的 `<think>` 前缀（输出 token 被推理耗尽）：视为没有实际内容，返回空串。
+    返回空串时由调用方回退到原文，避免下游把推理过程当作图片提示词。
+    """
+    if not text:
+        return text
+    stripped = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    lower = stripped.lower()
+    think_idx = lower.find("<think>")
+    if think_idx >= 0:
+        stripped = stripped[:think_idx]
+    return stripped.strip()
 
 
 class Optimizer:
@@ -182,14 +201,27 @@ class Optimizer:
                 raw_output, tokens = self._call_llm(
                     system_prompt, request.prompt, variant=i,
                 )
-                preferred_db_keys = _get_preferred_db_keys(detected_result)
-                optimized = strategy_cls.post_process(
-                    raw_output,
-                    creative_level=request.creative_level,
-                    preferred_categories=preferred_db_keys or None,
-                )
-                if len(optimized) > request.max_length:
-                    optimized = optimized[:request.max_length]
+                # 推理模型可能把 <think> 思考过程放进内容：先剥离再后处理
+                raw_output = strip_reasoning_blocks(raw_output)
+                if not raw_output:
+                    # 模型只返回了推理/空内容：直接回退原文。
+                    # 必须放在 post_process 之前——后处理会把空输入填充成无关内容。
+                    logger.warning(
+                        "LLM returned empty/reasoning-only output, fallback to original prompt: %s",
+                        request.prompt[:50],
+                    )
+                    optimized = request.prompt
+                else:
+                    preferred_db_keys = _get_preferred_db_keys(detected_result)
+                    optimized = strategy_cls.post_process(
+                        raw_output,
+                        creative_level=request.creative_level,
+                        preferred_categories=preferred_db_keys or None,
+                    )
+                    if len(optimized) > request.max_length:
+                        optimized = optimized[:request.max_length]
+                    if not optimized or not optimized.strip():
+                        optimized = request.prompt
                 candidates.append(optimized)
                 total_tokens += tokens
 
@@ -232,7 +264,10 @@ class Optimizer:
         start_time = time.time()
         try:
             rewriter = PromptRewriter(self._provider, max_retries=3)
-            result_raw = rewriter.rewrite_raw(request.prompt)
+            result_raw = strip_reasoning_blocks(rewriter.rewrite_raw(request.prompt))
+            if not result_raw.strip():
+                # 模型只返回了推理/空内容：回退原文
+                result_raw = request.prompt
 
             # 后处理：按 max_length 截断
             if len(result_raw) > request.max_length:
