@@ -132,7 +132,7 @@ class TestLoadConfig:
             "base_url": "https://minimax.example/v1",
             "model": "MiniMax-Test",
             "temperature": 0.7,
-            "max_tokens": 500,
+            "max_tokens": 1500,
             "timeout": 45,
         }
 
@@ -164,3 +164,16 @@ class TestLoadConfig:
 
         assert cfg["llm"]["provider"] == "ai_router"
         assert cfg["llm"]["ai_router"]["api_key"] == "router-test-key"
+
+class TestMinimaxMaxTokens:
+    def test_minimax_default_max_tokens_from_config(self, monkeypatch):
+        """config.yaml 默认 max_tokens=1500（推理模型预算，避免 <think> 耗尽输出）"""
+        monkeypatch.delenv("MINIMAX_MAX_TOKENS", raising=False)
+        cfg = load_config()
+        assert cfg["llm"]["minimax"]["max_tokens"] == 1500
+
+    def test_minimax_max_tokens_env_override(self, monkeypatch):
+        """MINIMAX_MAX_TOKENS 环境变量可覆盖 config.yaml"""
+        monkeypatch.setenv("MINIMAX_MAX_TOKENS", "2000")
+        cfg = load_config()
+        assert cfg["llm"]["minimax"]["max_tokens"] == 2000

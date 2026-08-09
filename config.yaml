@@ -31,7 +31,9 @@ llm:
     base_url: "https://api.minimaxi.com/v1"
     model: "MiniMax-M3"
     temperature: 0.7
-    max_tokens: 500
+    # MiniMax-M3 是推理模型，<think> 会消耗输出预算；500 太小导致整段输出只有推理
+    # （2026-08-09 图片轮播流水线 optimize 回退原文）。1500 给足思考 + 成文空间。
+    max_tokens: 1500
     timeout: 60
 
 engine:

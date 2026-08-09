@@ -17,6 +17,7 @@ _PROVIDER_ENV_OVERRIDES = {
         "api_key": ("MINIMAX_API_KEY", str),
         "base_url": ("MINIMAX_BASE_URL", str),
         "model": ("MINIMAX_MODEL", str),
+        "max_tokens": ("MINIMAX_MAX_TOKENS", int),
         "timeout": ("MINIMAX_TIMEOUT", int),
     },
     "openai_compat": {
