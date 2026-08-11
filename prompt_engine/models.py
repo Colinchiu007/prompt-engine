@@ -15,6 +15,40 @@ class PlatformType(str, Enum):
     GENERIC = "generic"      # 通用
 
 
+class DomainType(str, Enum):
+    """优化领域：image（图片，默认）/ video（视频）"""
+    IMAGE = "image"
+    VIDEO = "video"
+
+
+class VideoPlatformType(str, Enum):
+    """支持的视频生成平台（Phase 1：Generic 兜底；专项策略随 Phase 2 逐步注册）"""
+    SORA = "sora"
+    KLING = "kling"
+    VEO = "veo"
+    RUNWAY = "runway"
+    WAN = "wan"
+    SEEDANCE = "seedance"
+    MINIMAX = "minimax"
+    HUNYUAN = "hunyuan"
+    COGVIDEO = "cogvideo"
+    LTX = "ltx"
+    HIGGSFIELD = "higgsfield"
+    GROK = "grok"
+    AGNES = "agnes"
+    GENERIC_VIDEO = "generic_video"
+
+
+class VideoPromptResult(BaseModel):
+    """视频提示词结构化输出（与 optimized_prompt 渲染单串并存）"""
+    shot: Optional[str] = Field(default="", description="景别：如 close-up / medium / wide / establishing")
+    camera: Optional[str] = Field(default="", description="机位与镜头运动：如 static / pan / tilt / dolly / crane / handheld / drone")
+    motion_intensity: int = Field(default=5, ge=1, le=10, description="运动强度 1-10")
+    scene_transition: Optional[str] = Field(default="", description="转场：如 cut / fade / dissolve / wipe")
+    continuity_token: Optional[str] = Field(default="", description="跨镜头一致性令牌（角色/场景/风格）")
+    duration_hint: Optional[float] = Field(default=None, description="时长提示（秒）")
+
+
 class StyleType(str, Enum):
     """支持的艺术风格"""
     REALISTIC = "realistic"      # 写实
@@ -126,7 +160,8 @@ class AutoStyleRequest(BaseModel):
 class OptimizeRequest(BaseModel):
     """优化请求"""
     prompt: str = Field(..., min_length=1, max_length=2000, description="原始提示词")
-    platform: PlatformType = Field(default=PlatformType.GENERIC, description="目标平台")
+    domain: DomainType = Field(default=DomainType.IMAGE, description="优化领域：image（默认）/ video")
+    platform: PlatformType | VideoPlatformType = Field(default=PlatformType.GENERIC, description="目标平台（图片或视频）")
     style: Optional[StyleType] = Field(default=None, description="艺术风格")
     creative_level: int = Field(default=5, ge=1, le=10, description="创意程度 1-10")
     max_length: int = Field(default=500, ge=50, le=2000, description="优化结果最大字符数")
@@ -168,7 +203,8 @@ class ReverseResult(BaseModel):
 class OptimizeResult(BaseModel):
     """优化结果"""
     optimized_prompt: str = Field(..., description="优化后的提示词")
-    platform: PlatformType = Field(..., description="实际使用的平台策略")
+    platform: PlatformType | VideoPlatformType = Field(..., description="实际使用的平台策略")
+    video: Optional[VideoPromptResult] = Field(default=None, description="视频领域结构化输出（domain=video 时填充）")
     style: Optional[StyleType] = Field(default=None, description="使用的风格")
     model_used: str = Field(default="", description="LLM 模型名称")
     tokens_used: int = Field(default=0, description="消耗的 token 数")

@@ -8,6 +8,7 @@ from typing import Optional
 from prompt_engine.models import (
     OptimizeRequest, OptimizeResult, ReverseRequest, ReverseResult,
     StyleCategory, StyleType, StyleCategoryResult,
+    DomainType, VideoPromptResult,
 )
 from prompt_engine.config import load_config
 from prompt_engine.strategies import get_strategy
@@ -144,8 +145,8 @@ class Optimizer:
                 logger.info("Cache hit: %s @ %s", request.prompt[:50], request.platform.value)
                 return cached
 
-            # ✨ F2: 低创意模板直出（免 LLM）
-            if request.creative_level <= 3:
+            # ✨ F2: 低创意模板直出（免 LLM）— 仅图片领域；视频领域依赖 LLM 结构化输出
+            if request.creative_level <= 3 and request.domain != DomainType.VIDEO:
                 logger.info("Template render: creative_level=%d, %s @ %s",
                             request.creative_level, request.prompt[:50], request.platform.value)
                 return self._render_from_template(request)
@@ -170,10 +171,10 @@ class Optimizer:
                             [c.value for c in detected_result.categories],
                         )
 
-            # 1. 加载平台策略
+            # 1. 加载平台策略（视频领域未知平台回退 generic_video）
             strategy_cls = get_strategy(request.platform.value)
             if not strategy_cls:
-                strategy_cls = get_strategy("generic")
+                strategy_cls = get_strategy("generic_video" if request.domain == DomainType.VIDEO else "generic")
 
             # 2. 构建系统提示词
             system_prompt = PromptBuilder.build_system_prompt(
@@ -196,6 +197,8 @@ class Optimizer:
             num = request.num_candidates
             total_tokens = 0
             candidates = []
+            is_video = request.domain == DomainType.VIDEO
+            video_meta: dict = {}
 
             for i in range(num):
                 raw_output, tokens = self._call_llm(
@@ -212,16 +215,24 @@ class Optimizer:
                     )
                     optimized = request.prompt
                 else:
-                    preferred_db_keys = _get_preferred_db_keys(detected_result)
-                    optimized = strategy_cls.post_process(
-                        raw_output,
-                        creative_level=request.creative_level,
-                        preferred_categories=preferred_db_keys or None,
-                    )
+                    if is_video:
+                        # 视频领域：结构化输出（渲染单串 + 结构化字段）
+                        optimized, video_meta = strategy_cls.post_process_video(
+                            raw_output,
+                            creative_level=request.creative_level,
+                        )
+                    else:
+                        preferred_db_keys = _get_preferred_db_keys(detected_result)
+                        optimized = strategy_cls.post_process(
+                            raw_output,
+                            creative_level=request.creative_level,
+                            preferred_categories=preferred_db_keys or None,
+                        )
                     if len(optimized) > request.max_length:
                         optimized = optimized[:request.max_length]
                     if not optimized or not optimized.strip():
                         optimized = request.prompt
+                        video_meta = {}
                 candidates.append(optimized)
                 total_tokens += tokens
 
@@ -237,6 +248,7 @@ class Optimizer:
                 duration_ms=round(elapsed, 1),
                 candidates=candidates if num > 1 else [],
                 detected_categories=detected_result,
+                video=VideoPromptResult(**video_meta) if is_video and video_meta else None,
             )
             self._cache_set(
                 request.prompt, request.platform.value,

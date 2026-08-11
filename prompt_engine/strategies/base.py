@@ -19,15 +19,25 @@ def get_strategy(platform: str) -> type["BaseStrategy"] | None:
     return _strategies.get(platform)
 
 
-def list_strategies() -> list[str]:
-    """列出所有已注册的平台"""
-    return list(_strategies.keys())
+def list_strategies(domain: str | None = None) -> list[str]:
+    """列出已注册的平台；缺省按图片领域过滤（保持历史行为），domain='video' 列出视频平台"""
+    return [name for name, cls in _strategies.items() if getattr(cls, "domain", "image") == (domain or "image")]
 
 
 class BaseStrategy(ABC):
     """策略基类 — 每个平台继承此类"""
 
     platform: PlatformType = PlatformType.GENERIC
+    domain: str = "image"  # 优化领域：image（默认）/ video
+
+    @classmethod
+    def post_process_video(cls, raw_output: str, creative_level: int = 5) -> tuple[str, dict]:
+        """视频领域专用后处理：返回 (渲染单串, 结构化字段 dict)。
+
+        图片策略默认回退 post_process（兼容）；视频策略应覆盖此方法。
+        """
+        rendered = cls.post_process(raw_output, creative_level=creative_level)
+        return rendered, {}
 
     @classmethod
     @abstractmethod
