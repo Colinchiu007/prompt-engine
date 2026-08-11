@@ -139,6 +139,8 @@
         <el-alert v-if="sentences.length > 30" type="info" :closable="false" show-icon style="margin-bottom:12px"
           title="文案分句较多，生图将产生较多 API 调用，建议只对需要验证的分句生成图片。" />
 
+        <el-tabs v-model="layerTab" style="margin-bottom:4px">
+        <el-tab-pane :label="'句子层（' + sentences.length + '）'" name="sentence">
         <div v-for="(s, idx) in sentences" :key="s.index"
           style="border:1px solid #ebeef5;border-radius:6px;padding:12px;margin-bottom:12px">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
@@ -226,6 +228,39 @@
             </el-alert>
           </div>
         </div>
+        </el-tab-pane>
+
+        <el-tab-pane :label="'场景与字幕层（' + scenes.length + '）'" name="scene">
+          <div v-if="!scenes.length" style="color:#909399;font-size:13px;padding:8px 0">
+            分句服务未返回场景/字幕数据。
+          </div>
+          <div v-for="(sc, sci) in scenes" :key="sc.segment_id"
+            style="border:1px solid #ebeef5;border-radius:6px;padding:12px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+              <el-tag size="small" type="info">场景 {{ sc.segment_id }}</el-tag>
+              <el-tag v-if="sc.estimated_duration" size="small" effect="plain">
+                {{ fmtDuration(sc.estimated_duration) }}
+              </el-tag>
+              <span style="font-size:12px;color:#909399">
+                字幕 {{ sc.subtitle_count || (sc.subtitles || []).length }} 条
+              </span>
+            </div>
+            <div style="padding:8px 10px;background:#f5f7fa;border-radius:4px;font-size:13px;line-height:1.6;white-space:pre-wrap">
+              {{ sc.text }}
+            </div>
+            <el-table v-if="(sc.subtitles || []).length" :data="sc.subtitles" size="small" stripe style="margin-top:8px">
+              <el-table-column label="序" width="60">
+                <template #default="{row}">{{ row.display_order }}</template>
+              </el-table-column>
+              <el-table-column prop="text" label="字幕文本" />
+              <el-table-column label="时间" width="150">
+                <template #default="{row}">{{ fmtTime(row.start_time) }} ~ {{ fmtTime((row.start_time || 0) + (row.duration || 0)) }}</template>
+              </el-table-column>
+            </el-table>
+            <div v-else style="margin-top:8px;font-size:12px;color:#909399">该场景无字幕块。</div>
+          </div>
+        </el-tab-pane>
+        </el-tabs>
       </el-card>
 
       <el-dialog v-model="previewVisible" width="min(92vw, 900px)" :show-close="true" align-center>
@@ -237,7 +272,20 @@
       const text = ref('');
       const splitting = ref(false);
       const sentences = ref([]);
+      const scenes = ref([]);
+      const layerTab = ref('sentence');
       const splitMeta = ref(null);
+
+      function fmtTime(t) {
+        const v = Number(t) || 0;
+        const m = Math.floor(v / 60);
+        const s = (v - m * 60).toFixed(1);
+        return m > 0 ? m + '分' + s + '秒' : s + '秒';
+      }
+      function fmtDuration(d) {
+        const v = Number(d) || 0;
+        return v.toFixed(1) + 's';
+      }
 
       const apiKey = ref(localStorage.getItem(DEFAULT_KEY_STORAGE) || '');
       const advanced = ref(false);
@@ -317,7 +365,9 @@
             tier_used: d.tier_used || d.splitter || '-',
             duration_ms: d.duration_ms || 0,
           };
-          ElMessage.success('分句完成：' + sentences.value.length + ' 句');
+          // 场景层与字幕层（smart-sentence-splitter 返回，/v1/compare/split 原样透传）
+          scenes.value = (d.scenes || []).map(sc => ({ ...sc, subtitles: sc.subtitles || [] }));
+          ElMessage.success('分句完成：' + sentences.value.length + ' 句 · ' + scenes.value.length + ' 场景');
         } catch (e) {
           ElMessage.error(e.message || '分句失败');
         } finally {
@@ -438,6 +488,8 @@
       function reset() {
         text.value = '';
         sentences.value = [];
+        scenes.value = [];
+        layerTab.value = 'sentence';
         splitMeta.value = null;
         previewUrl.value = '';
         previewVisible.value = false;
@@ -452,13 +504,13 @@
       });
 
       return {
-        MAX_TEXT, text, splitting, sentences, splitMeta,
+        MAX_TEXT, text, splitting, sentences, scenes, layerTab, splitMeta,
         apiKey, advanced, baseUrl, llmModel, size, n,
         testing, testResult, testOk, hasKey, envKeyAvailable,
         bulkPrompting, bulkGenerating,
         previewVisible, previewUrl,
         width, height, pendingPrompts, pendingImages,
-        maskKey, copyText,
+        maskKey, copyText, fmtTime, fmtDuration,
         runSplit, genPrompt, genImages, genAllPrompts, genAllImages,
         testConnection, previewImage, reset, persistKey,
       };
