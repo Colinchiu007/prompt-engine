@@ -608,8 +608,16 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 
 ### 12.9 测试覆盖
 
-`tests/test_compare_api.py`（17 例，全部 mock 隔离）：
-- split：空文本/超长 422、代理成功（url/body 断言）、服务不可用 503、空结果 422；
-- prompt：无 key 400、`<think>` 剥离、剥离后为空 502；
-- images：无 key 400、双图成功、空结果 422、鉴权 400；
-- minimax_client：aspect_ratio 解析、无 key/invalid n/空结果/auth 错误分级。
+`tests/test_compare_api.py`（39 例，全部 mock 隔离）：
+- split：空文本/超长 422、语言/模式枚举校验、代理成功（url/body 断言）、服务不可用 503/超时 504、空结果 422；
+- prompt：无 key 400、`<think>` 剥离、剥离后为空 502、超长截断（truncated 标志）；
+- images：无 key 400、双图成功、7 种错误类型 HTTP 映射（参数化）、base_url SSRF 校验（拒绝回环/私网/明文 http）；
+- status：环境变量 Key 探测（has_env_key）；
+- minimax_client：aspect_ratio 解析、无 key/invalid n/空结果/auth 错误分级、响应形状防御。
+
+`tests/test_web_template_contract.py`（3 例前端静态契约断言，无需浏览器）：
+- in-DOM 模板组件标签必须 kebab-case（PascalCase 自闭合标签会被浏览器小写化导致组件未解析）；
+- `window.__PE` 只暴露全局可访问对象（禁止引用组件内局部函数，否则 ReferenceError 整页空白）；
+- compare-tab.js 加载与组件注册名匹配。
+
+**前端交付验证标准（bug-reflection 2026-08-11 沉淀）**：涉及 UI 变更的交付必须用真实浏览器渲染验证（渲染 → 切换每个页签 → 断言内容），curl 静态资源 200 仅证明文件存在，不能证明渲染正确。

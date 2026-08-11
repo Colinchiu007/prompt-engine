@@ -2,6 +2,20 @@
 
 本项目更新日志。
 
+## [v0.22.1] — 2026-08-11
+
+### Bug 修复：对比验证页签空白（PR #13）
+
+- **整页空白** — `window.__PE = { api, copyText, isEnglish }` 引用了 Workbench 组件内的局部函数 `copyText`（全局作用域 ReferenceError → 内联脚本中断 → createApp 未执行）。修复：`__PE` 只暴露全局可访问的 `api`。
+- **页签空白** — in-DOM 模板 `<CompareTab />`（PascalCase 自闭合标签）被浏览器小写化为 `<comparetab>`，Vue 解析链只能还原为 `Comparetab`，匹配不到注册名 `CompareTab` → 组件未解析、渲染为空原生元素（生产版 Vue 静默无警告）。修复：标签改用 kebab-case `<compare-tab>`。
+- **回归保护** — 新增 `tests/test_web_template_contract.py`（3 例静态契约断言：kebab-case 标签、`__PE` 只暴露全局对象、compare-tab.js 加载与注册名匹配）；浏览器级冒烟（真实 Chromium：渲染 → 切页签 → 分句 → 提示词 → 2 图）零错误。
+
+### 变更文件
+
+| 文件 | 说明 |
+|------|------|
+| `prompt_engine/web/index.html` | 更新 — kebab-case 标签 + `__PE` 作用域修复 |
+| `tests/test_web_template_contract.py` | 新增 — 前端模板契约测试（3 例） |
 ## [v0.22.0] — 2026-08-11
 
 ### 新增功能：文案分句 → 提示词 → 生图对比验证
