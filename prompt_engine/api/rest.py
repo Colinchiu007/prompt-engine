@@ -6,7 +6,7 @@ import logging
 import os
 from functools import lru_cache
 from pathlib import Path
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 
 logger = logging.getLogger(__name__)
 from prompt_engine.classifier import StyleCategoryClassifier
@@ -108,10 +108,10 @@ async def reverse_engineer(request: ReverseRequest):
 
 
 @app.get("/v1/platforms")
-async def list_platforms():
-    """列出支持的所有平台"""
+async def list_platforms(domain: str | None = Query(default=None)):
+    """列出支持的所有平台；domain=image|video 时按领域过滤（缺省返回图片平台，保持兼容）"""
     from prompt_engine.strategies import list_strategies
-    strategies = list_strategies()
+    strategies = list_strategies(domain=domain or "image")
     return {"platforms": strategies, "count": len(strategies)}
 
 

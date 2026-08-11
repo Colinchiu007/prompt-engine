@@ -2,6 +2,27 @@
 
 本项目更新日志。
 
+## [v0.23.0] — 2026-08-11
+
+### 新增：视频提示词优化（domain=video，Phase 1）
+
+- **视频领域模型** — `models.py` 新增 `DomainType`（image/video，缺省 image 零回归）、`VideoPlatformType`（sora/kling/veo/runway/wan/seedance/minimax/hunyuan/cogvideo/ltx/higgsfield/grok/agnes/generic_video）、`VideoPromptResult`（shot/camera/motion_intensity/scene_transition/continuity_token/duration_hint）；`OptimizeRequest.domain` + platform 联合枚举；`OptimizeResult.video` 可选结构化字段。
+- **视频通用策略** — `strategies/video/generic.py`（GenericVideoStrategy，六要素 + 镜头语言 + 结构化 JSON 输出，非法 JSON 规则化回退）；策略注册表按 `domain` 分组（`list_strategies(domain)`）。
+- **REST** — `/v1/optimize`、`/v1/optimize/batch` 支持 `domain=video`；`/v1/platforms?domain=video` 返回视频平台；视频领域 creative_level<=3 不走图片模板直出。
+- **测试** — `04-tests/test_video_optimize.py` 17 例（domain 缺省兼容/平台别名/结构化输出/空超长 error fail-closed/批量数量/模板跳过）。
+
+### 变更文件
+
+| 文件 | 说明 |
+|------|------|
+| `prompt_engine/models.py` | 视频领域模型（DomainType/VideoPlatformType/VideoPromptResult/domain/union/video 字段） |
+| `prompt_engine/strategies/video/` | 新增视频策略子包（GenericVideoStrategy） |
+| `prompt_engine/strategies/base.py` | 策略 domain 属性 + `post_process_video` 默认实现 + `list_strategies(domain)` |
+| `prompt_engine/strategies/__init__.py` | 注册视频策略 |
+| `prompt_engine/optimizer.py` | 视频路径（domain=video：结构化后处理、generic_video 兜底、跳过模板直出、video 字段填充） |
+| `prompt_engine/api/rest.py` | `/v1/optimize(/batch)` domain 支持 + `/v1/platforms?domain=` |
+| `04-tests/test_video_optimize.py` | 视频契约测试（17 例） |
+
 ## [v0.22.1] — 2026-08-11
 
 ### Bug 修复：对比验证页签空白（PR #13）
