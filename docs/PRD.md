@@ -506,3 +506,110 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 - 用户通过 orchestrator SSO 登录后获取 JWT
 - 调用 prompt-engine 时携带 JWT，由 orchestrator 签发
 - prompt-engine 验证 JWT 签名（共享密钥 `PO_SECRET_KEY`）
+
+---
+
+## 十二、文案分句 → 提示词 → 生图对比验证（v0.22.0）
+
+> **定位**：一个前端界面，核心目的是**验证图片提示词实际生成的图片效果**。
+> 输入一篇文案 → 分句模型分句 → 每句经 MiniMax 生成英文生图提示词 → 同一提示词生成 2 张图片并排对比。
+
+### 12.1 功能目标
+
+1. 文本输入框输入文案，**最多 6000 字**；
+2. 调用分句模型（smart-sentence-splitter）分句，**展示具体分句结果**；
+3. 每个分句经 MiniMax 多模态模型（文字推理）生成图片提示词；
+4. **同一提示词每次生成 2 张图片**进行对比；
+5. 可设置模型 API：**仅需输入 MiniMax API Key** 即可完成文字推理与图片生成（base_url / LLM 模型 / 尺寸 / 数量为高级可选项）。
+
+### 12.2 外部契约（复用 Multi-Publish 运营后台设置）
+
+| 能力 | 调用方式 | 说明 |
+|------|----------|------|
+| 文字推理（LLM） | `POST {base_url}/chat/completions`（OpenAI 兼容） | `base_url` 默认 `https://api.minimaxi.com/v1`；`Authorization: Bearer {key}`；模型默认 `MiniMax-M3`；响应需剥离 `<think>...</think>` 推理块 |
+| 图片生成 | `POST {base_url}/image_generation`（同步） | 请求体 `{"model":"image-01","prompt","response_format":"url","n":2,"aspect_ratio":"1:1"}`；响应 `data.image_urls[]`；HTTP 200 但空图必须显式报错 |
+| 分句 | `POST {SPLITTER_BASE_URL}/v1/split` | `SPLITTER_BASE_URL` 默认 `http://127.0.0.1:8002`；请求 `{text, language:"auto", mode:"balanced"}`；响应 `sentences[]`（index/text/language/tier/confidence/char_count） |
+
+### 12.3 后端 API 设计
+
+| 端点 | 方法 | 请求 | 响应 | 错误 |
+|------|------|------|------|------|
+| `/v1/compare/split` | POST | `{text(≤6000), language?, mode?}` | `{sentences[], scenes[], text_length, language, tier_used, splitter, duration_ms}` | 422 空/超长/空结果；503/504 分句服务不可用/超时 |
+| `/v1/compare/prompt` | POST | `{text, api_key?, base_url?, model?}` | `{prompt, model, duration_ms, retryable}` | 400 无 key/鉴权失败；429 限流；502 LLM 失败/剥离后为空 |
+| `/v1/compare/images` | POST | `{prompt(≤2000), api_key?, base_url?, n(1-4，默认2), width?, height?}` | `{urls[], count, model, duration_ms, retryable}` | 400 无 key/鉴权失败；422 空结果/内容安全/参数非法；429 限流；504 超时；502 其他 |
+| `/v1/compare/status` | GET | — | `{has_env_key, splitter, default_llm_model}` | — |
+
+**安全约束**：
+- `api_key` 流转：请求体 > 环境变量 `MINIMAX_API_KEY`；只存请求局部变量，不落服务端磁盘、不进服务端日志、不写入服务端存储（前端 localStorage 仅限本机单用户工具场景，见 12.4）；
+- `base_url` 覆盖仅允许 `https://host[/path]`（拒绝回环/私网/链路本地/云 metadata 地址，非回环强制 https；SSRF 缓解），默认 `https://api.minimaxi.com/v1`；
+- 分句服务 target 由服务端 `SPLITTER_BASE_URL` 固定配置，**不接受前端传入**（防 SSRF）；
+- 生图数量上限 4（需求默认 2）。
+
+### 12.4 前端界面（「对比验证」页签）
+
+| 区域 | 显示项 | 交互 |
+|------|--------|------|
+| ① 文案输入 | 多行文本框、字数统计（`{{n}}/6000`）、清空按钮 | 输入实时计数；超出 6000 字由 `maxlength` 与后端双重拦截 |
+| ② MiniMax 模型设置 | API Key（password 型，遮罩显示 `sk****xxxx`）、测试连接按钮、高级设置折叠（Base URL / LLM 模型 / 尺寸 1:1|16:9|9:16|4:3 / 每提示词生成数） | Key 保存到浏览器 localStorage（本地单机工具），随请求发送；「测试连接」调用 `/v1/compare/prompt` 轻量探测 |
+| ③ 分句结果 | 每句卡片：序号、字数、tier 标签、置信度百分比、原文；「生成提示词」「生图对比」「复制原文」按钮 | 分句完成后展示；可单独生成提示词/图片；>30 句提示生图成本 |
+| ④ 提示词 | 英文生图提示词（可编辑 textarea）、模型名、复制按钮 | 生成中骨架屏；失败显示错误 + 可重试；编辑后可重新生图 |
+| ⑤ 双图对比 | 图 1 / 图 2 并排（img），放大弹窗、复制 URL、生成耗时、尺寸 | 「生图对比」触发 n=2；仅 1 张时提示；失败显示错误 + 重试按钮 |
+| 汇总操作 | 「生成全部提示词（N）」「生成全部图片（N）」 | 串行执行；>30 句/批量生图前弹确认框（成本提示） |
+
+**状态机（每句独立）**：`idle → loading → done | error`（promptState 与 imageState 各自独立，互不阻塞）。
+
+**提示文字清单**：
+- 无 Key：`请先在「MiniMax 模型设置」填写 API Key（或配置环境变量 MINIMAX_API_KEY）`
+- 分句服务未启动：`无法连接分句服务 http://127.0.0.1:8002，请先启动 smart-sentence-splitter（端口 8002）`
+- 文案超长：`文案超过 6000 字上限`
+- 生图进行中：`图片生成中（通常 10~60 秒/张），请耐心等待…`
+- 仅 1 张图：`⚠️ 仅返回 1 张图（MiniMax 偶发少图），可点击「重新生图」。`
+- 内容安全拒绝：`MiniMax 内容安全策略拒绝了本次生成，请调整提示词后重试`
+- 空结果：`MiniMax 返回了空结果（HTTP 200 但无图片 URL），请重试；若反复出现请检查提示词`
+- 鉴权失败：`MiniMax 鉴权失败（HTTP 401/403）：请检查 API Key 是否正确`
+- 批量确认：`将生成 N 个提示词 x 每张 M 图 = <b>N×M 张图片</b>，会消耗 MiniMax API 额度。继续？`
+
+### 12.5 数据校验
+
+| 字段 | 规则 |
+|------|------|
+| 文案 text | 非空（去首尾空白）；≤6000 字（按字符数）；超出返回 422 |
+| 分句文本 | 非空；>0 句，否则 422 |
+| 提示词 prompt | 非空；≤2000 字符；LLM 剥离 `<think>` 后为空视为可重试错误（502） |
+| API Key | 非空（请求体或环境变量）；空返回 400 |
+| base_url | 仅 `http(s)://host[/path]`；非法返回 422 |
+| n | 整数 1~4；默认 2 |
+| width/height | 64~4096 像素；默认 1024 |
+
+### 12.6 错误分级（前端可据此提示"可重试"）
+
+| 类型 | 触发 | 可重试 | HTTP |
+|------|------|--------|------|
+| auth | 401/403 | 否 | 400 |
+| invalid_config | 参数非法/无 key | 否 | 400/422 |
+| content_safety | 内容安全策略拒绝 | 否 | 422 |
+| empty_result | HTTP 200 但无图 | 是 | 422 |
+| rate_limit | 429 | 是 | 429 |
+| timeout | 超时 | 是 | 504 |
+| network / provider_error | 网络/服务端 5xx | 是 | 502/503 |
+
+### 12.7 成本控制
+
+- 批量生图前强制确认（弹窗展示 N×M 图数量）；
+- 分句 >30 句时展示成本提示（建议按句选择性生成）；
+- 生图数量上限 4；LLM `max_tokens=1500`（预留推理空间，避免整段只有 `<think>`）；
+- 图片 URL 仅会话内展示，不落库（Non-goal）。
+
+### 12.8 Non-goals（不做）
+
+- 不做账号体系/多用户；不落库生成历史；
+- 不改 smart-sentence-splitter / Multi-Publish 代码；
+- 不引入前端构建链（沿用 CDN Vue3 + Element Plus 单页模式）。
+
+### 12.9 测试覆盖
+
+`tests/test_compare_api.py`（17 例，全部 mock 隔离）：
+- split：空文本/超长 422、代理成功（url/body 断言）、服务不可用 503、空结果 422；
+- prompt：无 key 400、`<think>` 剥离、剥离后为空 502；
+- images：无 key 400、双图成功、空结果 422、鉴权 400；
+- minimax_client：aspect_ratio 解析、无 key/invalid n/空结果/auth 错误分级。

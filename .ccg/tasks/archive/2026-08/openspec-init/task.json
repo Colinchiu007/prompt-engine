@@ -1,0 +1,12 @@
+{
+  "id": "openspec-init",
+  "title": "初始化 prompt-engine 的 OpenSpec 项目结构",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "tooling",
+  "currentPhase": "completed",
+  "nextAction": "已归档（openspec init 完成，doctor ok）",
+  "createdAt": "2026-08-09T10:00:00+08:00",
+  "branch": "feat/ian-xiaohei-reuse"
+}

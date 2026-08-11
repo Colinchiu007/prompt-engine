@@ -2,6 +2,8 @@
 import os
 import pytest
 
+WEB_TEST_URL = os.environ.get("TEST_SERVER_URL", "http://127.0.0.1:8094/")
+
 
 class TestDockerDeployment:
     """F1: Dockerfile + docker-compose 部署文件存在性测试."""
@@ -94,7 +96,11 @@ class TestBatchUI:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
                 page = browser.new_page()
-                page.goto("http://127.0.0.1:8094/", wait_until="networkidle")
+                page.goto(WEB_TEST_URL, wait_until="domcontentloaded", timeout=30000)
+                page.locator("button:has-text('优化 Prompt')").wait_for(
+                    state="visible",
+                    timeout=30000,
+                )
                 page.wait_for_timeout(3000)
                 # Look for batch-related button/text
                 batch_btn = page.locator("text=/批量/").first
@@ -110,7 +116,11 @@ class TestBatchUI:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
                 page = browser.new_page()
-                page.goto("http://127.0.0.1:8094/", wait_until="networkidle")
+                page.goto(WEB_TEST_URL, wait_until="domcontentloaded", timeout=30000)
+                page.locator("button:has-text('优化 Prompt')").wait_for(
+                    state="visible",
+                    timeout=30000,
+                )
                 page.wait_for_timeout(3000)
                 # Click batch mode
                 batch_btn = page.locator("text=/批量/").first

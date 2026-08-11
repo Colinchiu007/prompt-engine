@@ -41,12 +41,13 @@ async def test_health_responsive_while_optimize_in_flight(monkeypatch):
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         t0 = time.time()
         health_task = asyncio.create_task(client.get("/health"))
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.2)  # 让 optimize 先开始阻塞旧实现
         opt_task = asyncio.create_task(
             client.post("/v1/optimize", json={"prompt": "a cat", "platform": "generic", "style": "realistic"})
         )
         health = await health_task
         health_latency = time.time() - t0
+        # 修复前：health 会被 optimize 的同步调用阻塞 ~2s；修复后应立即返回
         assert health.status_code == 200
         assert health_latency < 1.5, f"health 被 optimize 阻塞: {health_latency:.2f}s"
         opt = await opt_task
@@ -66,4 +67,5 @@ async def test_concurrent_optimizes_run_in_parallel(monkeypatch):
         )
         elapsed = time.time() - t0
         assert all(r.status_code == 200 for r in results)
+        # 修复前两个 2s 请求串行 ~4s；修复后并行 ~2s
         assert elapsed < 3.5, f"两个 optimize 未并行执行: {elapsed:.2f}s"

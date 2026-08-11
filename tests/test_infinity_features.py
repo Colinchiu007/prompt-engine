@@ -1,12 +1,16 @@
 """测试 Prompt Rewriter、BitwiseClassifier、Prompt Disturber"""
 import pytest
-import torch
 from unittest.mock import patch, MagicMock
 from prompt_engine.models import OptimizeRequest, PlatformType
 from prompt_engine.optimizer import Optimizer
 from prompt_engine.rewriter import PromptRewriter
 from prompt_engine.disturb import disturb_prompt, PromptDisturber
 from prompt_engine.classifier import BitwiseClassifier
+
+try:
+    import torch
+except ImportError:
+    torch = None
 
 
 class TestPromptRewriter:
@@ -61,8 +65,8 @@ class TestPromptDisturber:
         assert len(result.split()) >= 2
 
     def test_disturb_no_change_low_strength(self):
-        result = disturb_prompt("short", strength=0.0)
-        assert result == "short"
+        result = disturb_prompt("beautiful tree", strength=0.0)
+        assert result == "beautiful tree"
 
     def test_disturb_empty_prompt(self):
         result = disturb_prompt("", strength=0.5)
@@ -83,6 +87,7 @@ class TestPromptDisturber:
         assert perturbed != original
 
 
+@pytest.mark.skipif(torch is None, reason="未安装可选实验依赖 torch")
 class TestBitwiseClassifier:
     """测试 Infinity IVC 灵感的比特级分类器"""
 

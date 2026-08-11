@@ -11,6 +11,17 @@
   <script src="https://unpkg.com/@element-plus/icons-vue"></script>
   <script src="https://unpkg.com/echarts@5.4.3/dist/echarts.min.js"></script>
   <style>
+    * { box-sizing:border-box; }
+    html, body, #app { width:100%; max-width:100%; min-height:100%; margin:0; overflow-x:hidden; }
+    .app-header { background:#fff; border-bottom:1px solid #e4e7ed; display:flex; align-items:center; padding:0 20px; min-width:0; }
+    .app-brand { display:flex; align-items:center; flex:0 0 auto; white-space:nowrap; }
+    .app-menu { flex:1 1 auto; min-width:0; margin-left:40px; border-bottom:none !important; overflow-x:auto; overflow-y:hidden; }
+    .app-menu.el-menu--horizontal { flex-wrap:nowrap; }
+    .app-menu .el-menu-item { flex:0 0 auto; }
+    .app-main { min-width:0; background:#f5f7fa; padding:20px; }
+    .settings-grid > .el-col, .settings-grid .el-card { min-width:0; }
+    .settings-grid .el-card__header > div { min-width:0; gap:8px; flex-wrap:wrap; }
+    .settings-grid .el-table { width:100% !important; max-width:100%; }
     .example-btn { cursor:pointer; margin:2px; }
     .example-btn:hover { color:#409eff; }
     .section-desc { color:#909399; font-size:13px; margin-bottom:12px; line-height:1.6; }
@@ -20,31 +31,54 @@
     .resource-value small { font-size:12px;color:#909399;font-weight:normal; }
     .preview-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-top:12px; }
     .hover-bg:hover { background:#e6f7ff !important; }
+    @media (max-width: 767px) {
+      .app-header { padding:0 12px; }
+      .app-brand h2 { font-size:16px !important; }
+      .app-version { display:none; }
+      .app-menu { margin-left:6px; }
+      .app-menu .el-menu-item { padding:0 7px; font-size:13px; }
+      .app-main { padding:12px; }
+      .workbench-grid > .el-col + .el-col,
+      .dashboard-charts > .el-col + .el-col { margin-top:16px; }
+      .dashboard-stats > .el-col { margin-bottom:12px; }
+      .dashboard-stats .el-card { height:100%; }
+      .resource-grid > .el-col + .el-col,
+      .cache-grid > .el-col + .el-col { margin-top:12px; }
+      .settings-grid { margin-left:0 !important; margin-right:0 !important; }
+      .settings-grid > .el-col { padding-left:0 !important; padding-right:0 !important; }
+      .settings-grid > .el-col + .el-col { margin-top:16px; }
+      .settings-grid .el-card__body { padding:14px; }
+    }
   </style>
 </head>
 <body>
 <div id="app">
   <el-container style="min-height:100vh">
-    <el-header style="background:#fff;border-bottom:1px solid #e4e7ed;display:flex;align-items:center;padding:0 20px">
-      <h2 style="margin:0;font-size:18px">🎨 Prompt Engine</h2>
-      <span style="color:#909399;font-size:12px;margin-left:8px">v0.8.0</span>
-      <el-menu mode="horizontal" :ellipsis="false" style="margin-left:40px;border-bottom:none" :default-active="tab" @select="tab=$event">
+    <el-header class="app-header">
+      <div class="app-brand">
+        <h2 style="margin:0;font-size:18px">🎨 Prompt Engine</h2>
+        <span class="app-version" style="color:#909399;font-size:12px;margin-left:8px">v0.8.0</span>
+      </div>
+      <el-menu class="app-menu" mode="horizontal" :ellipsis="false" :default-active="tab" @select="tab=$event">
         <el-menu-item index="workbench">Prompt 工作台</el-menu-item>
         <el-menu-item index="dashboard">数据看板</el-menu-item>
+        <el-menu-item index="compare">🎞️ 对比验证</el-menu-item>
         <el-menu-item index="settings">配置</el-menu-item>
       </el-menu>
     </el-header>
-    <el-main style="background:#f5f7fa;padding:20px">
+    <el-main class="app-main">
 
       <div v-if="tab==='workbench'"><Workbench /></div>
       <div v-if="tab==='dashboard'"><Dashboard /></div>
       <div v-if="tab==='settings'"><Settings /></div>
+      <div v-if="tab==='compare'"><CompareTab /></div>
     </el-main>
   </el-container>
 </div>
 
+<script src="compare-tab.js"></script>
 <script>
-const { createApp, ref, reactive, onMounted, computed } = Vue;
+const { createApp, ref, reactive, onMounted, computed, watch } = Vue;
 const { ElMessage } = ElementPlus;
 
 
@@ -127,24 +161,34 @@ function translateEN2CN(text) {
 
 const api = {
   base: '',
-  async post(path, body) {
+  async parse(r) {
+    const contentType = r.headers.get('content-type') || '';
+    const data = contentType.includes('application/json')
+      ? await r.json()
+      : {detail: await r.text()};
+    if (!r.ok) {
+      throw new Error(data.detail || `请求失败 (${r.status})`);
+    }
+    return data;
+  },
+  async post(path, body, headers = {}) {
     const r = await fetch(this.base + path, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: {'Content-Type':'application/json', ...headers},
       body: JSON.stringify(body)
     });
-    return r.json();
+    return this.parse(r);
   },
-  async get(path) {
-    const r = await fetch(this.base + path);
-    return r.json();
+  async get(path, headers = {}) {
+    const r = await fetch(this.base + path, {headers});
+    return this.parse(r);
   }
 };
 
 // ── Workbench ────────────────────────────────────
 const Workbench = {
   template: `
-    <el-row :gutter="16">
-      <el-col :span="16">
+    <el-row class="workbench-grid" :gutter="16">
+      <el-col :xs="24" :lg="16">
         <el-card shadow="never">
           <template #header><span>📝 Prompt 工作台</span></template>
 
@@ -376,7 +420,7 @@ const Workbench = {
         </el-card>
       </el-col>
 
-      <el-col :span="8">
+      <el-col :xs="24" :lg="8">
         <el-card shadow="never">
           <template #header><span>💡 使用说明</span></template>
           <el-collapse v-model="activeHelps" style="--el-collapse-header-bg-color:transparent">
@@ -681,8 +725,8 @@ const Workbench = {
 // ── Dashboard ────────────────────────────────────
 const Dashboard = {
   template: `
-    <el-row :gutter="16">
-      <el-col :span="6" v-for="s in statCards" :key="s.label">
+    <el-row class="dashboard-stats" :gutter="16">
+      <el-col :xs="12" :md="6" v-for="s in statCards" :key="s.label">
         <el-card shadow="never">
           <div style="font-size:28px;font-weight:bold;color:#409eff">{{ s.value }}</div>
           <div style="color:#909399;font-size:13px;margin-top:4px">{{ s.label }}</div>
@@ -698,15 +742,15 @@ const Dashboard = {
           <span style="font-size:12px;color:#909399">提示词引擎内嵌的全部资产</span>
         </div>
       </template>
-      <el-row :gutter="16">
-        <el-col :span="8">
+      <el-row class="resource-grid" :gutter="16">
+        <el-col :xs="24" :sm="12" :md="8">
           <div class="resource-block">
             <div class="resource-label">🎨 平台策略</div>
             <div class="resource-value">{{ resources.platforms || 0 }} <small>个</small></div>
             <el-tag v-for="p in (resources.platform_list || [])" :key="p" size="small" style="margin:2px">{{ p }}</el-tag>
           </div>
         </el-col>
-        <el-col :span="8">
+        <el-col :xs="24" :sm="12" :md="8">
           <div class="resource-block">
             <div class="resource-label">📚 RAG 案例库</div>
             <div class="resource-value">{{ resources.rag_cases || 0 }} <small>条</small></div>
@@ -718,7 +762,7 @@ const Dashboard = {
             <div style="font-size:12px;color:#909399">25 维风格维度</div>
           </div>
         </el-col>
-        <el-col :span="8">
+        <el-col :xs="24" :sm="12" :md="8">
           <div class="resource-block">
             <div class="resource-label">🤖 LLM 供应商</div>
             <div class="resource-value">{{ resources.llm_providers || 0 }} <small>个</small></div>
@@ -748,22 +792,22 @@ const Dashboard = {
           <span style="font-size:12px;color:#909399">SQLite + Memory 双级缓存</span>
         </div>
       </template>
-      <el-row :gutter="16">
-        <el-col :span="8">
+      <el-row class="cache-grid" :gutter="16">
+        <el-col :xs="24" :sm="8">
           <div class="resource-block">
             <div class="resource-label">🗄️ SQLite</div>
             <div class="resource-value">{{ cacheStats.sqlite?.entries || 0 }} <small>条目</small></div>
             <div style="font-size:12px;color:#909399">累积命中 {{ cacheStats.sqlite?.total_hits || 0 }} 次，TTL {{ cacheStats.sqlite?.ttl_hours || 48 }}h</div>
           </div>
         </el-col>
-        <el-col :span="8">
+        <el-col :xs="24" :sm="8">
           <div class="resource-block">
             <div class="resource-label">⚡ 内存 (L1)</div>
             <div class="resource-value">{{ cacheStats.memory?.entries || 0 }} <small>条目</small></div>
             <div style="font-size:12px;color:#909399">热点缓存，FIFO 淘汰</div>
           </div>
         </el-col>
-        <el-col :span="8">
+        <el-col :xs="24" :sm="8">
           <div class="resource-block">
             <div class="resource-label">🎯 未命中时</div>
             <div class="resource-value">{{ cacheStats.sqlite?.storage || 'sqlite' }}</div>
@@ -773,8 +817,8 @@ const Dashboard = {
       </el-row>
     </el-card>
 
-    <el-row :gutter="16" style="margin-top:16px">
-      <el-col :span="12">
+    <el-row class="dashboard-charts" :gutter="16" style="margin-top:16px">
+      <el-col :xs="24" :md="12">
         <el-card shadow="never">
           <template #header>
             <div style="display:flex;justify-content:space-between;align-items:center">
@@ -788,7 +832,7 @@ const Dashboard = {
           </div>
         </el-card>
       </el-col>
-      <el-col :span="12">
+      <el-col :xs="24" :md="12">
         <el-card shadow="never">
           <template #header>
             <div style="display:flex;justify-content:space-between;align-items:center">
@@ -876,8 +920,8 @@ const Dashboard = {
 // ── Settings ─────────────────────────────────────
 const Settings = {
   template: `
-    <el-row :gutter="16">
-      <el-col :span="12">
+    <el-row class="settings-grid" :gutter="16">
+      <el-col :xs="24" :md="12">
         <el-card shadow="never">
           <template #header>
             <div style="display:flex;justify-content:space-between">
@@ -920,7 +964,7 @@ const Settings = {
         </el-card>
       </el-col>
 
-      <el-col :span="12">
+      <el-col :xs="24" :md="12">
         <el-card shadow="never">
           <template #header>
             <div style="display:flex;justify-content:space-between">
@@ -968,13 +1012,21 @@ const Settings = {
             <el-table-column prop="description" label="说明" min-width="200" />
           </el-table>
           <el-collapse style="margin-top:12px">
-            <el-collapse-item title="🔑 配置 API Key" name="apikey">
-              <div style="margin-bottom:12px">
-                <div style="font-size:13px;color:#606266;margin-bottom:6px">
-                  为当前选定的 LLM 供应商配置 API Key（重启后端服务生效）：
-                </div>
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+             <el-collapse-item title="🔑 配置 API Key" name="apikey">
+               <div style="margin-bottom:12px">
+                 <div style="font-size:13px;color:#606266;margin-bottom:6px">
+                   为当前选定的 LLM 供应商配置 API Key（重启后端服务生效）：
+                 </div>
+                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+                   <el-input v-model="adminToken" type="password" show-password clearable size="small"
+                     autocomplete="off" aria-label="管理令牌" placeholder="管理令牌"
+                     style="flex:1;min-width:200px;max-width:360px" @change="loadConfiguredKeys">
+                     <template #prepend>管理令牌</template>
+                   </el-input>
+                 </div>
+                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                   <el-select v-model="provider" style="width:160px" size="small">
+                    <el-option label="AI Router" value="ai_router" />
                     <el-option label="OpenAI" value="openai" />
                     <el-option label="讯飞星火" value="xfyun" />
                     <el-option label="Gemini" value="gemini" />
@@ -982,15 +1034,17 @@ const Settings = {
                   </el-select>
                   <el-input v-model="apiKeyInput" type="password" show-password size="small"
                     placeholder="粘贴 API Key…" style="flex:1;min-width:200px;max-width:360px" />
-                  <el-button type="primary" size="small" @click="saveApiKey" :loading="apiKeySaving"
-                    :disabled="!provider || !apiKeyInput">
-                    保存到 .env
-                  </el-button>
+                   <el-button type="primary" size="small" @click="saveApiKey" :loading="apiKeySaving"
+                     :disabled="!provider || !apiKeyInput || !adminToken.trim()">
+                     保存到 .env
+                   </el-button>
                   <el-tag v-if="apiKeySaved" type="success" size="small">已保存 ✓</el-tag>
                 </div>
-                <div v-if="configuredKeys.length" style="margin-top:8px;font-size:12px;color:#67c23a">
-                  ✓ 已配置：{{ configuredKeys.join('、') }}
-                </div>
+                 <div v-if="configuredKeys.length" style="margin-top:8px;font-size:12px;color:#67c23a">
+                   ✓ 已配置：{{ configuredKeys.join('、') }}
+                 </div>
+                 <el-alert v-if="apiKeyError" :title="apiKeyError" type="error" :closable="false"
+                   show-icon style="margin-top:8px" />
               </div>
               <el-divider style="margin:12px 0" />
               <div style="font-size:12px;color:#909399">
@@ -1022,10 +1076,37 @@ const Settings = {
   setup() {
     const provider = ref('openai');
     const imageModels = ref([]);
-    const configuredKeys = ref([]);
-    const apiKeyInput = ref('');
-    const apiKeySaved = ref(false);
-    const apiKeySaving = ref(false);
+     const configuredKeys = ref([]);
+     const apiKeyInput = ref('');
+     const apiKeySaved = ref(false);
+     const apiKeySaving = ref(false);
+     const apiKeyError = ref('');
+     const adminToken = ref(sessionStorage.getItem('promptEngineAdminToken') || '');
+
+     watch(adminToken, value => {
+       const token = value.trim();
+       if (token) sessionStorage.setItem('promptEngineAdminToken', token);
+       else sessionStorage.removeItem('promptEngineAdminToken');
+     });
+
+     const adminHeaders = () => ({
+       Authorization: `Bearer ${adminToken.value.trim()}`,
+     });
+
+     async function loadConfiguredKeys() {
+       apiKeyError.value = '';
+       if (!adminToken.value.trim()) {
+         configuredKeys.value = [];
+         return;
+       }
+       try {
+         const status = await api.get('/v1/config/api-key', adminHeaders());
+         configuredKeys.value = status.configured || [];
+       } catch (e) {
+         configuredKeys.value = [];
+         apiKeyError.value = String(e.message || e);
+       }
+     }
 
     onMounted(async () => {
       try {
@@ -1053,23 +1134,28 @@ const Settings = {
           {id:'aurora',name:'Aurora',provider:'xai',requires_key:true,description:'xAI Grok Aurora 图像'},
         ];
       }
-      try {
-        const status = await api.get('/v1/config/api-key');
-        configuredKeys.value = status.configured || [];
-      } catch(e) {}
-    });
+       await loadConfiguredKeys();
+     });
 
     async function saveApiKey() {
-      if (!provider.value || !apiKeyInput.value.trim()) return;
-      apiKeySaving.value = true;
-      try {
-        await api.post('/v1/config/api-key', {provider: provider.value, api_key: apiKeyInput.value.trim()});
-        apiKeySaved.value = true;
-        configuredKeys.value.push(provider.value + '_key');
-        apiKeyInput.value = '';
-        setTimeout(() => { apiKeySaved.value = false; }, 3000);
-      } catch(e) { alert('保存失败: ' + String(e)); }
-      finally { apiKeySaving.value = false; }
+       if (!provider.value || !apiKeyInput.value.trim()) return;
+       apiKeySaving.value = true;
+       apiKeyError.value = '';
+       try {
+         const saved = await api.post(
+           '/v1/config/api-key',
+           {provider: provider.value, api_key: apiKeyInput.value.trim()},
+           adminHeaders(),
+         );
+         apiKeySaved.value = true;
+         configuredKeys.value = Array.from(new Set([...configuredKeys.value, saved.env_var]));
+         apiKeyInput.value = '';
+         setTimeout(() => { apiKeySaved.value = false; }, 3000);
+       } catch(e) {
+         apiKeyError.value = String(e.message || e);
+         ElMessage.error('保存失败');
+       }
+       finally { apiKeySaving.value = false; }
     }
     const wildcards = reactive([
       {name:'colors', count:10, sample:'red, green, golden...'},
@@ -1087,12 +1173,19 @@ const Settings = {
       {name:'即梦', status:'就绪', desc:'视觉冲击力 + 氛围描写'},
       {name:'Nano Banana Pro', status:'就绪', desc:'风格直描 + 推荐分辨率'},
     ]);
-    return { provider, imageModels, configuredKeys, apiKeyInput, apiKeySaved, apiKeySaving, saveApiKey, wildcards, platforms };
+    return {
+      provider, imageModels, configuredKeys, apiKeyInput, apiKeySaved,
+      apiKeySaving, apiKeyError, adminToken, loadConfiguredKeys, saveApiKey,
+      wildcards, platforms,
+    };
   }
 };
 
+// 共享给独立组件（compare-tab.js）：API 助手 / 复制 / 英文检测
+window.__PE = { api, copyText, isEnglish };
+
 const app = createApp({
-  components: { Workbench, Dashboard, Settings },
+  components: { Workbench, Dashboard, Settings, CompareTab: window.CompareTab },
   setup() {
     const tab = ref('workbench');
     return { tab };

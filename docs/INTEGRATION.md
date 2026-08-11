@@ -69,6 +69,17 @@
 | `/v1/image-models` | GET | 图片生成模型清单 |
 | `/v1/preview` | POST | 获取图片预览 URL |
 
+### 对比验证（v0.22.0，文案分句 → 提示词 → 生图对比）
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/v1/compare/split` | POST | 代理 smart-sentence-splitter 分句（`SPLITTER_BASE_URL`，默认 `http://127.0.0.1:8002`）；请求 `{text≤6000, language, mode}`，响应 `{sentences[], scenes[], tier_used, splitter, duration_ms}` |
+| `/v1/compare/prompt` | POST | 单句经 MiniMax LLM（OpenAI 兼容 `chat/completions`）生成英文生图提示词；请求 `{text, api_key?, base_url?, model?}`，自动剥离 `<think>` 推理块，空输出返回 502 可重试 |
+| `/v1/compare/images` | POST | 单提示词经 MiniMax image-01 生成 n 张图（默认 2 张）；请求 `{prompt, api_key?, base_url?, n?, width?, height?}`，响应 `{urls[], count, model, duration_ms}`；HTTP 200 但 `image_urls` 为空时显式报错（`content_safety`/`empty_result`） |
+
+> **API Key 流转**：请求体 `api_key` 优先，其次环境变量 `MINIMAX_API_KEY`；Key 仅存于请求局部变量，不落盘、不进日志。
+> **SSRF 缓解**：`base_url` 仅允许 `https://host[/path]`（拒绝回环/私网/链路本地/云 metadata 地址，非回环强制 https）；分句服务 target 由服务端 `SPLITTER_BASE_URL` 配置，不接受前端传入。
+
 ## CI/CD
 
 ### GitHub Actions

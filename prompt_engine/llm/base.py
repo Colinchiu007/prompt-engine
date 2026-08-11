@@ -23,9 +23,9 @@ class BaseLLMProvider:
         """工厂方法：根据配置创建 provider 实例"""
         cfg = config or load_config()
         provider_name = cfg["llm"]["provider"]
-        if provider_name == "openai_compat":
+        if provider_name in ("openai_compat", "ai_router"):
             from prompt_engine.llm.openai_compat import OpenAICompatProvider
-            return OpenAICompatProvider(cfg["llm"]["openai_compat"])
+            return OpenAICompatProvider(cfg["llm"][provider_name])
         elif provider_name == "xfyun":
             from prompt_engine.llm.xfyun import XfyunProvider
             return XfyunProvider(cfg["llm"]["xfyun"])

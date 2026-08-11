@@ -16,6 +16,7 @@ dependencies = [
     "pydantic>=2.0",
     "httpx>=0.27.0",
     "python-jose>=3.3.0",
+    "python-dotenv>=1.0.0",
     "fastapi>=0.110.0",
     "uvicorn>=0.27.0",
     # 钉住 <1.28：新版 mcp 移除 Server.list_tools，导致 test_mcp_server 失败（2026-08-09 既有 CI 红）
@@ -34,6 +35,7 @@ all = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23.0",
     "python-jose>=3.3.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.scripts]

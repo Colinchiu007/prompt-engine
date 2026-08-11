@@ -1,6 +1,11 @@
 """QA 综合检查 — v0.15.0 PROJECT-011"""
-import os, pathlib, re, subprocess
+import os, pathlib, re, subprocess, sys
 import urllib.request, urllib.error
+
+if __name__ != "__main__":
+    import pytest
+
+    pytest.skip("综合 QA 脚本需单独运行", allow_module_level=True)
 
 REPO = str(pathlib.Path(__file__).resolve().parent.parent)
 SERVER = "http://127.0.0.1:8000"
@@ -13,7 +18,7 @@ def banner(t):
 # QA-1
 banner("QA-1: 全量测试")
 r = subprocess.run(
-    ["python", "-m", "pytest", "tests/", "-q", "--tb=line",
+    [sys.executable, "-m", "pytest", "tests/", "-q", "--tb=line",
      "--ignore=tests/test_infinity_features.py"],
     cwd=REPO, capture_output=True, text=True, timeout=300
 )

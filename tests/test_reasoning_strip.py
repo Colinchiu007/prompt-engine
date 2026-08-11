@@ -32,6 +32,10 @@ class TestStripReasoningBlocks:
         raw = "<think>first</think>content<think>second</think> tail"
         assert strip_reasoning_blocks(raw) == "content tail"
 
+    def test_think_with_leading_text(self):
+        raw = "prefix <think>hidden</think> real prompt"
+        assert strip_reasoning_blocks(raw) == "prefix  real prompt"
+
 
 class TestOptimizerReasoningFallback:
     @patch.object(Optimizer, "_call_llm")

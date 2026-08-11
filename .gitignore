@@ -8,6 +8,7 @@ build/
 
 # Runtime data (auto-generated)
 prompt_engine/data/*.db
+prompt_engine/data/*.db-*
 !prompt_engine/data/.gitkeep
 
 # User feedback & weights (auto-generated)
