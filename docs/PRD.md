@@ -528,7 +528,7 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 |------|----------|------|
 | 文字推理（LLM） | `POST {base_url}/chat/completions`（OpenAI 兼容） | `base_url` 默认 `https://api.minimaxi.com/v1`；`Authorization: Bearer {key}`；模型默认 `MiniMax-M3`；响应需剥离 `<think>...</think>` 推理块 |
 | 图片生成 | `POST {base_url}/image_generation`（同步） | 请求体 `{"model":"image-01","prompt","response_format":"url","n":2,"aspect_ratio":"1:1"}`；响应 `data.image_urls[]`；HTTP 200 但空图必须显式报错 |
-| 分句 | `POST {SPLITTER_BASE_URL}/v1/split` | `SPLITTER_BASE_URL` 默认 `http://127.0.0.1:8002`；请求 `{text, language:"auto", mode:"balanced"}`；响应 `sentences[]`（index/text/language/tier/confidence/char_count） |
+| 分句 | `POST {SPLITTER_BASE_URL}/v1/split` | `SPLITTER_BASE_URL` 默认 `http://127.0.0.1:8002`；请求 `{text, language:"auto", mode:"balanced"}`；响应 `sentences[]`（index/text/language/tier/confidence/char_count）+ `scenes[]`（segment_id/text/estimated_duration/target_words/subtitle_count/**subtitles[]**——字幕块含 text/display_order/start_time/duration/parent_segment_id，v0.13 起全量透传） |
 
 ### 12.3 后端 API 设计
 
