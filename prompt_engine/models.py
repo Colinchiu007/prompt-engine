@@ -129,7 +129,7 @@ class OptimizeRequest(BaseModel):
     platform: PlatformType = Field(default=PlatformType.GENERIC, description="目标平台")
     style: Optional[StyleType] = Field(default=None, description="艺术风格")
     creative_level: int = Field(default=5, ge=1, le=10, description="创意程度 1-10")
-    max_length: int = Field(default=300, ge=50, le=2000, description="优化结果最大字符数")
+    max_length: int = Field(default=500, ge=50, le=2000, description="优化结果最大字符数")
     user_tier: int = Field(default=0, ge=0, le=3, description="用户会员等级 0=未指定 1=免费 2=标准 3=专业")
     user_own_key: Optional[str] = Field(default=None, description="用户自带的 API Key（优先级最高）")
     negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词，避免的元素")

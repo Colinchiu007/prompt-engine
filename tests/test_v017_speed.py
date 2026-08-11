@@ -5,11 +5,11 @@ from fastapi.testclient import TestClient
 class TestSpeedOptimization:
     """速度优化测试."""
 
-    def test_default_max_length_is_300(self):
-        """OptimizeRequest 默认 max_length 应为 300"""
+    def test_default_max_length_is_500(self):
+        """OptimizeRequest 默认 max_length 应为 500"""
         from prompt_engine.models import OptimizeRequest
         req = OptimizeRequest(prompt="a cat", platform="midjourney")
-        assert req.max_length == 300, f"Got {req.max_length}"
+        assert req.max_length == 500, f"Got {req.max_length}"
 
     def test_fast_mode_max_length_150(self):
         """快速模式 max_length=150"""

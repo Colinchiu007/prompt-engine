@@ -80,6 +80,14 @@ class PromptBuilder:
             parts.append(f"All characters/全部角色: {', '.join(names)}")
         if context.get("synopsis"):
             parts.append(f"Story synopsis/故事梗概: {context['synopsis'][:200]}")
+        if context.get("narrative_intent"):
+            parts.append(f"Narrative intent/文案意图: {context['narrative_intent'][:300]}")
+        if context.get("scene_type"):
+            parts.append(f"Scene type/场景类型: {context['scene_type']}")
+        if context.get("full_text"):
+            # 完整文案摘要（用于理解上下文），限制长度避免 token 爆炸
+            full_text = context['full_text'][:500]
+            parts.append(f"Full text context/完整文案上下文: {full_text}")
 
         if not parts:
             return ""
