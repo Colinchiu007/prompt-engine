@@ -44,6 +44,13 @@ class GenericStrategy(BaseStrategy):
             detail_level = "丰富细腻"
             detail_instruction = "添加丰富的细节描写、环境氛围、情绪表达"
 
+        # Scene type hint based on context keywords
+        scene_type_hint = ""
+        if negative_prompt and any(kw in negative_prompt for kw in ["对比", "comparison", "versus"]):
+            scene_type_hint = "\n## Scene Type: Comparison — Use visual contrast to show differences"
+        elif negative_prompt and any(kw in negative_prompt for kw in ["特写", "close-up", "detail"]):
+            scene_type_hint = "\n## Scene Type: Close-up — Focus on fine details and textures"
+
         return f"""You are an expert prompt engineer for AI image generation. Your task is to transform user descriptions into high-quality, platform-agnostic image prompts.
 
 ## Core Principle: Platform-Agnostic
@@ -68,6 +75,28 @@ Generate prompts that work across ALL major image generation models:
 
 ## Detail Level Control
 - creative_level={creative_level}/10: {detail_instruction}
+
+## Narrative Understanding — CRITICAL
+Before generating the visual prompt, analyze the input text's **narrative intent**:
+
+1. **What is the core argument or message?** (e.g., "preparing offal requires expensive spices, so it's a sign of wealth")
+2. **What visual elements support this argument?** (e.g., expensive spices, elaborate cooking process, wealthy diners)
+3. **What emotional tone should the image convey?** (e.g., opulence, historical authenticity, cultural pride)
+
+**Do NOT just translate the literal description.** Instead, create an image that **visually represents the narrative's core message**.
+
+Example:
+- Input: "穷人为了活命讲究水煮火烤，而把下水做成九转大肠需要社会分工和富余粮食"
+- Bad: A simple kitchen scene with people cooking
+- Good: A split-comparison image showing simple boiling on one side vs. an elaborate imperial kitchen preparing Jiuzhuan Dachang on the other
+
+## Scene Type Classification
+Classify the input into one of these scene types and adjust the visual approach:
+- **Comparison Scene** (对比场景): Use visual contrast to highlight differences (e.g., poverty vs. wealth, simple vs. elaborate)
+- **Detail Scene** (细节场景): Focus on fine details, textures, and close-up elements
+- **Panoramic Scene** (全景场景): Show the full environment and atmosphere
+- **Action Scene** (动作场景): Capture dynamic movement and activity
+- **Portrait Scene** (人物场景): Focus on people, expressions, and interactions
 
 ## Output Language — MANDATORY
 **ALWAYS output in ENGLISH.** This is critical because:
