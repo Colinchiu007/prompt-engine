@@ -506,6 +506,7 @@ async def list_image_models():
 # ── 图片预览端点 (F2) ──────────────────────────
 
 import urllib.parse
+from prompt_engine.api.minimax_client import generate_minimax_images, MinimaxImageError, MAX_IMAGE_COUNT
 
 @app.post("/v1/preview")
 async def image_preview(request: dict):
@@ -522,7 +523,10 @@ async def image_preview(request: dict):
     model = request.get("model", "picsum")
     width = request.get("width", 1024)
     height = request.get("height", 1024)
-    n = request.get("n", 1)  # 生成数量
+    try:
+        n = int(request.get("n", 1))  # 生成数量
+    except (TypeError, ValueError):
+        n = 1
 
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt 不能为空")
@@ -533,7 +537,7 @@ async def image_preview(request: dict):
         url = f"https://picsum.photos/seed/{prompt_hash}/{width}/{height}"
         return {"url": url, "model": "picsum", "width": width, "height": height, "prompt": prompt}
 
-    # ── MiniMax image-01 ──────────────────────────
+    # ── MiniMax image-01（复用共享助手 minimax_client）──────────
     if model == "MiniMax":
         api_key = os.environ.get("MINIMAX_API_KEY", "")
         if not api_key:
@@ -547,72 +551,31 @@ async def image_preview(request: dict):
             }
 
         try:
-            import httpx
-            # MiniMax API: aspect_ratio 从尺寸推断
-            aspect = "1:1"
-            if width > height:
-                aspect = "16:9"
-            elif height > width:
-                aspect = "9:16"
-
-            resp = httpx.post(
-                "https://api.minimaxi.com/v1/image_generation",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "image-01",
-                    "prompt": prompt,
-                    "aspect_ratio": aspect,
-                    "response_format": "url",
-                    "n": min(n, 3),  # 最多 3 张
-                    "prompt_optimizer": True,
-                },
-                timeout=60.0,
+            result = generate_minimax_images(
+                prompt=prompt,
+                api_key=api_key,
+                n=min(n, MAX_IMAGE_COUNT),  # 上限统一走共享常量
+                width=width,
+                height=height,
             )
-            resp.raise_for_status()
-            data = resp.json()
-
-            # 解析 MiniMax 响应
-            image_urls = data.get("data", {}).get("image_urls", [])
-            if image_urls:
-                return {
-                    "url": image_urls[0],  # 返回第一张
-                    "urls": image_urls,     # 全部 URL
-                    "model": "MiniMax",
-                    "width": width,
-                    "height": height,
-                    "prompt": prompt,
-                    "count": len(image_urls),
-                }
-            else:
-                return {
-                    "url": "",
-                    "model": "MiniMax",
-                    "width": width,
-                    "height": height,
-                    "prompt": prompt,
-                    "note": "MiniMax 返回了空结果"
-                }
-
-        except httpx.HTTPStatusError as e:
+            urls = result["urls"]
             return {
-                "url": "",
+                "url": urls[0],  # 返回第一张
+                "urls": urls,     # 全部 URL
                 "model": "MiniMax",
                 "width": width,
                 "height": height,
                 "prompt": prompt,
-                "note": f"MiniMax API 错误: {e.response.status_code}"
+                "count": len(urls),
             }
-        except Exception as e:
+        except MinimaxImageError as e:
             return {
                 "url": "",
                 "model": "MiniMax",
                 "width": width,
                 "height": height,
                 "prompt": prompt,
-                "note": f"MiniMax 调用失败: {str(e)[:100]}"
+                "note": e.message,
             }
 
     # ── 其他模型: 需要 API Key ──────────────────────────
@@ -844,6 +807,11 @@ if _web_dir.exists():
         return RedirectResponse(url="/web/")
 
     app.mount("/web", StaticFiles(directory=str(_web_dir), html=True), name="web")
+
+
+# ── 对比验证（分句 → 提示词 → 生图）路由 ────────────────
+from prompt_engine.api.compare import router as compare_router
+app.include_router(compare_router)
 
 
 # ── 惰性 seed：首次访问 stats 时自动填充 ───

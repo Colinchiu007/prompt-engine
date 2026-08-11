@@ -62,6 +62,7 @@
       <el-menu class="app-menu" mode="horizontal" :ellipsis="false" :default-active="tab" @select="tab=$event">
         <el-menu-item index="workbench">Prompt 工作台</el-menu-item>
         <el-menu-item index="dashboard">数据看板</el-menu-item>
+        <el-menu-item index="compare">🎞️ 对比验证</el-menu-item>
         <el-menu-item index="settings">配置</el-menu-item>
       </el-menu>
     </el-header>
@@ -70,10 +71,12 @@
       <div v-if="tab==='workbench'"><Workbench /></div>
       <div v-if="tab==='dashboard'"><Dashboard /></div>
       <div v-if="tab==='settings'"><Settings /></div>
+      <div v-if="tab==='compare'"><CompareTab /></div>
     </el-main>
   </el-container>
 </div>
 
+<script src="compare-tab.js"></script>
 <script>
 const { createApp, ref, reactive, onMounted, computed, watch } = Vue;
 const { ElMessage } = ElementPlus;
@@ -1178,8 +1181,11 @@ const Settings = {
   }
 };
 
+// 共享给独立组件（compare-tab.js）：API 助手 / 复制 / 英文检测
+window.__PE = { api, copyText, isEnglish };
+
 const app = createApp({
-  components: { Workbench, Dashboard, Settings },
+  components: { Workbench, Dashboard, Settings, CompareTab: window.CompareTab },
   setup() {
     const tab = ref('workbench');
     return { tab };

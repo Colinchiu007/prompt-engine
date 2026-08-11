@@ -2,6 +2,34 @@
 
 本项目更新日志。
 
+## [v0.22.0] — 2026-08-11
+
+### 新增功能：文案分句 → 提示词 → 生图对比验证
+
+- **「对比验证」页签（web/index.html + web/compare-tab.js）** — 输入 ≤6000 字文案 → 分句模型分句并展示 → 每句经 MiniMax 生成英文生图提示词 → 同一提示词生成 2 张图并排对比；支持单句/批量操作、失败重试、放大预览、API Key 输入（localStorage 记忆 + 环境变量回退）
+- **后端 API（prompt_engine/api/compare.py）** — 新增 3 个无状态端点：
+  - `POST /v1/compare/split` — 代理 smart-sentence-splitter 分句（`SPLITTER_BASE_URL` 可配，默认 8002，防 SSRF）
+  - `POST /v1/compare/prompt` — 单句经 MiniMax LLM 生成英文生图提示词（复用 `strip_reasoning_blocks` 剥离 `<think>`，空输出 502 可重试）
+  - `POST /v1/compare/images` — 单提示词经 MiniMax image-01 生成 n 张图（默认 2），HTTP 200 空图显式报错（content_safety / empty_result）
+- **生图共享助手（prompt_engine/api/minimax_client.py）** — `/v1/preview` 与 `/v1/compare/images` 复用同一 MiniMax 调用实现；错误分级（auth/rate_limit/timeout/network/content_safety/empty_result/invalid_config）
+- **API Key 流转** — 请求体 `api_key` > 环境变量 `MINIMAX_API_KEY`；仅存请求局部变量，不落盘、不进日志
+- **测试** — `tests/test_compare_api.py` 新增 17 例（全部 mock 隔离）；PRD 新增第十二章（数据校验/流程/交互/显示项/提示文字/错误分级/成本控制）
+
+### 变更文件
+
+| 文件 | 说明 |
+|------|------|
+| `prompt_engine/api/compare.py` | 新增 — 对比验证路由（3 端点） |
+| `prompt_engine/api/minimax_client.py` | 新增 — MiniMax 生图共享助手 |
+| `prompt_engine/api/rest.py` | 更新 — include compare router；/v1/preview 复用共享助手 |
+| `prompt_engine/web/compare-tab.js` | 新增 — 对比验证前端组件 |
+| `prompt_engine/web/index.html` | 更新 — 新增「对比验证」页签 + window.__PE 共享 |
+| `tests/test_compare_api.py` | 新增 — 17 例对比验证 API 测试 |
+| `.env.example` | 更新 — 补充 SPLITTER_BASE_URL 说明 |
+| `docs/PRD.md` | 更新 — 新增第十二章 |
+| `docs/INTEGRATION.md` | 更新 — 补充对比验证端点 |
+| `README.md` | 更新 — 使用说明 |
+| `openspec/changes/2026-08-11-image-prompt-validation-ui/` | 新增 — OpenSpec 契约文档 |
 ## [v0.21.1] — 2026-06-25
 
 ### P3 架构迁移

@@ -185,6 +185,18 @@ curl -X POST http://localhost:8013/v1/reverse \
   -d '{"image_url": "https://example.com/photo.jpg", "platform": "midjourney"}'
 ```
 
+### Web 控制台（含「对比验证」页签）
+
+启动 REST 服务后，浏览器访问 `http://localhost:8013/web/` 打开内置控制台：
+
+- **Prompt 工作台** — 优化 / 分类 / 评估 / 批量 / 图片预览
+- **数据看板** — 统计概览
+- **🎞️ 对比验证**（v0.22.0）— 验证图片提示词实际生成效果：输入 ≤6000 字文案 → 分句并展示 → 每句经 MiniMax 生成英文生图提示词 → 同一提示词生成 2 张图并排对比
+
+对比验证前置条件：
+1. 启动分句服务：`smart-sentence-splitter`（默认 `http://127.0.0.1:8002`，可用环境变量 `SPLITTER_BASE_URL` 覆盖）；
+2. 配置 MiniMax API Key：在页面「MiniMax 模型设置」粘贴 Key（保存到浏览器 localStorage），或设置环境变量 `MINIMAX_API_KEY`。
+
 ### 启动 MCP Server
 
 ```bash
