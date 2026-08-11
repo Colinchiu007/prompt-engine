@@ -19,7 +19,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "fastapi>=0.110.0",
     "uvicorn>=0.27.0",
-    "mcp>=1.0.0",
+    # 钉住 <1.28：新版 mcp 移除 Server.list_tools，导致 test_mcp_server 失败（2026-08-09 既有 CI 红）
+    "mcp>=1.0.0,<1.28",
     "scikit-learn>=1.3.0",
     "numpy>=1.24.0",
     "openai>=1.0.0",
