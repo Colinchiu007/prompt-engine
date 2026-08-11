@@ -391,3 +391,48 @@ class TestSplitLanguageEnum:
     def test_invalid_mode_rejected(self, client):
         resp = client.post("/v1/compare/split", json={"text": "测试", "mode": "ultra"})
         assert resp.status_code == 422
+
+# ── 场景层 / 字幕层透传 ────────────────────────────────
+
+class TestCompareSplitSceneLayers:
+    def test_split_proxies_scenes_with_subtitles(self, client, monkeypatch):
+        """分句代理必须透传场景层（scenes）与字幕层（subtitles），供前端分层展示。"""
+        import httpx
+
+        class FakeResp:
+            status_code = 200
+            def json(self):
+                return {
+                    "text_length": 40,
+                    "language": "zh",
+                    "tier_used": "tier2_semantic",
+                    "sentences": [{"index": 0, "text": "第一句。", "language": "zh", "tier": "t2", "confidence": 1.0, "char_count": 4}],
+                    "scenes": [
+                        {
+                            "segment_id": 0,
+                            "text": "第一句。第二句。",
+                            "estimated_duration": 3.0,
+                            "target_words": 8,
+                            "subtitle_count": 2,
+                            "subtitles": [
+                                {"text": "第一句", "display_order": 0, "start_time": 0.0, "duration": 1.5, "parent_segment_id": 0},
+                                {"text": "第二句", "display_order": 1, "start_time": 1.5, "duration": 1.5, "parent_segment_id": 0},
+                            ],
+                        }
+                    ],
+                }
+
+        monkeypatch.setattr(httpx, "post", lambda *a, **k: FakeResp())
+        resp = client.post("/v1/compare/split", json={"text": "第一句。第二句。"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["scenes"]) == 1
+        scene = data["scenes"][0]
+        assert scene["subtitle_count"] == 2
+        assert "subtitles" in scene
+        assert len(scene["subtitles"]) == 2
+        assert scene["subtitles"][0]["text"] == "第一句"
+        assert scene["subtitles"][0]["display_order"] == 0
+        assert scene["subtitles"][0]["start_time"] == 0.0
+        assert "duration" in scene["subtitles"][0]
+        assert "parent_segment_id" in scene["subtitles"][0]
