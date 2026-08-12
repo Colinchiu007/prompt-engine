@@ -1,0 +1,120 @@
+"""视频策略基类 — 每个视频平台继承此类（独立实现，机制与图片引擎一致）。
+
+职责：
+- build_system_prompt：平台指令（含 Fact-Fidelity 与镜头语言）
+- post_process_video：LLM 结构化输出 → (渲染单串, 结构化字段 dict)
+- extract_video_meta / render：结构化字段提取与单串渲染
+- @register 自动注册 + get_strategy 查询
+"""
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from typing import Any, Optional
+
+from video_prompt_engine.models import VideoPlatformType
+
+_REGISTRY: dict[str, type["BaseVideoStrategy"]] = {}
+
+
+def register(platform: str):
+    """策略注册装饰器。"""
+    def decorator(cls):
+        _REGISTRY[platform] = cls
+        return cls
+    return decorator
+
+
+def get_strategy(platform: str) -> type["BaseVideoStrategy"] | None:
+    return _REGISTRY.get(str(platform or "").lower())
+
+
+def list_strategies() -> list[str]:
+    return sorted(_REGISTRY.keys())
+
+
+def _clamp_int(value: Any, lo: int = 1, hi: int = 10, default: int = 5) -> int:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(lo, min(hi, n))
+
+
+class BaseVideoStrategy(ABC):
+    """视频策略基类。"""
+
+    domain = "video"
+    platform: VideoPlatformType = VideoPlatformType.GENERIC_VIDEO
+
+    @classmethod
+    @abstractmethod
+    def build_system_prompt(
+        cls,
+        style: Optional[str] = None,
+        creative_level: int = 5,
+        max_length: int = 500,
+        negative_prompt: Optional[str] = None,
+        keywords_hint: str = "",
+    ) -> str:
+        raise NotImplementedError
+
+    @classmethod
+    def build_negative_section(cls, negative_prompt: Optional[str]) -> str:
+        if not negative_prompt:
+            return ""
+        return f"\n## Avoid these elements / 避免元素\n- {negative_prompt}\n生成内容不得包含这些元素。"
+
+    @classmethod
+    def parse_video_json(cls, raw_output: str) -> dict[str, Any] | None:
+        import json
+        import re
+        text = str(raw_output or "").strip()
+        if not text:
+            return None
+        text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE).strip()
+        try:
+            data = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        return data if isinstance(data, dict) else None
+
+    @classmethod
+    def render(cls, data: dict[str, Any]) -> str:
+        prompt = str(data.get("prompt") or "").strip()
+        if prompt:
+            return prompt
+        parts = []
+        for key in ("subject", "action", "environment", "colors", "lighting", "style"):
+            val = str(data.get(key) or "").strip()
+            if val:
+                parts.append(val)
+        return " ".join(parts)
+
+    @classmethod
+    def extract_video_meta(cls, raw_output: str) -> dict[str, Any] | None:
+        data = cls.parse_video_json(raw_output)
+        if data is None:
+            return None
+        duration = data.get("duration_hint")
+        try:
+            duration_f = float(duration) if duration is not None and str(duration).strip() != "" else None
+        except (TypeError, ValueError):
+            duration_f = None
+        return {
+            "shot": str(data.get("shot") or "").strip(),
+            "camera": str(data.get("camera") or "").strip(),
+            "motion_intensity": _clamp_int(data.get("motion_intensity")),
+            "scene_transition": str(data.get("scene_transition") or "").strip(),
+            "continuity_token": str(data.get("continuity_token") or "").strip(),
+            "duration_hint": duration_f,
+        }
+
+    @classmethod
+    def post_process_video(cls, raw_output: str, creative_level: int = 5) -> tuple[str, dict[str, Any]]:
+        data = cls.parse_video_json(raw_output)
+        if data is None:
+            rendered = str(raw_output or "").strip().strip('"').strip()
+            return rendered, {}
+        rendered = cls.render(data)
+        meta = cls.extract_video_meta(raw_output) or {}
+        return rendered, meta

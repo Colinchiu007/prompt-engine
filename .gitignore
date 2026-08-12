@@ -17,3 +17,6 @@ keyword_weights.json
 
 # Environment variables (API keys - never commit)
 .env
+
+# 视频引擎构建产物（运行时生成）
+video_prompts_db/

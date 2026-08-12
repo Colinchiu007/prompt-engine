@@ -1,0 +1,167 @@
+[
+  {
+    "id": "awv-000",
+    "title": "{\"description\": \"androgynous individual interacting with fut",
+    "description": "awesome-video-prompts 精选视频提示词",
+    "prompt_text": "{\n  \"shot\": {\n    \"composition\": \"wide establishing shots transitioning to medium orbit and macro close-up\",\n    \"lens\": \"24mm for wide interior, 50mm for orbit, 90mm macro for device\",\n    \"frame_rate\": \"30fps standard with subtle ramping during gesture moments\",\n    \"camera_movement\": \"smooth orbital tracking around subject, gentle push-in for close-up\"\n  },\n\n  \"subject\": {\n    \"description\": \"androgynous individual interacting with futuristic home interface\",\n    \"wardrobe\": \"monochromatic high-tech loungewear with subtle metallic textures\",\n    \"props\": \"transparent ripple-reactive interfaces, glass-like control device\"\n  },\n\n  \"scene\": {\n    \"location\": \"suspended apartment overlooking neon cyberpunk cityscape\",\n    \"time_of_day\": \"twilight\",\n    \"environment\": \"minimalist architecture with panoramic windows, glowing neon haze outside\"\n  },\n\n  \"visual_details\": {\n    \"action\": \"gestures in air controlling environment, responsive lighting, final close-up of device\",\n    \"special_effects\": \"holographic UI, liquid ripple transitions, adaptive lighting\",\n    \"hair_clothing_motion\": \"minimal motion, soft fabric flow with elegant gesturing\"\n  },\n\n  \"cinematography\": {\n    \"lighting\": \"ambient interior glow with reactive accents, neon reflections\",\n    \"color_palette\": \"cool cyans, deep purples, soft whites with glass highlights\",\n    \"tone\": \"elevated, futuristic, serene\"\n  },\n\n  \"audio\": {\n    \"music\": \"ambient synthwave with digital chimes and subtle builds\",\n    \"ambient\": \"soft city hum, electronic interface whispers\",\n    \"sound_effects\": \"gesture-triggered whooshes, soft chime on logo\",\n    \"mix_level\": \"refined spatial mix with immersive clarity\"\n  },\n\n  \"dialogue\": {\n    \"character\": \"\",\n    \"line\": \"\",\n    \"subtitles\": false\n  }\n}",
+    "language": "en",
+    "platform": "generic_video",
+    "style": "video",
+    "categories": [
+      "video",
+      "cinematic"
+    ],
+    "quality_score": 8,
+    "source": "awesome-video-prompts"
+  },
+  {
+    "id": "awv-001",
+    "title": "{\"character\": \"blonde woman with a single back braid, wearin",
+    "description": "awesome-video-prompts 精选视频提示词",
+    "prompt_text": "{\n  \"shot\": {\n    \"type\": \"single\",\n    \"camera_motion\": \"slow top-down crane descend with subtle push-in (no cuts)\",\n    \"loop_hint\": \"hold final 6 frames for seamless autoplay\"\n  },\n  \"subject\": {\n    \"character\": \"blonde woman with a single back braid, wearing a flowing black evening dress with thigh-high slit; barefoot; goddess-ritual vibe\",\n    \"pose\": \"arms outstretched overhead touching a luminous golden arc; head bowed slightly\",\n    \"expression\": \"calm, reverent focus\",\n    \"wardrobe_motion\": \"fabric breathes gently; hem sways from faint updraft\"\n  },\n  \"scene\": {\n    \"environment\": \"black void stage with sparse floating dust motes\",\n    \"hero_prop\": \"crescent-like golden light arc above her hands (liquid-light ribbon)\",\n    \"fx\": [\"soft volumetric glow\", \"micro-particle drift\", \"subtle heat shimmer near arc\"],\n    \"time_of_day\": \"timeless night\"\n  },\n  \"visual_details\": {\n    \"beats\": [\n      {\n        \"time\": \"0.0-2.4\",\n        \"action\": \"Camera descends from above; subject silhouette resolves; dormant gold arc begins to glimmer as hands make contact.\",\n        \"focus\": \"top-down framing, shoulders and braid highlighted\"\n      },\n      {\n        \"time\": \"2.4-5.4\",\n        \"action\": \"Arc brightens and bends smoothly into a perfect crescent; light blooms along her arms; dust motes orbit slowly.\",\n        \"focus\": \"rim highlights on skin; gentle lens bloom on the arc\"\n      },\n      {\n        \"time\": \"5.4-8.0\",\n        \"action\": \"She rises a few centimeters (levitation hint) while arc hums and stabilizes; fabric lifts softly; camera finishes push-in and settles for loop.\",\n        \"focus\": \"hero tableau centered; clean negative space around figure\"\n      }\n    ]\n  },\n  \"cinematography\": {\n    \"lens\": \"portrait 65–85mm feel, shallow depth (f/2.0)\",\n    \"framing\": \"centered vertical figure; arc sits just above frame midline; low key with strong speculars\",\n    \"exposure\": \"protect highlights on arc, maintain true blacks; mild roll-off on skin\",\n    \"post\": \"cinematic contrast; glow bloom on arc; very light film grain; negligible chromatic aberration\"\n  },\n  \"audio\": {\n    \"fx\": [\n      \"low airy shimmer tied to the arc brightness\",\n      \"soft cloth rustle on levitation\",\n      \"sub-bass swell at 5.4s\"\n    ],\n    \"music\": \"minimal drone in D minor, barely rising toward the final hold\",\n    \"dialogue\": \"none\"\n  },\n  \"color_palette\": {\n    \"primary\": \"molten gold (#F5C76A)\",\n    \"secondary\": \"amber highlights (#D69B3A)\",\n    \"accents\": \"skin neutrals with warm rim\",\n    \"background\": \"pure black (#000000)\"\n  },\n  \"physics_rules\": [\n    \"dust motes drift on gentle convection; no chaotic turbulence\",\n    \"cloth responds to continuous mild updraft; inertia preserved\",\n    \"arc emits soft light that illuminates nearby skin and fabric with inverse-square falloff\"\n  ],\n  \"visual_rules\": [\n    \"no text, captions, or watermarks\",\n    \"keep background clean; no extra props\",\n    \"avoid camera shake and excessive bloom; preserve detail in highlights\",\n    \"maintain elegant anatomy and natural hand poses\"\n  ],\n  \"negative_prompt\": [\n    \"cartoonish rendering\",\n    \"overexposed arc clipping\",\n    \"banding or posterization in blacks\",\n    \"extra limbs or finger artifacts\",\n    \"busy background\",\n    \"harsh color shifts (green, magenta)\"\n  ],\n  \"metadata\": {\n    \"mood\": \"sacred, poised, ascendant\",\n    \"platform_goal\": \"high-readability loop thumbnail with bright gold arc framing the centered subject\"\n  }\n}",
+    "language": "en",
+    "platform": "generic_video",
+    "style": "video",
+    "categories": [
+      "video",
+      "cinematic"
+    ],
+    "quality_score": 8,
+    "source": "awesome-video-prompts"
+  },
+  {
+    "id": "awv-002",
+    "title": "{\"description\": \"bee racing full throttle through university",
+    "description": "awesome-video-prompts 精选视频提示词",
+    "prompt_text": "{\n  \"shot\": {\n    \"composition\": \"tight rear POV shot directly behind frantic bee, wings vibrating violently in frame\",\n    \"lens\": \"GoPro ultra-wide with extreme distortion to amplify speed\",\n    \"frame_rate\": \"180fps with ramping slow-motion bursts on near collisions\",\n    \"camera_movement\": \"hyper-fast forward rush with jitter, mimicking chaotic flight path\"\n  },\n  \"subject\": {\n    \"description\": \"bee racing full throttle through university corridors in panic, wings shaking violently\",\n    \"wardrobe\": \"\",\n    \"props\": \"students dodging aside, papers and books scattering, doors slamming open\"\n  },\n  \"scene\": {\n    \"location\": \"endless university hallway with fluorescent lights and lockers\",\n    \"time_of_day\": \"midday rush, crowded corridors\",\n    \"environment\": \"blurred faces of surprised students, moving obstacles flying past in streaks\"\n  },\n  \"visual_details\": {\n    \"action\": \"bee blasts forward in straight chaotic line, barely missing heads and shoulders, narrowly escaping slamming doors and spinning around obstacles\",\n    \"special_effects\": \"extreme motion blur, speed warp trails, shockwave distortion around wings, lights streaking by\"\n  },\n  \"cinematography\": {\n    \"lighting\": \"harsh fluorescent lighting flickering as speed distorts space\",\n    \"color_palette\": \"cool whites, blurred neon streaks, chaotic color flashes from student clothing\",\n    \"tone\": \"frenetic, high-adrenaline, disorienting\"\n  },\n  \"audio\": {\n    \"music\": \"fast EDM with rising tempo and heavy drops synced to near misses\",\n    \"ambient\": \"chaotic corridor reverberation fading under speed\",\n    \"sound_effects\": \"intense buzzing amplified, violent whooshes, crashes and startled shouts passing rapidly\",\n    \"mix_level\": \"overwhelming immersive mix, pushing speed sensation\"\n  }\n}",
+    "language": "en",
+    "platform": "generic_video",
+    "style": "video",
+    "categories": [
+      "video",
+      "cinematic"
+    ],
+    "quality_score": 8,
+    "source": "awesome-video-prompts"
+  },
+  {
+    "id": "awv-003",
+    "title": "{\"description\": \"claymation Bilbo Baggins, wide-eyed and tre",
+    "description": "awesome-video-prompts 精选视频提示词",
+    "prompt_text": "{\n  \"shot\": {\n    \"composition\": \"medium-wide shot with claymation-style depth and handcrafted textures\",\n    \"lens\": \"50mm virtual stop-motion lens with slight fisheye distortion\",\n    \"frame_rate\": \"12fps to mimic traditional claymation pacing\",\n    \"camera_movement\": \"slow dolly push-in toward Bilbo, with sudden tilt up on dragon reveal\"\n  },\n\n  \"subject\": {\n    \"description\": \"claymation Bilbo Baggins, wide-eyed and trembling, tiptoes across a mountain of gold\",\n    \"wardrobe\": \"tiny sculpted wool cloak, clay sword, hand-textured curls\",\n    \"props\": \"glittered clay coins, oversized goblets, clay Arkenstone glowing subtly\"\n  },\n\n  \"scene\": {\n    \"location\": \"Smaug’s hoarded treasure hall under the Lonely Mountain\",\n    \"time_of_day\": \"dim cavern lit by fire-glow and scattered treasure reflections\",\n    \"environment\": \"clay-crafted columns, soot-blackened walls, gold piles molded with finger prints\"\n  },\n\n  \"visual_details\": {\n    \"action\": \"Bilbo freezes as a low rumble shakes the hoard and a massive clay claw emerges\",\n    \"special_effects\": \"stop-motion fire breath effect using layered painted cellophane, glowing eyes frame-by-frame animated\",\n    \"hair_clothing_motion\": \"subtle, jittery frame-to-frame cloak motion and expressive clay eye shifts\"\n  },\n\n  \"cinematography\": {\n    \"lighting\": \"warm clay-fire bounce lighting mixed with cool cavern shadows\",\n    \"color_palette\": \"burnt oranges, muted browns, deep shadows, with gold shimmer\",\n    \"tone\": \"tense, handcrafted, whimsically eerie\"\n  },\n\n  \"audio\": {\n    \"music\": \"orchestral clay percussion and slow string plucks with echo\",\n    \"ambient\": \"distant rumbling, coin shifts, a single deep dragon breath\",\n    \"sound_effects\": \"creaky stop-motion footsteps, crackling treasure slide\",\n    \"mix_level\": \"ambience forward with subtle music underlay\"\n  },\n\n  \"dialogue\": {\n    \"character\": \"Smaug (claymation voice)\",\n    \"line\": \"I smell you, thief... Do not think you can hide from me.\",\n    \"subtitles\": false\n  }\n}",
+    "language": "en",
+    "platform": "generic_video",
+    "style": "video",
+    "categories": [
+      "video",
+      "cinematic"
+    ],
+    "quality_score": 8,
+    "source": "awesome-video-prompts"
+  },
+  {
+    "id": "awv-004",
+    "title": "{\"description\": \"claymation Cooper in a sculpted flight suit",
+    "description": "awesome-video-prompts 精选视频提示词",
+    "prompt_text": "{\n  \"shot\": {\n    \"composition\": \"top-down spinning claymation shot of the Endurance aligning with the docking station\",\n    \"lens\": \"virtual macro lens with slight barrel distortion for handmade effect\",\n    \"frame_rate\": \"12fps with deliberate clay flicker\",\n    \"camera_movement\": \"rotational tracking around the spinning ships, tightening as docking nears\"\n  },\n\n  \"subject\": {\n    \"description\": \"claymation Cooper in a sculpted flight suit, intensely controlling the Endurance as it rotates into place\",\n    \"wardrobe\": \"tiny molded astronaut suit with moving clay tubes and helmet visor reflections\",\n    \"props\": \"hand-sculpted console with blinking lights, rotating docking clamps, clay ring segments\"\n  },\n\n  \"scene\": {\n    \"location\": \"orbit above a stylized black hole with painted light swirl backdrop\",\n    \"time_of_day\": \"deep space — star-speckled black with ambient glow from distant galaxy\",\n    \"environment\": \"floating clay debris, sculpted ring shadows, mini clay model of Gargantua in the distance\"\n  },\n\n  \"visual_details\": {\n    \"action\": \"the ships spin faster, Cooper aligns them with pinpoint timing, the clamps connect in a satisfying clay click\",\n    \"special_effects\": \"hand-drawn star trails, layered glow from the black hole, clay particles flung by centrifugal motion\",\n    \"hair_clothing_motion\": \"helmet strap sways inside the capsule, clay fingers twitch on the controls\"\n  },\n\n  \"cinematography\": {\n    \"lighting\": \"subtle clay studio-style lighting with harsh contrast from the black hole side\",\n    \"color_palette\": \"matte black, dusty gray, and blue glow tones with bursts of warm orange during connection\",\n    \"tone\": \"intense, handcrafted, suspenseful\"\n  },\n\n  \"audio\": {\n    \"music\": \"claypipe organ version of Interstellar theme with chime loops\",\n    \"ambient\": \"muted beeps, radio static, deep space hum\",\n    \"sound_effects\": \"clicking clay clamps, creaky plastic panels, muffled breathing inside helmet\",\n    \"mix_level\": \"music builds to climax with sound FX punched forward during final lock\"\n  },\n\n  \"dialogue\": {\n    \"character\": \"Cooper (claymation voice)\",\n    \"line\": \"Hold on... we’re going to dock manually.\",\n    \"subtitles\": false\n  }\n}",
+    "language": "en",
+    "platform": "generic_video",
+    "style": "video",
+    "categories": [
+      "video",
+      "cinematic"
+    ],
+    "quality_score": 8,
+    "source": "awesome-video-prompts"
+  },
+  {
+    "id": "awv-005",
+    "title": "{\"description\": \"claymation Harry Potter leaning out of the ",
+    "description": "awesome-video-prompts 精选视频提示词",
+    "prompt_text": "{\n  \"shot\": {\n    \"composition\": \"sweeping wide claymation shot of the Hogwarts Express approaching the castle\",\n    \"lens\": \"virtual tilt-shift clay camera with exaggerated depth\",\n    \"frame_rate\": \"12fps classic stop-motion pace\",\n    \"camera_movement\": \"dolly shot following train, crane-style tilt up to reveal clay Hogwarts\"\n  },\n\n  \"subject\": {\n    \"description\": \"claymation Harry Potter leaning out of the train window, eyes wide with wonder\",\n    \"wardrobe\": \"miniature sculpted robes, scarf with moving clay fringe, round glasses molded on\",\n    \"props\": \"clay owl in cage, sculpted suitcase with spellbooks, hand-shaped wand in pocket\"\n  },\n\n  \"scene\": {\n    \"location\": \"Hogwarts Express track curving beside a clay river, leading to Hogwarts castle on a hill\",\n    \"time_of_day\": \"twilight with fading sculpted sky gradients\",\n    \"environment\": \"rolling clay hills, fiber-clouds on strings, flickering castle windows made of translucent clay\"\n  },\n\n  \"visual_details\": {\n    \"action\": \"train puffs clay steam as Harry gazes at the glowing castle, cloak fluttering slightly\",\n    \"special_effects\": \"stop-motion light flickers in the windows, twinkling stars added frame-by-frame\",\n    \"hair_clothing_motion\": \"Harry’s hair shifts subtly between frames, scarf bobs in the wind\"\n  },\n\n  \"cinematography\": {\n    \"lighting\": \"soft clay-style ambient lighting with glowing castle highlights\",\n    \"color_palette\": \"deep blues, warm golds, and hand-painted brick reds\",\n    \"tone\": \"magical, nostalgic, hand-crafted\"\n  },\n\n  \"audio\": {\n    \"music\": \"gentle clay-bell chimes and whimsical glockenspiel melody\",\n    \"ambient\": \"train wheels clacking, faint owl hoot, breeze on the hill\",\n    \"sound_effects\": \"soft clay footsteps, luggage bump, magical sparkle twinkles\",\n    \"mix_level\": \"music-forward mix with delicate ambient textures\"\n  },\n\n  \"dialogue\": {\n    \"character\": \"Harry Potter (child voice, claymation-style)\",\n    \"line\": \"Is that... Hogwarts?\",\n    \"subtitles\": false\n  }\n}",
+    "language": "en",
+    "platform": "generic_video",
+    "style": "video",
+    "categories": [
+      "video",
+      "cinematic"
+    ],
+    "quality_score": 8,
+    "source": "awesome-video-prompts"
+  },
+  {
+    "id": "awv-006",
+    "title": "{\"description\": \"PS5 DualSense controller forming from raw f",
+    "description": "awesome-video-prompts 精选视频提示词",
+    "prompt_text": "{\n  \"shot\": {\n    \"composition\": \"fragmented pieces of a PS5 DualSense controller assembling mid-air with zero-gravity motion and explosive impact points\",\n    \"lens\": \"35mm virtual lens with fast rack focus and shallow depth of field on each part\",\n    \"frame_rate\": \"1000fps during slow-motion assembly, 60fps in between\",\n    \"camera_movement\": \"ultra-dynamic orbital spins, snap-zooms on triggers, inside-out fly-through of the controller body, ending in hard push-in on the completed device\"\n  },\n\n  \"subject\": {\n    \"description\": \"PS5 DualSense controller forming from raw floating components — triggers, face buttons, analog sticks, haptic core — coming together with sonic force\",\n    \"wardrobe\": \"\",\n    \"props\": \"transparent trigger shells, vibrating actuator module, light bar strip, PlayStation symbols spinning before locking into buttons\"\n  },\n\n  \"scene\": {\n    \"location\": \"digital void resembling a dark console startup space with particle fog and ambient grid lighting\",\n    \"time_of_day\": \"stylized tech-space\",\n    \"environment\": \"hovering digital dust, low-lying mist, energy lines pulsing with every part assembled\"\n  },\n\n  \"visual_details\": {\n    \"action\": \"each piece enters frame like a precision missile, locking into place with sonic booms — thumbsticks spiral in, faceplate slams down with micro-explosions of light, final PlayStation logo burns in at the center — controller lands on glass surface, sending out shock ripples and lighting up its LEDs\",\n    \"special_effects\": \"light trail streaks, magnetic snap FX, glitch pulses, haptic vibration simulated in slow motion, LED ignition flare\",\n    \"hair_clothing_motion\": \"\"\n  },\n\n  \"cinematography\": {\n    \"lighting\": \"pulsed spotlight bursts from above and below, reflective surfaces bouncing light off every plastic curve\",\n    \"color_palette\": \"ice white, midnight black, pulse blue, reactive neon flares\",\n    \"tone\": \"tech-futuristic, powerful, sleek\"\n  },\n\n  \"audio\": {\n    \"music\": \"cinematic synthwave with layered build-ups and sharp percussive drops\",\n    \"ambient\": \"low digital hum, frequency sweeps, energy pulses rising\",\n    \"sound_effects\": \"clicks, pressure pops, deep magnetic lock-ins, startup chime reimagined as an impact sting\",\n    \"mix_level\": \"studio-grade mix with 3D stereo positioning, sharp highs for clicks and wide low-end on impacts\"\n  },\n\n  \"dialogue\": {\n    \"character\": \"\",\n    \"line\": \"\",\n    \"subtitles\": false\n  }\n}",
+    "language": "en",
+    "platform": "generic_video",
+    "style": "video",
+    "categories": [
+      "video",
+      "cinematic"
+    ],
+    "quality_score": 8,
+    "source": "awesome-video-prompts"
+  },
+  {
+    "id": "awv-007",
+    "title": "{\"description\": \"calloused hands with soot-stained fingertip",
+    "description": "awesome-video-prompts 精选视频提示词",
+    "prompt_text": "{\n  \"shot\": {\n    \"composition\": \"Extreme close-up, 135mm lens, shoulder-mounted for subtle sway\",\n    \"camera_motion\": \"slow left-to-right pan with slight handheld shake\",\n    \"frame_rate\": \"60fps\",\n    \"film_grain\": \"slight vintage grain with digital clarity\"\n  },\n  \"subject\": {\n    \"description\": \"calloused hands with soot-stained fingertips rapidly typing on burning keys\",\n    \"wardrobe\": \"charcoal black hoodie sleeves pushed up to elbows\",\n    \"character_consistency\": \"calloused hands with soot-stained fingertips rapidly typing on burning keys\"\n  },\n  \"scene\": {\n    \"location\": \"dark forge-style desktop lit by glowing coals\",\n    \"time_of_day\": \"late evening\",\n    \"environment\": \"embers floating in smoky low-light haze\"\n  },\n  \"visual_details\": {\n    \"action\": \"keys ignite on each press, flaring momentarily before cooling to a glow, smoke curling with every impact\",\n    \"props\": \"keyboard forged from volcanic glass and ember veins\",\n    \"physics\": \"realistic ember flare-up and ash behavior with particle glow diffusion\"\n  },\n  \"cinematography\": {\n    \"lighting\": \"backlit ember underglow with dynamic contrast\",\n    \"tone\": \"intense, elemental, darkly magical\",\n    \"color_palette\": \"burnt oranges, obsidian black, crimson pulses\"\n  },\n  \"audio\": {\n    \"dialogue\": null,\n    \"primary_sounds\": \"crackles, fire pops, crunch of hot glass under fingers\",\n    \"ambient\": \"deep furnace hum and distant metallic resonance\",\n    \"environmental_details\": \"ash settling and faint ember crackling\",\n    \"music\": \"no music\",\n    \"technical_effects\": \"ASMR mic with heat-reactive reverb tail\"\n  },\n  \"style\": {\n    \"visual_aesthetic\": \"fantasy realism with ASMR emphasis\",\n    \"aspect_ratio\": \"16:9\",\n    \"quality\": \"4K\"\n  }\n}",
+    "language": "en",
+    "platform": "generic_video",
+    "style": "video",
+    "categories": [
+      "video",
+      "cinematic"
+    ],
+    "quality_score": 8,
+    "source": "awesome-video-prompts"
+  },
+  {
+    "id": "awv-008",
+    "title": "{\"entity\": \"charismatic Latina hip-hop performer\", \"descript",
+    "description": "awesome-video-prompts 精选视频提示词",
+    "prompt_text": "{\n  \"shot\": {\n    \"composition\": \"waist-level medium tracking shot (focus on hips) → mid-torso push-in\",\n    \"camera_motion\": \"smooth crane drop from 4 m to 1.0 m over 1 s, then gimbal sidestep left-right 40 cm each beat (follow hip sways) for remaining 7 s\",\n    \"frame_rate\": \"24fps\",\n    \"lens\": \"prime 40 mm throughout\",\n    \"depth_of_field\": \"medium; hips sharp, background soft\",\n    \"film_grain\": 0.03\n  },\n\n  \"subject\": {\n    \"entity\": \"charismatic Latina hip-hop performer\",\n    \"description\": \"athletic build, copper-toned skin, high velvet ponytail, holographic silver bodysuit with crystal fringes, thigh-high reflective boots; wireless mic in right hand, left hand free\",\n    \"movement\": \"booty-dance isolations: knees bent 20°, pelvis pops backward on beat-one, forward on beat-two; controlled hip rolls (no leg crossing) plus three rapid twerk pulses at 3.2 Hz; shoulders stay steady to avoid torso distortion\",\n    \"facial_expression\": \"confident smile, playful wink on downbeat two\",\n    \"eyes\": \"smoky metallic eyeshadow catching key light\"\n  },\n\n  \"scene\": {\n    \"location\": \"infinite white cyclorama studio (seamless wall-to-floor curve)\",\n    \"time_of_day\": \"n/a (controlled studio lighting)\",\n    \"environment_details\": \"polished white epoxy floor reflecting subtle pink/cyan rim lights; no crowd\"\n  },\n\n  \"visual_details\": {\n    \"primary_action\": \"performer executes booty-dance routine for full 8 s while spitting rap hook; camera’s lateral sway syncs with hip pops\",\n    \"secondary_motion\": \"thin RGB floor strips flash pink-aqua on each bass hit\",\n    \"duration\": \"8s\",\n    \"resolution\": \"4K\",\n    \"special_effects\": [\n      \"edge-lit panels sweep color across white surfaces\",\n      \"micro-lens flares on chrome accessories\",\n      \"sub-10 % slow-shutter smears on quickest hip pulses (safe threshold)\"\n    ]\n  },\n\n  \"cinematography\": {\n    \"lighting\": \"high-key softbox grid overhead (5600 K); magenta accent strip camera left, cyan accent camera right; gentle 0.5 s strobe on every fourth snare (≤ 0.5 stop)\",\n    \"style\": \"glossy hyper-real studio aesthetic\",\n    \"tone\": \"playful, high-energy\"\n  },\n\n  \"audio\": {\n    \"music_track\": \"trap-pop beat at 190 BPM, heavy 808 sub, crisp claps on 2 & 4\",\n    \"ambience\": \"subtle studio room tone (−60 LUFS)\",\n    \"vocal_processing\": \"tight slapback delay (60 ms); gentle de-ess at 6 kHz\"\n  },\n\n  \"dialogue\": {\n    \"spoken_lines\": [\n      {\n        \"speaker\": \"performer\",\n        \"line\": \"Grok4 crashin' in, meltin' chips like fire,\",\n        \"delivery\": \"assertive bounce, lands squarely on beat\"\n      },\n      {\n        \"speaker\": \"performer\",\n        \"line\": \"GPT-5 wired, but Grok takes it higher!\",\n        \"delivery\": \"rising intonation with breathy laugh tail\"\n      }\n    ],\n    \"subtitles\": false\n  },\n\n  \"color_palette\": {\n    \"name\": \"Neon on White\",\n    \"primary\": \"#FF007F\",\n    \"secondary\": \"#00FFD5\",\n    \"accents\": \"#C0C0C0\",\n    \"background\": \"#FFFFFF\"\n  },\n\n  \"visual_rules\": {\n    \"prohibited_elements\": [\n      \"brand logos\",\n      \"explicit nudity\",\n      \"onscreen text overlays\",\n      \"slow-motion exceeding 10 % stretch\",\n      \"lens dirt or burn-in frame lines\"\n    ]\n  }\n}",
+    "language": "en",
+    "platform": "generic_video",
+    "style": "video",
+    "categories": [
+      "video",
+      "cinematic"
+    ],
+    "quality_score": 8,
+    "source": "awesome-video-prompts"
+  },
+  {
+    "id": "awv-009",
+    "title": "{\"description\": \"A young woman with pale skin and long black",
+    "description": "awesome-video-prompts 精选视频提示词",
+    "prompt_text": "{\n  \"shot\": {\n    \"composition\": \"Medium shot, 35mm lens, shot on ARRI Alexa Mini LF, shallow depth of field, centered framing\",\n    \"camera_motion\": \"static camera with slight handheld sway for liveliness\",\n    \"frame_rate\": \"24fps\",\n    \"film_grain\": \"subtle Kodak Vision3 250D grain overlay\"\n  },\n  \"subject\": {\n    \"description\": \"A young woman with pale skin and long black wavy hair, dressed in a crisp white button-up shirt, a slim black tie, and dark tailored trousers\",\n    \"wardrobe\": \"white dress shirt neatly tucked, black tie loosely knotted, dark fitted trousers, casual yet polished\",\n    \"character_motion\": \"she raises both hands playfully like claws and winks with one eye, holding the pose for a beat\"\n  },\n  \"scene\": {\n    \"location\": \"minimalist indoor studio hallway with matte gray walls and industrial door labeled with signage\",\n    \"time_of_day\": \"midday with soft diffused light\",\n    \"environment\": \"clean neutral-toned space, subtle overhead lighting, muted background for focus on subject\"\n  },\n  \"visual_details\": {\n    \"action\": \"as the woman strikes her playful claw pose and winks, a pixel art character appears in the lower right corner, mimicking her motion in perfect sync with exaggerated cartoonish expression\",\n    \"props\": \"visible door with white 'DO NOT OPEN' label, gray paneling, studio floor tiles\"\n  },\n  \"cinematography\": {\n    \"lighting\": \"soft top-lighting with a hint of bounce to preserve facial charm and skin tone\",\n    \"tone\": \"lighthearted, whimsical, charming with a touch of surreal contrast between realism and pixel art\"\n  },\n  \"audio\": {\n    \"ambient\": \"soft studio room tone, faint echo of movement\",\n    \"sound_effects\": \"light chime as both the woman and pixel character raise their hands, soft digital pop as pixel character appears\"\n  },\n  \"color_palette\": \"neutral grays with pops of black and white, slight pastel blush tones in the pixel character for warmth\",\n  \"dialogue\": {\n    \"character\": \"Woman\",\n    \"line\": \"(cheerfully, winking) \\\"Rawr! I'm pixel-perfect!\\\"\",\n    \"subtitles\": false\n  }\n}",
+    "language": "en",
+    "platform": "generic_video",
+    "style": "video",
+    "categories": [
+      "video",
+      "cinematic"
+    ],
+    "quality_score": 8,
+    "source": "awesome-video-prompts"
+  },
+  {
+    "id": "awv-010",
+    "title": "{\"description\": \"A towering, snow-white Yeti with shaggy fur",
+    "description": "awesome-video-prompts 精选视频提示词",
+    "prompt_text": "{\n  \"shot\": {\n    \"composition\": \"Medium shot, vertical format, handheld camera\",\n    \"camera_motion\": \"slight natural shake\",\n    \"frame_rate\": \"30fps\",\n    \"film_grain\": \"none\"\n  },\n  \"subject\": {\n    \"description\": \"A towering, snow-white Yeti with shaggy fur and expressive blue eyes\",\n    \"wardrobe\": \"slightly oversized white T-shirt with the name 'Emily' in bold, blood-red letters across the chest\"\n  },\n  \"scene\": {\n    \"location\": \"lush forest clearing\",\n    \"time_of_day\": \"daytime\",\n    \"environment\": \"sunlight filtering through the canopy, creating dappled light patterns on the forest floor\"\n  },\n  \"visual_details\": {\n    \"action\": \"Yeti holds a smartphone on a selfie stick, speaking excitedly to the camera before letting out a dramatic scream\",\n    \"props\": \"smartphone mounted on a selfie stick\"\n  },\n  \"cinematography\": {\n    \"lighting\": \"natural sunlight with soft shadows\",\n    \"tone\": \"lighthearted and humorous\"\n  },\n  \"audio\": {\n    \"ambient\": \"rustling leaves, distant bird calls\",\n    \"dialogue\": {\n      \"character\": \"Yeti\",\n      \"line\": \"Veo3 Fast is now available in the Gemini app—three videos per day! People are going to prompt me like crazy!\",\n      \"subtitles\": false\n    },\n    \"effects\": \"sudden loud scream, flapping wings of startled birds\"\n  },\n  \"color_palette\": \"naturalistic with earthy greens and browns; bold red lettering on shirt provides contrast\"\n}",
+    "language": "en",
+    "platform": "generic_video",
+    "style": "video",
+    "categories": [
+      "video",
+      "cinematic"
+    ],
+    "quality_score": 8,
+    "source": "awesome-video-prompts"
+  }
+]
