@@ -1,0 +1,22 @@
+# 独立视频提示词优化引擎配置（与图片 prompt_engine config.yaml 分离）
+server:
+  host: 0.0.0.0
+  port: 8020
+
+knowledge:
+  enabled: true
+  persist_dir: video_prompts_db
+  retrieval:
+    top_k: 3
+
+llm:
+  # provider: minimax | openai_compat | gemini（图片引擎同语义，视频引擎独立实现）
+  provider: openai_compat
+  model: ""
+  api_key: ""
+  base_url: ""
+  timeout: 60
+
+optimizer:
+  cache_size: 512
+  max_retries: 2

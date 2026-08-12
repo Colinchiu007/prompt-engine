@@ -1,0 +1,8252 @@
+{
+  "scene": [
+    {
+      "zh": "透明背景",
+      "en": "transparent_background"
+    },
+    {
+      "zh": "白色背景",
+      "en": "white_background"
+    },
+    {
+      "zh": "黑色背景",
+      "en": "black_background"
+    },
+    {
+      "zh": "灰色背景",
+      "en": "grey_background"
+    },
+    {
+      "zh": "棕褐色背景",
+      "en": "tan_background"
+    },
+    {
+      "zh": "米色背景",
+      "en": "beige_background"
+    },
+    {
+      "zh": "棕色背景",
+      "en": "brown_background"
+    },
+    {
+      "zh": "双色调背景",
+      "en": "two-tone_background"
+    },
+    {
+      "zh": "多彩的背景",
+      "en": "multicolored_background"
+    },
+    {
+      "zh": "彩虹背景",
+      "en": "rainbow_background"
+    },
+    {
+      "zh": "前景模糊",
+      "en": "blurry_foreground"
+    },
+    {
+      "zh": "渐变的背景",
+      "en": "gradient_background"
+    },
+    {
+      "zh": "抽象背景",
+      "en": "abstract_background"
+    },
+    {
+      "zh": "菱形背景",
+      "en": "argyle_background"
+    },
+    {
+      "zh": "方格背景",
+      "en": "checkered_background"
+    },
+    {
+      "zh": "花朵点缀的背景",
+      "en": "floral_background"
+    },
+    {
+      "zh": "花卉图案装饰的背景",
+      "en": "foral_background"
+    },
+    {
+      "zh": "圆斑背景",
+      "en": "striped_background"
+    },
+    {
+      "zh": "赛博朋克",
+      "en": "cyberpunk"
+    },
+    {
+      "zh": "风景",
+      "en": "scenery"
+    },
+    {
+      "zh": "城市灯光背景",
+      "en": "city_lights"
+    },
+    {
+      "zh": "星空背景",
+      "en": "starry_background"
+    },
+    {
+      "zh": "闪着星光的背景",
+      "en": "sparkle_background"
+    },
+    {
+      "zh": "气泡背景",
+      "en": "bubble_background"
+    },
+    {
+      "zh": "时钟背景",
+      "en": "clock_background"
+    },
+    {
+      "zh": "网点图背景",
+      "en": "halftone_background"
+    },
+    {
+      "zh": "桃色背景",
+      "en": "heart_background"
+    },
+    {
+      "zh": "蜂窝风格背景",
+      "en": "honeycomb_background"
+    },
+    {
+      "zh": "格子呢背景",
+      "en": "plaid_background"
+    },
+    {
+      "zh": "简单的背景",
+      "en": "simple_background"
+    },
+    {
+      "zh": "科技幻想",
+      "en": "ban"
+    },
+    {
+      "zh": "露脐上衣下摆外露",
+      "en": "crop_top_overhang"
+    },
+    {
+      "zh": "相机取景框",
+      "en": "viewfinder"
+    },
+    {
+      "zh": "背景或画框是圆角",
+      "en": "rounded_corners"
+    },
+    {
+      "zh": "边框",
+      "en": "border"
+    },
+    {
+      "zh": "一部分画到了背景框外",
+      "en": "outside_border"
+    },
+    {
+      "zh": "柱状画布背景",
+      "en": "pillarboxed"
+    },
+    {
+      "zh": "套着画框(背景)",
+      "en": "windowboxed"
+    },
+    {
+      "zh": "回忆场景",
+      "en": "flashback"
+    },
+    {
+      "zh": "背景文字",
+      "en": "background_text"
+    },
+    {
+      "zh": "文字背景",
+      "en": "wall_of_text"
+    },
+    {
+      "zh": "模糊背景",
+      "en": "blurred background"
+    },
+    {
+      "zh": "春",
+      "en": "in spring"
+    },
+    {
+      "zh": "夏",
+      "en": "in summer"
+    },
+    {
+      "zh": "秋",
+      "en": "in autumn"
+    },
+    {
+      "zh": "冬",
+      "en": "in winter"
+    },
+    {
+      "zh": "秋景",
+      "en": "(autumn maple forest:1.3),(very few fallen leaves),(path)"
+    },
+    {
+      "zh": "白天",
+      "en": "day"
+    },
+    {
+      "zh": "黄昏",
+      "en": "dusk"
+    },
+    {
+      "zh": "夜晚",
+      "en": "night"
+    },
+    {
+      "zh": "下雨",
+      "en": "rain"
+    },
+    {
+      "zh": "冰雪",
+      "en": "snow,ice"
+    },
+    {
+      "zh": "雪花",
+      "en": "snowflakes"
+    },
+    {
+      "zh": "闪电",
+      "en": "lighting"
+    },
+    {
+      "zh": "彩虹",
+      "en": "rainbow"
+    },
+    {
+      "zh": "流星雨",
+      "en": "meteor shower"
+    },
+    {
+      "zh": "多云",
+      "en": "cloudy"
+    },
+    {
+      "zh": "雨天",
+      "en": "rainy days"
+    },
+    {
+      "zh": "雨中",
+      "en": "in the rain"
+    },
+    {
+      "zh": "流星",
+      "en": "shooting star"
+    },
+    {
+      "zh": "柔和的雾",
+      "en": "smooth fog"
+    },
+    {
+      "zh": "暴风雨",
+      "en": "thunderstorms"
+    },
+    {
+      "zh": "暴风雨的海面",
+      "en": "stormy ocean"
+    },
+    {
+      "zh": "龙卷风",
+      "en": "Tornado"
+    },
+    {
+      "zh": "海洋背景",
+      "en": "ocean backdrop"
+    },
+    {
+      "zh": "闪电",
+      "en": "lightning"
+    },
+    {
+      "zh": "好天好水",
+      "en": "beautiful detailed sky,beautiful detailed water"
+    },
+    {
+      "zh": "海边日落",
+      "en": "beautiful purple sunset at beach"
+    },
+    {
+      "zh": "山脉",
+      "en": "mountain"
+    },
+    {
+      "zh": "山丘",
+      "en": "hills"
+    },
+    {
+      "zh": "山上",
+      "en": "on a hill"
+    },
+    {
+      "zh": "山顶",
+      "en": "the top of the hill"
+    },
+    {
+      "zh": "森林",
+      "en": "forest"
+    },
+    {
+      "zh": "树林",
+      "en": "grove"
+    },
+    {
+      "zh": "竹林",
+      "en": "bamboo forest"
+    },
+    {
+      "zh": "梦幻之森(虚幻感.光粒子幽静)",
+      "en": "Dreamy forest"
+    },
+    {
+      "zh": "大草原",
+      "en": "savanna"
+    },
+    {
+      "zh": "高原",
+      "en": "plateau"
+    },
+    {
+      "zh": "山谷",
+      "en": "valley"
+    },
+    {
+      "zh": "峡谷",
+      "en": "canyon"
+    },
+    {
+      "zh": "悬崖",
+      "en": "cliff"
+    },
+    {
+      "zh": "绿洲",
+      "en": "oasis"
+    },
+    {
+      "zh": "荒地",
+      "en": "wasteland"
+    },
+    {
+      "zh": "冰川",
+      "en": "glacier"
+    },
+    {
+      "zh": "火山",
+      "en": "volcano"
+    },
+    {
+      "zh": "瀑布",
+      "en": "waterfall"
+    },
+    {
+      "zh": "溪流",
+      "en": "stream"
+    },
+    {
+      "zh": "河流",
+      "en": "river"
+    },
+    {
+      "zh": "湖泊",
+      "en": "lake"
+    },
+    {
+      "zh": "海洋",
+      "en": "ocean"
+    },
+    {
+      "zh": "大海",
+      "en": "sea"
+    },
+    {
+      "zh": "海边",
+      "en": "beach"
+    },
+    {
+      "zh": "海滩",
+      "en": "on the beach"
+    },
+    {
+      "zh": "海边",
+      "en": "over the sea"
+    },
+    {
+      "zh": "波浪",
+      "en": "waves"
+    },
+    {
+      "zh": "海藻",
+      "en": "seaweed"
+    },
+    {
+      "zh": "水中",
+      "en": "underwater"
+    },
+    {
+      "zh": "浮岛",
+      "en": "floating island"
+    },
+    {
+      "zh": "繁花草甸",
+      "en": "flowers meadows"
+    },
+    {
+      "zh": "花田",
+      "en": "flower field"
+    },
+    {
+      "zh": "花海",
+      "en": "flower sea"
+    },
+    {
+      "zh": "玫瑰花瓣",
+      "en": "rose petals"
+    },
+    {
+      "zh": "落花",
+      "en": "falling petals"
+    },
+    {
+      "zh": "草地",
+      "en": "in a meadow"
+    },
+    {
+      "zh": "田园",
+      "en": "field"
+    },
+    {
+      "zh": "麦田",
+      "en": "wheat field"
+    },
+    {
+      "zh": "稻田",
+      "en": "rice paddy"
+    },
+    {
+      "zh": "温泉",
+      "en": "onsen"
+    },
+    {
+      "zh": "滴水",
+      "en": "dripping"
+    },
+    {
+      "zh": "漩涡",
+      "en": "swirl"
+    },
+    {
+      "zh": "涟漪",
+      "en": "ripples"
+    },
+    {
+      "zh": "阿尔卑斯山脉",
+      "en": "Alps"
+    },
+    {
+      "zh": "沙漠",
+      "en": "on a desert"
+    },
+    {
+      "zh": "天空",
+      "en": "sky"
+    },
+    {
+      "zh": "倾斜的天空",
+      "en": "gradient_sky"
+    },
+    {
+      "zh": "落日",
+      "en": "sunset"
+    },
+    {
+      "zh": "夜空",
+      "en": "night_sky"
+    },
+    {
+      "zh": "星空",
+      "en": "starry_sky"
+    },
+    {
+      "zh": "星星(天空中的)",
+      "en": "star_(sky)"
+    },
+    {
+      "zh": "星星轨迹",
+      "en": "star_trail"
+    },
+    {
+      "zh": "月亮",
+      "en": "moon"
+    },
+    {
+      "zh": "月牙",
+      "en": "crescent"
+    },
+    {
+      "zh": "新月",
+      "en": "crescent_moon"
+    },
+    {
+      "zh": "满月",
+      "en": "full_moon"
+    },
+    {
+      "zh": "猩红月亮",
+      "en": "scarlet_moon"
+    },
+    {
+      "zh": "超级银河",
+      "en": "hyper_galaxy"
+    },
+    {
+      "zh": "宇宙",
+      "en": "universe"
+    },
+    {
+      "zh": "太空",
+      "en": "space"
+    },
+    {
+      "zh": "星球",
+      "en": "planet"
+    },
+    {
+      "zh": "空间站",
+      "en": "from_space_station"
+    },
+    {
+      "zh": "卫星",
+      "en": "satellite"
+    },
+    {
+      "zh": "月的",
+      "en": "lunar"
+    },
+    {
+      "zh": "卷云",
+      "en": "cirrus"
+    },
+    {
+      "zh": "卷积云类",
+      "en": "cirrocumulus"
+    },
+    {
+      "zh": "卷层云类",
+      "en": "cirrostratus"
+    },
+    {
+      "zh": "高积云类",
+      "en": "altocumulus"
+    },
+    {
+      "zh": "高层云类",
+      "en": "altostratus"
+    },
+    {
+      "zh": "层云",
+      "en": "stratus"
+    },
+    {
+      "zh": "层积云类",
+      "en": "stratocumulus"
+    },
+    {
+      "zh": "积云",
+      "en": "cumulus"
+    },
+    {
+      "zh": "积雨云类",
+      "en": "cumulonimbus"
+    },
+    {
+      "zh": "雨层云",
+      "en": "Nimbostratus"
+    },
+    {
+      "zh": "毛卷云",
+      "en": "cirrus_fibratus"
+    },
+    {
+      "zh": "钩卷云",
+      "en": "cirrus_uncinus"
+    },
+    {
+      "zh": "密卷云",
+      "en": "cirrus_spissatus"
+    },
+    {
+      "zh": "絮卷云",
+      "en": "cirrus_floccus"
+    },
+    {
+      "zh": "堡卷云",
+      "en": "cirrus_castellanus"
+    },
+    {
+      "zh": "乱卷云",
+      "en": "cirrus_intortus"
+    },
+    {
+      "zh": "层状卷积云",
+      "en": "cirrocumulus_stratiformis"
+    },
+    {
+      "zh": "絮状卷积云",
+      "en": "cirrocumulus_floccus"
+    },
+    {
+      "zh": "堡状卷积云",
+      "en": "cirrocumulus_castellanus"
+    },
+    {
+      "zh": "网状卷积云",
+      "en": "cirrocumulus_lacunosus"
+    },
+    {
+      "zh": "毛卷层云",
+      "en": "cirrostratus_fibratus"
+    },
+    {
+      "zh": "雾卷层云",
+      "en": "cirrostratus_nebulosus"
+    },
+    {
+      "zh": "层状高积云",
+      "en": "altocumulus_strataformis"
+    },
+    {
+      "zh": "荚状高积云",
+      "en": "altocumulus_lenticularis"
+    },
+    {
+      "zh": "堡状高积云",
+      "en": "altocumulus_castellanus"
+    },
+    {
+      "zh": "絮状高积云",
+      "en": "altocumulus_floccus"
+    },
+    {
+      "zh": "网状高积云",
+      "en": "altocumulus_lacunosus"
+    },
+    {
+      "zh": "波状高层云",
+      "en": "altostratus_undulatus"
+    },
+    {
+      "zh": "复合高层云",
+      "en": "altostratus_duplicates"
+    },
+    {
+      "zh": "破片高层云",
+      "en": "altostratus_pannus"
+    },
+    {
+      "zh": "透光高层云",
+      "en": "altostratus_translucidus"
+    },
+    {
+      "zh": "蔽光高层云",
+      "en": "altostratus_opacus"
+    },
+    {
+      "zh": "辐状高层云",
+      "en": "altostratus_radiatus"
+    },
+    {
+      "zh": "乳状高层云",
+      "en": "altostratus_mammatus"
+    },
+    {
+      "zh": "碎层云",
+      "en": "stratus_fractus"
+    },
+    {
+      "zh": "雾层云",
+      "en": "stratus_nebulosus"
+    },
+    {
+      "zh": "波层云",
+      "en": "stratus_undulatus"
+    },
+    {
+      "zh": "层状层积云",
+      "en": "stratocumulus_stratiformis"
+    },
+    {
+      "zh": "积雨性层积云",
+      "en": "stratocumulus_cumulogentis"
+    },
+    {
+      "zh": "堡状层积云",
+      "en": "stratocumulus_castellanus"
+    },
+    {
+      "zh": "荚状层积云",
+      "en": "stratocumulus_lenticularis"
+    },
+    {
+      "zh": "絮状层积云",
+      "en": "stratocumulus_lacunosus"
+    },
+    {
+      "zh": "淡积云",
+      "en": "cumulus_humilis"
+    },
+    {
+      "zh": "中积云",
+      "en": "cumulus_mediocris"
+    },
+    {
+      "zh": "浓积云",
+      "en": "cumulus_congestus"
+    },
+    {
+      "zh": "碎积云",
+      "en": "cumulus_fractus"
+    },
+    {
+      "zh": "秃积雨云",
+      "en": "cumulonimbus_calvus"
+    },
+    {
+      "zh": "鬃积雨云",
+      "en": "cumulonimbus_capillatus"
+    },
+    {
+      "zh": "砧积雨云",
+      "en": "cumulonimbus_incus"
+    },
+    {
+      "zh": "室外",
+      "en": "outdoors"
+    },
+    {
+      "zh": "城堡",
+      "en": "castle"
+    },
+    {
+      "zh": "赛博朋克城市",
+      "en": "cyberpunk city"
+    },
+    {
+      "zh": "繁华都市",
+      "en": "Bustling city"
+    },
+    {
+      "zh": "霓虹灯",
+      "en": "neon lights"
+    },
+    {
+      "zh": "路灯",
+      "en": "street lamp"
+    },
+    {
+      "zh": "摩天楼",
+      "en": "skyscraper"
+    },
+    {
+      "zh": "建筑",
+      "en": "building"
+    },
+    {
+      "zh": "哥特式建筑",
+      "en": "gothic architecture"
+    },
+    {
+      "zh": "古风建筑",
+      "en": "chinese style architecture"
+    },
+    {
+      "zh": "工业化古建筑",
+      "en": "Industrial wind,Chinese architecture"
+    },
+    {
+      "zh": "教堂",
+      "en": "church"
+    },
+    {
+      "zh": "大教堂",
+      "en": "cathedral"
+    },
+    {
+      "zh": "清真寺",
+      "en": "mosque"
+    },
+    {
+      "zh": "鸟居",
+      "en": "torii"
+    },
+    {
+      "zh": "神社",
+      "en": "gohei"
+    },
+    {
+      "zh": "寺庙",
+      "en": "temple"
+    },
+    {
+      "zh": "遗迹",
+      "en": "ruins"
+    },
+    {
+      "zh": "残骸",
+      "en": "remains"
+    },
+    {
+      "zh": "喷泉",
+      "en": "fountain"
+    },
+    {
+      "zh": "公园",
+      "en": "park"
+    },
+    {
+      "zh": "树屋",
+      "en": "treehouse"
+    },
+    {
+      "zh": "植物园",
+      "en": "botanical garden"
+    },
+    {
+      "zh": "坟墓",
+      "en": "grave"
+    },
+    {
+      "zh": "墓地",
+      "en": "graveyard"
+    },
+    {
+      "zh": "墓碑",
+      "en": "tombstone"
+    },
+    {
+      "zh": "巨大的石头物体",
+      "en": "monolith"
+    },
+    {
+      "zh": "拉平（悬挂）",
+      "en": "rappelling"
+    },
+    {
+      "zh": "港口",
+      "en": "harbor"
+    },
+    {
+      "zh": "桥",
+      "en": "bridge"
+    },
+    {
+      "zh": "铁轨",
+      "en": "railroad tracks"
+    },
+    {
+      "zh": "铁路",
+      "en": "railroad"
+    },
+    {
+      "zh": "铁路",
+      "en": "railway"
+    },
+    {
+      "zh": "火车站",
+      "en": "train station"
+    },
+    {
+      "zh": "巴士车站",
+      "en": "bus stop"
+    },
+    {
+      "zh": "电话亭",
+      "en": "phone booth"
+    },
+    {
+      "zh": "隧道",
+      "en": "tunnel"
+    },
+    {
+      "zh": "机场",
+      "en": "airport"
+    },
+    {
+      "zh": "摩天轮",
+      "en": "ferris wheel"
+    },
+    {
+      "zh": "旋转木马",
+      "en": "carousel"
+    },
+    {
+      "zh": "水上乐园",
+      "en": "waterpark"
+    },
+    {
+      "zh": "体育场",
+      "en": "stadium"
+    },
+    {
+      "zh": "竞技场",
+      "en": "arena"
+    },
+    {
+      "zh": "礼堂",
+      "en": "Auditorium"
+    },
+    {
+      "zh": "音乐会",
+      "en": "concert"
+    },
+    {
+      "zh": "市场摊位",
+      "en": "market stall"
+    },
+    {
+      "zh": "商店",
+      "en": "shop"
+    },
+    {
+      "zh": "饭店",
+      "en": "restaurant"
+    },
+    {
+      "zh": "面包店",
+      "en": "bakery"
+    },
+    {
+      "zh": "便利店",
+      "en": "convenience store"
+    },
+    {
+      "zh": "超市",
+      "en": "supermarket"
+    },
+    {
+      "zh": "药店",
+      "en": "pharmacy"
+    },
+    {
+      "zh": "酒吧",
+      "en": "bar"
+    },
+    {
+      "zh": "居酒屋",
+      "en": "izakaya"
+    },
+    {
+      "zh": "咖啡馆",
+      "en": "cafe"
+    },
+    {
+      "zh": "咖啡馆",
+      "en": "coffee house"
+    },
+    {
+      "zh": "吊架；秋千",
+      "en": "Trapeze"
+    },
+    {
+      "zh": "保龄球馆",
+      "en": "bowling alley"
+    },
+    {
+      "zh": "健身房",
+      "en": "gym"
+    },
+    {
+      "zh": "图书馆",
+      "en": "library"
+    },
+    {
+      "zh": "美术馆",
+      "en": "art gallery"
+    },
+    {
+      "zh": "博物馆",
+      "en": "museum"
+    },
+    {
+      "zh": "天文馆",
+      "en": "planetarium"
+    },
+    {
+      "zh": "游泳池",
+      "en": "swimming pool"
+    },
+    {
+      "zh": "动物园",
+      "en": "zoo"
+    },
+    {
+      "zh": "水族馆",
+      "en": "aquarium"
+    },
+    {
+      "zh": "实验室",
+      "en": "laboratory"
+    },
+    {
+      "zh": "监狱",
+      "en": "prison"
+    },
+    {
+      "zh": "轮机舱",
+      "en": "engine room"
+    },
+    {
+      "zh": "仓库",
+      "en": "warehouse"
+    },
+    {
+      "zh": "工作坊",
+      "en": "workshop"
+    },
+    {
+      "zh": "法庭",
+      "en": "courtroom"
+    },
+    {
+      "zh": "剧院",
+      "en": "theater"
+    },
+    {
+      "zh": "电影院",
+      "en": "movie theater"
+    },
+    {
+      "zh": "台球桌",
+      "en": "billiard"
+    },
+    {
+      "zh": "赌场",
+      "en": "casino"
+    },
+    {
+      "zh": "游乐场",
+      "en": "playground"
+    },
+    {
+      "zh": "西罗马建筑",
+      "en": "greco-roman architectur"
+    },
+    {
+      "zh": "罗马街道",
+      "en": "in the romanesque architecture streets"
+    },
+    {
+      "zh": "栏杆",
+      "en": "handrail"
+    },
+    {
+      "zh": "贫民窟",
+      "en": "shanty town/slum"
+    },
+    {
+      "zh": "现代欧式建筑",
+      "en": "modern,Europe"
+    },
+    {
+      "zh": "建筑废墟",
+      "en": "building_ruins"
+    },
+    {
+      "zh": "游乐园",
+      "en": "amusement_park"
+    },
+    {
+      "zh": "迪士尼乐园",
+      "en": "Disney_land"
+    },
+    {
+      "zh": "摔角场",
+      "en": "wrestling_ring"
+    },
+    {
+      "zh": "日本旅馆",
+      "en": "Japanese_hotel"
+    },
+    {
+      "zh": "监狱酒吧",
+      "en": "jail_bars"
+    },
+    {
+      "zh": "在电影院里",
+      "en": "in_the_movie_theatre"
+    },
+    {
+      "zh": "建筑",
+      "en": "architecture"
+    },
+    {
+      "zh": "建筑",
+      "en": "magnificent_architecture"
+    },
+    {
+      "zh": "东亚建筑",
+      "en": "east_asian_architecture"
+    },
+    {
+      "zh": "中式阁楼",
+      "en": "chinese_style_loft"
+    },
+    {
+      "zh": "传统中式客房",
+      "en": "traditional_chinese_room"
+    },
+    {
+      "zh": "塔楼",
+      "en": "turret"
+    },
+    {
+      "zh": "塔",
+      "en": "tower"
+    },
+    {
+      "zh": "灯塔",
+      "en": "at the lighthouse"
+    },
+    {
+      "zh": "水库",
+      "en": "reservoir"
+    },
+    {
+      "zh": "桥下",
+      "en": "under_bridge"
+    },
+    {
+      "zh": "瓦砾|废墟",
+      "en": "rubble_ruins"
+    },
+    {
+      "zh": "城市",
+      "en": "city"
+    },
+    {
+      "zh": "市中心",
+      "en": "downtown"
+    },
+    {
+      "zh": "城市风景",
+      "en": "cityscape"
+    },
+    {
+      "zh": "大道",
+      "en": "in_main_street"
+    },
+    {
+      "zh": "路口",
+      "en": "Intersection"
+    },
+    {
+      "zh": "街道",
+      "en": "street"
+    },
+    {
+      "zh": "大街",
+      "en": "avenue"
+    },
+    {
+      "zh": "小巷",
+      "en": "alley"
+    },
+    {
+      "zh": "人群",
+      "en": "crowd"
+    },
+    {
+      "zh": "路",
+      "en": "road"
+    },
+    {
+      "zh": "路径",
+      "en": "path"
+    },
+    {
+      "zh": "路面",
+      "en": "pavement"
+    },
+    {
+      "zh": "路标",
+      "en": "road_sign"
+    },
+    {
+      "zh": "路障",
+      "en": "traffic_cone"
+    },
+    {
+      "zh": "路灯",
+      "en": "lamppost"
+    },
+    {
+      "zh": "栅栏",
+      "en": "fence"
+    },
+    {
+      "zh": "栏杆",
+      "en": "railing"
+    },
+    {
+      "zh": "长凳",
+      "en": "bench"
+    },
+    {
+      "zh": "草坪",
+      "en": "lawn"
+    },
+    {
+      "zh": "自动贩卖机",
+      "en": "vending_machine"
+    },
+    {
+      "zh": "食品摊",
+      "en": "food_stand"
+    },
+    {
+      "zh": "城市高楼夜景背景",
+      "en": "cityscape backdrop,rooftop or high-rise balcony,shallow depth of field,bokeh from city lights"
+    },
+    {
+      "zh": "室内",
+      "en": "indoor"
+    },
+    {
+      "zh": "卧室",
+      "en": "bedroom"
+    },
+    {
+      "zh": "教室",
+      "en": "classroom"
+    },
+    {
+      "zh": "俱乐部",
+      "en": "clubroom"
+    },
+    {
+      "zh": "昏暗的夜总会背景",
+      "en": "dark nightclub background"
+    },
+    {
+      "zh": "宿舍",
+      "en": "dormitory"
+    },
+    {
+      "zh": "自助餐厅",
+      "en": "cafeteria"
+    },
+    {
+      "zh": "厨房",
+      "en": "kitchen"
+    },
+    {
+      "zh": "厕所隔间",
+      "en": "toilet stall"
+    },
+    {
+      "zh": "医务室",
+      "en": "infirmary"
+    },
+    {
+      "zh": "美术室",
+      "en": "art room"
+    },
+    {
+      "zh": "温室",
+      "en": "greenhouse"
+    },
+    {
+      "zh": "地下室",
+      "en": "basement"
+    },
+    {
+      "zh": "服务器机房",
+      "en": "server room"
+    },
+    {
+      "zh": "配电房",
+      "en": "electrical room"
+    },
+    {
+      "zh": "地库",
+      "en": "dungeon"
+    },
+    {
+      "zh": "宅男房间",
+      "en": "otaku room"
+    },
+    {
+      "zh": "舞台",
+      "en": "stage"
+    },
+    {
+      "zh": "浴室",
+      "en": "bathing"
+    },
+    {
+      "zh": "楼梯",
+      "en": "stairs"
+    },
+    {
+      "zh": "宫廷",
+      "en": "palace"
+    },
+    {
+      "zh": "床",
+      "en": "bed"
+    },
+    {
+      "zh": "衣柜",
+      "en": "wardrobe"
+    },
+    {
+      "zh": "台灯",
+      "en": "desk lamp"
+    },
+    {
+      "zh": "沙发",
+      "en": "couch"
+    },
+    {
+      "zh": "榻榻米",
+      "en": "tatami"
+    },
+    {
+      "zh": "被炉",
+      "en": "kotatsu"
+    },
+    {
+      "zh": "壁炉",
+      "en": "fireplace"
+    },
+    {
+      "zh": "桌子",
+      "en": "table"
+    },
+    {
+      "zh": "课桌",
+      "en": "school_desk"
+    },
+    {
+      "zh": "椅子",
+      "en": "chair"
+    },
+    {
+      "zh": "扶手椅",
+      "en": "armchair"
+    },
+    {
+      "zh": "躺椅",
+      "en": "lounge_chair"
+    },
+    {
+      "zh": "沙滩椅",
+      "en": "beach_chair"
+    },
+    {
+      "zh": "折叠椅",
+      "en": "folding_chair"
+    },
+    {
+      "zh": "办公椅",
+      "en": "office_chair"
+    },
+    {
+      "zh": "轮椅",
+      "en": "wheelchair"
+    },
+    {
+      "zh": "隐形椅子",
+      "en": "invisible_chair"
+    },
+    {
+      "zh": "窗",
+      "en": "window_"
+    },
+    {
+      "zh": "窗扇",
+      "en": "sash"
+    },
+    {
+      "zh": "窗帘",
+      "en": "curtains"
+    },
+    {
+      "zh": "推拉门",
+      "en": "sliding_doors"
+    },
+    {
+      "zh": "门",
+      "en": "door"
+    },
+    {
+      "zh": "衣架",
+      "en": "clothes_rack"
+    },
+    {
+      "zh": "空调",
+      "en": "air_conditioner"
+    },
+    {
+      "zh": "床垫；褥子",
+      "en": "mattress"
+    },
+    {
+      "zh": "床单",
+      "en": "bed_sheet"
+    },
+    {
+      "zh": "日本床垫",
+      "en": "futon"
+    },
+    {
+      "zh": "枕头",
+      "en": "pillow"
+    },
+    {
+      "zh": "坐垫",
+      "en": "cushion"
+    },
+    {
+      "zh": "团子抱枕",
+      "en": "dumpling_Hug_Pillow"
+    },
+    {
+      "zh": "抱枕",
+      "en": "pillow_hug"
+    },
+    {
+      "zh": "Yes/No枕头",
+      "en": "yes-no_pillow"
+    },
+    {
+      "zh": "毛绒玩偶",
+      "en": "stuffed_animal"
+    },
+    {
+      "zh": "毛绒兔子",
+      "en": "stuffed_bunny"
+    },
+    {
+      "zh": "地毯",
+      "en": "carpet"
+    },
+    {
+      "zh": "浴室",
+      "en": "bathroom"
+    },
+    {
+      "zh": "淋浴喷头",
+      "en": "shower_head"
+    },
+    {
+      "zh": "马桶",
+      "en": "toilet"
+    },
+    {
+      "zh": "蹲便器",
+      "en": "squat_toilet"
+    },
+    {
+      "zh": "瓷砖",
+      "en": "tiles"
+    },
+    {
+      "zh": "浴缸",
+      "en": "bathtub"
+    },
+    {
+      "zh": "牙膏",
+      "en": "Toothpaste"
+    },
+    {
+      "zh": "肥皂",
+      "en": "soap"
+    },
+    {
+      "zh": "橡皮鸭",
+      "en": "rubber_duck"
+    },
+    {
+      "zh": "新年",
+      "en": "new year"
+    },
+    {
+      "zh": "兔年",
+      "en": "year of the rabbit"
+    },
+    {
+      "zh": "情人节",
+      "en": "valentine"
+    },
+    {
+      "zh": "元宵节",
+      "en": "lantern festival"
+    },
+    {
+      "zh": "夏日祭",
+      "en": "summer festival"
+    },
+    {
+      "zh": "七夕节",
+      "en": "tanabata"
+    },
+    {
+      "zh": "中秋节",
+      "en": "mid-autumn festival"
+    },
+    {
+      "zh": "万圣节",
+      "en": "halloween"
+    },
+    {
+      "zh": "圣诞节",
+      "en": "christmas"
+    },
+    {
+      "zh": "焰火",
+      "en": "fireworks"
+    },
+    {
+      "zh": "爆炸",
+      "en": "explosion"
+    },
+    {
+      "zh": "蒸汽",
+      "en": "water vapor"
+    },
+    {
+      "zh": "液体背景",
+      "en": "liquid background,Sputtered water"
+    },
+    {
+      "zh": "海边日落",
+      "en": "in the ocean"
+    },
+    {
+      "zh": "魔法环",
+      "en": "magic circles"
+    },
+    {
+      "zh": "荧光蘑菇森林",
+      "en": "fluorescent mushroom forests background"
+    },
+    {
+      "zh": "彩色泡泡",
+      "en": "(((colorful bubble)))"
+    },
+    {
+      "zh": "黄金时段照明",
+      "en": "golden hour lighting"
+    },
+    {
+      "zh": "强边缘光",
+      "en": "strong rim light"
+    },
+    {
+      "zh": "傍晚背对阳光",
+      "en": "against backlight at dusk"
+    },
+    {
+      "zh": "强阴影",
+      "en": "intense shadows"
+    },
+    {
+      "zh": "落地窗",
+      "en": "ceiling window"
+    },
+    {
+      "zh": "彩色玻璃",
+      "en": "colourful glass"
+    },
+    {
+      "zh": "染色玻璃",
+      "en": "stain glass"
+    },
+    {
+      "zh": "涂鸦墙",
+      "en": "Graffiti wall"
+    },
+    {
+      "zh": "马赛克背景",
+      "en": "mosaic background"
+    },
+    {
+      "zh": "夜色公园背景",
+      "en": "night park,tranquil atmosphere,soft streetlight glow,light and shadow on pathway,bright full moon,moonlight blending with street lamps,romantic mood,dreamy night scene,delicate lighting,premium aesthetic,cinematic,bokeh,shallow depth of field"
+    }
+  ],
+  "action": [
+    {
+      "zh": "站立",
+      "en": "standing"
+    },
+    {
+      "zh": "坐",
+      "en": "sitting"
+    },
+    {
+      "zh": "躺着的",
+      "en": "lying"
+    },
+    {
+      "zh": "倚靠|身体倾斜",
+      "en": "leaning"
+    },
+    {
+      "zh": "鞠躬",
+      "en": "bowing"
+    },
+    {
+      "zh": "仰躺",
+      "en": "on_back"
+    },
+    {
+      "zh": "侧卧",
+      "en": "on_side"
+    },
+    {
+      "zh": "趴着",
+      "en": "on_stomach"
+    },
+    {
+      "zh": "斜倒斜躺姿势",
+      "en": "reclining"
+    },
+    {
+      "zh": "正坐",
+      "en": "seiza"
+    },
+    {
+      "zh": "鸭子坐",
+      "en": "wariza"
+    },
+    {
+      "zh": "侧身坐",
+      "en": "yokozuwari"
+    },
+    {
+      "zh": "坐在桌子上",
+      "en": "lotus_position"
+    },
+    {
+      "zh": "蝴蝶坐",
+      "en": "butterfly_sitting"
+    },
+    {
+      "zh": "身体往后靠",
+      "en": "leaning_back"
+    },
+    {
+      "zh": "身体前倾",
+      "en": "leaning_forward"
+    },
+    {
+      "zh": "靠在一边",
+      "en": "leaning_to_the_side"
+    },
+    {
+      "zh": "靠在物体上",
+      "en": "leaning_on_object"
+    },
+    {
+      "zh": "弓身体",
+      "en": "arched_back"
+    },
+    {
+      "zh": "翘臀姿势",
+      "en": "bent_over"
+    },
+    {
+      "zh": "趴在地上并翘起脚",
+      "en": "the_pose"
+    },
+    {
+      "zh": "时尚姿势",
+      "en": "stylish_pose"
+    },
+    {
+      "zh": "跨坐",
+      "en": "straddling"
+    },
+    {
+      "zh": "倒立",
+      "en": "upside-down"
+    },
+    {
+      "zh": "胎儿姿势(躺)",
+      "en": "fetal_position"
+    },
+    {
+      "zh": "倚靠玻璃",
+      "en": "against_glass"
+    },
+    {
+      "zh": "浮在水上",
+      "en": "afloat"
+    },
+    {
+      "zh": "展示（后接部位）",
+      "en": "presenting"
+    },
+    {
+      "zh": "坐在床上",
+      "en": "sitting_on_bed"
+    },
+    {
+      "zh": "坐在课桌上",
+      "en": "sitting_on_desk"
+    },
+    {
+      "zh": "坐在大腿上",
+      "en": "sitting_on_lap"
+    },
+    {
+      "zh": "坐在人身上",
+      "en": "sitting_on_person"
+    },
+    {
+      "zh": "趴着翘臀",
+      "en": "top-down_bottom-up"
+    },
+    {
+      "zh": "俯卧后入",
+      "en": "prone_bone"
+    },
+    {
+      "zh": "靠墙",
+      "en": "against wall"
+    },
+    {
+      "zh": "看向观众",
+      "en": "looking_at_viewer"
+    },
+    {
+      "zh": "眼神接触（对视）",
+      "en": "eye_contact"
+    },
+    {
+      "zh": "回眸",
+      "en": "looking_back"
+    },
+    {
+      "zh": "人物视角向下看↘",
+      "en": "looking_down"
+    },
+    {
+      "zh": "人物视角抬头看↗",
+      "en": "looking_up"
+    },
+    {
+      "zh": "凝视",
+      "en": "stare"
+    },
+    {
+      "zh": "盯着看",
+      "en": "eyeball"
+    },
+    {
+      "zh": "看向侧面",
+      "en": "looking_to_the_side"
+    },
+    {
+      "zh": "看着别处",
+      "en": "looking_away"
+    },
+    {
+      "zh": "面向别处",
+      "en": "facing_away"
+    },
+    {
+      "zh": "展望未来",
+      "en": "looking_ahead"
+    },
+    {
+      "zh": "轻轻向侧面瞥",
+      "en": "sideways_glance"
+    },
+    {
+      "zh": "歪头",
+      "en": "head_tilt"
+    },
+    {
+      "zh": "低头",
+      "en": "head_down"
+    },
+    {
+      "zh": "看着另一个",
+      "en": "looking_at_another"
+    },
+    {
+      "zh": "看手机",
+      "en": "looking_at_phone"
+    },
+    {
+      "zh": "照镜子",
+      "en": "looking_at_mirror"
+    },
+    {
+      "zh": "看着手",
+      "en": "looking_at_hand"
+    },
+    {
+      "zh": "看食物",
+      "en": "looking_at_food"
+    },
+    {
+      "zh": "看着屏幕",
+      "en": "looking_at_screen"
+    },
+    {
+      "zh": "看着动物",
+      "en": "looking_at_animal"
+    },
+    {
+      "zh": "遥望",
+      "en": "looking_afar"
+    },
+    {
+      "zh": "向外看",
+      "en": "looking_outside"
+    },
+    {
+      "zh": "瞄准",
+      "en": "aiming"
+    },
+    {
+      "zh": "瞄准了读者(的视角)",
+      "en": "aiming_at_viewer"
+    },
+    {
+      "zh": "从衬衫下方瞥",
+      "en": "upshirt"
+    },
+    {
+      "zh": "从裙底瞥",
+      "en": "upshorts"
+    },
+    {
+      "zh": "人物倾斜",
+      "en": "gradient"
+    },
+    {
+      "zh": "盯着你",
+      "en": "stare at me"
+    },
+    {
+      "zh": "抬手",
+      "en": "arms_up"
+    },
+    {
+      "zh": "手交叉于胸前",
+      "en": "arms_crossed"
+    },
+    {
+      "zh": "交叉双臂",
+      "en": "crossed_arms"
+    },
+    {
+      "zh": "双手垂放",
+      "en": "arms_at_sides"
+    },
+    {
+      "zh": "单手垂放",
+      "en": "arm_at_side"
+    },
+    {
+      "zh": "手放在身后",
+      "en": "arms_behind_back"
+    },
+    {
+      "zh": "双手抱头",
+      "en": "arms_behind_head"
+    },
+    {
+      "zh": "手放头后",
+      "en": "arm_behind_head"
+    },
+    {
+      "zh": "单手背到身后",
+      "en": "arm_behind_back"
+    },
+    {
+      "zh": "双手手指交叉|双手紧握",
+      "en": "hands_clasped"
+    },
+    {
+      "zh": "双手紧握",
+      "en": "interlocked_fingers"
+    },
+    {
+      "zh": "用手支撑住",
+      "en": "arm_support"
+    },
+    {
+      "zh": "手在头上",
+      "en": "arm_above_head"
+    },
+    {
+      "zh": "伸出双臂",
+      "en": "outstretched_arms"
+    },
+    {
+      "zh": "双手交叉伸进袖子里",
+      "en": "hands_in_opposite_sleeves"
+    },
+    {
+      "zh": "双臂摆出V",
+      "en": "v_arms"
+    },
+    {
+      "zh": "双臂摆出W",
+      "en": "w_arms"
+    },
+    {
+      "zh": "锐利的手指甲",
+      "en": "sharp_fingernails"
+    },
+    {
+      "zh": "张开手指",
+      "en": "spread_fingers"
+    },
+    {
+      "zh": "手指没放在扳机上",
+      "en": "trigger_discipline"
+    },
+    {
+      "zh": "手指比W",
+      "en": "w"
+    },
+    {
+      "zh": "手臂被束缚",
+      "en": "bound_arms"
+    },
+    {
+      "zh": "多只手臂",
+      "en": "extra_arms"
+    },
+    {
+      "zh": "互挽手臂",
+      "en": "locked_arms"
+    },
+    {
+      "zh": "遮住关键部位的手臂",
+      "en": "convenient_arm"
+    },
+    {
+      "zh": "手炮",
+      "en": "arm_cannon"
+    },
+    {
+      "zh": "手臂丝带",
+      "en": "arm_ribbon"
+    },
+    {
+      "zh": "手臂往后拉",
+      "en": "arm_held_back"
+    },
+    {
+      "zh": "抱自己的双腿",
+      "en": "hugging_own_legs"
+    },
+    {
+      "zh": "颤抖",
+      "en": "trembling"
+    },
+    {
+      "zh": "翻白眼",
+      "en": "rolleyes"
+    },
+    {
+      "zh": "攥拳",
+      "en": "clenched hand"
+    },
+    {
+      "zh": "遮盖xx",
+      "en": "covering_xx"
+    },
+    {
+      "zh": "双手 V 手势",
+      "en": "double piece pose"
+    },
+    {
+      "zh": "双手拨头发",
+      "en": "hands in hair"
+    },
+    {
+      "zh": "将手藏起来",
+      "en": "hidden hands"
+    },
+    {
+      "zh": "张开双手",
+      "en": "open hands"
+    },
+    {
+      "zh": "双手相扣",
+      "en": "own hands clasped"
+    },
+    {
+      "zh": "双手相合",
+      "en": "own hands together"
+    },
+    {
+      "zh": "剪刀手",
+      "en": "peace sign"
+    },
+    {
+      "zh": "展示腋窝",
+      "en": "presenting armpit"
+    },
+    {
+      "zh": "张开双臂",
+      "en": "spread arms"
+    },
+    {
+      "zh": "扎头发",
+      "en": "tying hair"
+    },
+    {
+      "zh": "挥手(打招呼/告别)",
+      "en": "waving"
+    },
+    {
+      "zh": "指向看图的人",
+      "en": "pointing_at_viewer"
+    },
+    {
+      "zh": "指着自己",
+      "en": "pointing_at_self"
+    },
+    {
+      "zh": "翘大拇指",
+      "en": "thumbs_up"
+    },
+    {
+      "zh": "胜利手势",
+      "en": "v"
+    },
+    {
+      "zh": "双v",
+      "en": "double_v"
+    },
+    {
+      "zh": "OK手势",
+      "en": "ok_sign"
+    },
+    {
+      "zh": "向上指",
+      "en": "pointing_up"
+    },
+    {
+      "zh": "招手示意",
+      "en": "beckoning"
+    },
+    {
+      "zh": "敬礼",
+      "en": "salute"
+    },
+    {
+      "zh": "助威",
+      "en": "cheering"
+    },
+    {
+      "zh": "(有目的地)伸手",
+      "en": "reaching"
+    },
+    {
+      "zh": "朝画外伸手",
+      "en": "reaching_out"
+    },
+    {
+      "zh": "伸懒腰",
+      "en": "stretch"
+    },
+    {
+      "zh": "嘘手势",
+      "en": "shushing"
+    },
+    {
+      "zh": "手抵在嘴唇边",
+      "en": "finger_to_mouth"
+    },
+    {
+      "zh": "比出中指",
+      "en": "middle_finger"
+    },
+    {
+      "zh": "抬起食指",
+      "en": "index_finger_raised"
+    },
+    {
+      "zh": "猫爪手势",
+      "en": "cat_pose"
+    },
+    {
+      "zh": "爪手势",
+      "en": "claw_pose"
+    },
+    {
+      "zh": "招财猫手势(下弯手腕)",
+      "en": "paw_pose"
+    },
+    {
+      "zh": "手指枪手势",
+      "en": "finger_gun"
+    },
+    {
+      "zh": "指尖抵着指间",
+      "en": "steepled_fingers"
+    },
+    {
+      "zh": "戳",
+      "en": "poking"
+    },
+    {
+      "zh": "准备扣扳机的手势",
+      "en": "finger_on_trigger"
+    },
+    {
+      "zh": "用手指做出笑脸",
+      "en": "fingersmile"
+    },
+    {
+      "zh": "做手势",
+      "en": "hand_gesture"
+    },
+    {
+      "zh": "狐狸影偶",
+      "en": "fox_shadow_puppet"
+    },
+    {
+      "zh": "双狐影偶",
+      "en": "double_fox_shadow_puppet"
+    },
+    {
+      "zh": "咬手指",
+      "en": "finger_biting"
+    },
+    {
+      "zh": "吮吸手指",
+      "en": "finger_in_mouth"
+    },
+    {
+      "zh": "拿着某物",
+      "en": "holding"
+    },
+    {
+      "zh": "牵手",
+      "en": "holding_hands"
+    },
+    {
+      "zh": "拿着手机",
+      "en": "holding_phone"
+    },
+    {
+      "zh": "手持杯子",
+      "en": "holding_cup"
+    },
+    {
+      "zh": "捧着书",
+      "en": "holding_book"
+    },
+    {
+      "zh": "提着包",
+      "en": "holding_bag"
+    },
+    {
+      "zh": "握笔",
+      "en": "holding_pen"
+    },
+    {
+      "zh": "手持摄像机",
+      "en": "holding_camera"
+    },
+    {
+      "zh": "拿着麦克风",
+      "en": "holding_microphone"
+    },
+    {
+      "zh": "拿着食物",
+      "en": "holding_food"
+    },
+    {
+      "zh": "拿着瓶子",
+      "en": "holding_bottle"
+    },
+    {
+      "zh": "拿着餐叉",
+      "en": "holding_fork"
+    },
+    {
+      "zh": "拿着汤勺",
+      "en": "holding_spoon"
+    },
+    {
+      "zh": "拿着筷子",
+      "en": "holding_chopsticks"
+    },
+    {
+      "zh": "撑伞",
+      "en": "holding_umbrella"
+    },
+    {
+      "zh": "拿着毛巾",
+      "en": "holding_towel"
+    },
+    {
+      "zh": "手里捧着头",
+      "en": "holding_head"
+    },
+    {
+      "zh": "手放在嘴边",
+      "en": "hand_to_mouth"
+    },
+    {
+      "zh": "拿着花",
+      "en": "holding_flower"
+    },
+    {
+      "zh": "拿着礼物",
+      "en": "holding_gift"
+    },
+    {
+      "zh": "手持卡片",
+      "en": "holding_card"
+    },
+    {
+      "zh": "抱着球",
+      "en": "holding_ball"
+    },
+    {
+      "zh": "抱着枕头",
+      "en": "holding_pillow"
+    },
+    {
+      "zh": "抱着毛绒玩具",
+      "en": "holding_stuffed_animal"
+    },
+    {
+      "zh": "抱着玩偶",
+      "en": "holding_doll"
+    },
+    {
+      "zh": "抱着宝可梦",
+      "en": "holding_pokemon"
+    },
+    {
+      "zh": "端着箱子",
+      "en": "holding_box"
+    },
+    {
+      "zh": "托着盘子",
+      "en": "holding_tray"
+    },
+    {
+      "zh": "端着碟子",
+      "en": "holding_plate"
+    },
+    {
+      "zh": "端着碗",
+      "en": "holding_bowl"
+    },
+    {
+      "zh": "提着篮子",
+      "en": "holding_basket"
+    },
+    {
+      "zh": "手持扫帚",
+      "en": "holding_broom"
+    },
+    {
+      "zh": "拿着易拉罐",
+      "en": "holding_can"
+    },
+    {
+      "zh": "手持糖果",
+      "en": "holding_candy"
+    },
+    {
+      "zh": "手叼香烟",
+      "en": "holding_cigarette"
+    },
+    {
+      "zh": "拿着眼镜|正在摘眼镜",
+      "en": "holding_eyewear"
+    },
+    {
+      "zh": "拿着帽子",
+      "en": "holding_hat"
+    },
+    {
+      "zh": "拿着头盔",
+      "en": "holding_helmet"
+    },
+    {
+      "zh": "拿着面具",
+      "en": "holding_mask"
+    },
+    {
+      "zh": "拿着缝衣针",
+      "en": "holding_needle"
+    },
+    {
+      "zh": "手握画笔",
+      "en": "holding_paintbrush"
+    },
+    {
+      "zh": "握着头发|手指绕着头发",
+      "en": "holding_hair"
+    },
+    {
+      "zh": "握着自己的脚",
+      "en": "holding_own_foot"
+    },
+    {
+      "zh": "单手托在脑后",
+      "en": "shou"
+    },
+    {
+      "zh": "拿着衣服",
+      "en": "holding_clothes"
+    },
+    {
+      "zh": "拿着扇子",
+      "en": "holding_fan"
+    },
+    {
+      "zh": "手持旗帜",
+      "en": "holding_flag"
+    },
+    {
+      "zh": "拿着纸",
+      "en": "holding_paper"
+    },
+    {
+      "zh": "拿着泳圈",
+      "en": "holding_innertube"
+    },
+    {
+      "zh": "拿着乐器",
+      "en": "holding_instrument"
+    },
+    {
+      "zh": "拿着叶子",
+      "en": "holding_leaf"
+    },
+    {
+      "zh": "手捧花束",
+      "en": "holding_bouquet"
+    },
+    {
+      "zh": "拿着水果",
+      "en": "holding_fruit"
+    },
+    {
+      "zh": "抱着猫",
+      "en": "holding_cat"
+    },
+    {
+      "zh": "抱着动物",
+      "en": "holding_animal"
+    },
+    {
+      "zh": "手持铅笔",
+      "en": "holding_pencil"
+    },
+    {
+      "zh": "拿着烟斗",
+      "en": "holding_pipe"
+    },
+    {
+      "zh": "拿着披萨",
+      "en": "holding_pizza"
+    },
+    {
+      "zh": "拿着棒棒糖",
+      "en": "holding_lollipop"
+    },
+    {
+      "zh": "手持长柄武器",
+      "en": "holding_polearm"
+    },
+    {
+      "zh": "握着鞭子",
+      "en": "holding_whip"
+    },
+    {
+      "zh": "拿着精灵球",
+      "en": "holding_poke_ball"
+    },
+    {
+      "zh": "拎着包袱",
+      "en": "holding_sack"
+    },
+    {
+      "zh": "手持镰刀",
+      "en": "holding_scythe"
+    },
+    {
+      "zh": "拿着避孕套",
+      "en": "holding_condom"
+    },
+    {
+      "zh": "对坐体位",
+      "en": "upright_straddle"
+    },
+    {
+      "zh": "单手搂着脖子",
+      "en": "arm_around_neck"
+    },
+    {
+      "zh": "双手搂着脖子",
+      "en": "arms_around_neck"
+    },
+    {
+      "zh": "握着刀鞘",
+      "en": "holding_sheath"
+    },
+    {
+      "zh": "手持盾牌",
+      "en": "holding_shield"
+    },
+    {
+      "zh": "拿着鞋子",
+      "en": "holding_shoes"
+    },
+    {
+      "zh": "手持招牌",
+      "en": "holding_sign"
+    },
+    {
+      "zh": "手持长矛",
+      "en": "holding_spear"
+    },
+    {
+      "zh": "手拉着吊带",
+      "en": "holding_strap"
+    },
+    {
+      "zh": "手持手写笔",
+      "en": "holding_stylus"
+    },
+    {
+      "zh": "手持注射器",
+      "en": "holding_syringe"
+    },
+    {
+      "zh": "抓住|抓着",
+      "en": "grabbing"
+    },
+    {
+      "zh": "抓住手臂",
+      "en": "arm_grab"
+    },
+    {
+      "zh": "抓着头发",
+      "en": "hair_grab"
+    },
+    {
+      "zh": "抓着腿",
+      "en": "leg_grab"
+    },
+    {
+      "zh": "抓着手腕",
+      "en": "wrist_grab"
+    },
+    {
+      "zh": "双手放在别人的脸上",
+      "en": "hands_on_another's"
+    },
+    {
+      "zh": "双手放在对方的脸颊上",
+      "en": "hands_on_another's_cheeks"
+    },
+    {
+      "zh": "双手放在别人的肩膀上",
+      "en": "hands_on_another's_shoulders"
+    },
+    {
+      "zh": "双手放在自己的胸口",
+      "en": "hands_on_own_chest"
+    },
+    {
+      "zh": "双手放在自己的脸上",
+      "en": "hands_on_own_face"
+    },
+    {
+      "zh": "双手放在自己的脸颊上",
+      "en": "hands_on_own_cheeks"
+    },
+    {
+      "zh": "双手放在自己的头上",
+      "en": "hands_on_own_head"
+    },
+    {
+      "zh": "双手放在自己的膝盖上",
+      "en": "hands_on_own_knees"
+    },
+    {
+      "zh": "双手放在自己的肚子上",
+      "en": "hands_on_own_stomach"
+    },
+    {
+      "zh": "双手放在自己的大腿上",
+      "en": "hands_on_own_thighs"
+    },
+    {
+      "zh": "双手叉腰|双手搁在腰上",
+      "en": "hands_on_hips"
+    },
+    {
+      "zh": "双手放在两腿之间",
+      "en": "hands_on_lap"
+    },
+    {
+      "zh": "抓着屁股",
+      "en": "ass_grab"
+    },
+    {
+      "zh": "抓着贫乳",
+      "en": "flat_chest_grab"
+    },
+    {
+      "zh": "抓着对方屁股",
+      "en": "grabbing_another's_ass"
+    },
+    {
+      "zh": "抓着对方的头发",
+      "en": "grabbing_another's_hair"
+    },
+    {
+      "zh": "从背后揉胸|从背后抓住胸部",
+      "en": "grabbing_from_behind"
+    },
+    {
+      "zh": "抓着自己的屁股",
+      "en": "grabbing_own_ass"
+    },
+    {
+      "zh": "抓着大腿",
+      "en": "thigh_grab"
+    },
+    {
+      "zh": "抓着躯干",
+      "en": "torso_grab"
+    },
+    {
+      "zh": "双手放在屁股上",
+      "en": "hands_on_ass"
+    },
+    {
+      "zh": "双手放在脚上",
+      "en": "hands_on_feet"
+    },
+    {
+      "zh": "双手碰到头上的饰物",
+      "en": "hands_on_headwear"
+    },
+    {
+      "zh": "双手搭在刀柄上",
+      "en": "hands_on_hilt"
+    },
+    {
+      "zh": "抓着领带",
+      "en": "necktie_grab"
+    },
+    {
+      "zh": "抓着颈部的衣服",
+      "en": "neckwear_grab"
+    },
+    {
+      "zh": "抓着枕头",
+      "en": "pillow_grab"
+    },
+    {
+      "zh": "抓着床单",
+      "en": "sheet_grab"
+    },
+    {
+      "zh": "抓着尾巴",
+      "en": "tail_grab"
+    },
+    {
+      "zh": "手托乳房",
+      "en": "breast lift"
+    },
+    {
+      "zh": "手夹腿间",
+      "en": "hand between legs"
+    },
+    {
+      "zh": "手放在对方的头发上",
+      "en": "hand_in_another's_hair"
+    },
+    {
+      "zh": "手埋在头发里",
+      "en": "hand_in_hair"
+    },
+    {
+      "zh": "手插在口袋里",
+      "en": "hand_in_pocket"
+    },
+    {
+      "zh": "手接触到对方的脸",
+      "en": "hand_on_another's"
+    },
+    {
+      "zh": "手摸着对方的脸颊",
+      "en": "hand_on_another's_cheek"
+    },
+    {
+      "zh": "手放在对方的胸前",
+      "en": "hand_on_another's_chest"
+    },
+    {
+      "zh": "手托着对方的下巴",
+      "en": "hand_on_another's_chin"
+    },
+    {
+      "zh": "手放在对方的头上",
+      "en": "hand_on_another's_head"
+    },
+    {
+      "zh": "手放在对方的肩上",
+      "en": "hand_on_another's_shoulder"
+    },
+    {
+      "zh": "手放在对方的肚子上",
+      "en": "hand_on_another's_stomach"
+    },
+    {
+      "zh": "手放在屁股上",
+      "en": "hand_on_ass"
+    },
+    {
+      "zh": "手放在头上",
+      "en": "hand_on_head"
+    },
+    {
+      "zh": "手触碰帽子",
+      "en": "hand_on_headwear"
+    },
+    {
+      "zh": "手搁在刀柄上",
+      "en": "hand_on_hilt"
+    },
+    {
+      "zh": "手叉着腰|手搁在腰上",
+      "en": "hand_on_hip"
+    },
+    {
+      "zh": "把手放在自己脸上",
+      "en": "hand_on_own"
+    },
+    {
+      "zh": "把手放在自己的脸颊上",
+      "en": "hand_on_own_cheek"
+    },
+    {
+      "zh": "把手放在自己的胸口",
+      "en": "hand_on_own_chest"
+    },
+    {
+      "zh": "手碰着自己的下巴",
+      "en": "hand_on_own_chin"
+    },
+    {
+      "zh": "把手放在自己的肚子上",
+      "en": "hand_on_own_stomach"
+    },
+    {
+      "zh": "手放在肩上",
+      "en": "hand_on_shoulder"
+    },
+    {
+      "zh": "手把腿抓着",
+      "en": "leg hold"
+    },
+    {
+      "zh": "单腿站立",
+      "en": "standing_on_one_leg"
+    },
+    {
+      "zh": "抬一只腿",
+      "en": "legs_up"
+    },
+    {
+      "zh": "单腿抬高",
+      "en": "leg_lift"
+    },
+    {
+      "zh": "抬起腿",
+      "en": "leg_up"
+    },
+    {
+      "zh": "两腿并拢",
+      "en": "legs_together"
+    },
+    {
+      "zh": "二郎腿",
+      "en": "crossed_legs"
+    },
+    {
+      "zh": "两腿分开",
+      "en": "legs_apart"
+    },
+    {
+      "zh": "膝盖顶到胸部",
+      "en": "knees_to_chest"
+    },
+    {
+      "zh": "膝盖合并，两脚分开",
+      "en": "knees_together_feet_apart"
+    },
+    {
+      "zh": "M字摆腿",
+      "en": "m_legs"
+    },
+    {
+      "zh": "稍息",
+      "en": "open_stance"
+    },
+    {
+      "zh": "站立劈叉|站立高抬腿",
+      "en": "standing_split"
+    },
+    {
+      "zh": "屈膝礼（女仆行礼）",
+      "en": "curtsy"
+    },
+    {
+      "zh": "踮起脚尖",
+      "en": "tiptoes"
+    },
+    {
+      "zh": "翘起脚",
+      "en": "feet_up"
+    },
+    {
+      "zh": "交叉脚踝",
+      "en": "crossed_ankles"
+    },
+    {
+      "zh": "单脚不在图内",
+      "en": "foot_out_of_frame"
+    },
+    {
+      "zh": "四肢着地",
+      "en": "all_fours"
+    },
+    {
+      "zh": "膝盖上有动物",
+      "en": "animal_on_lap"
+    },
+    {
+      "zh": "脚踝丝环",
+      "en": "ankle_strap"
+    },
+    {
+      "zh": "脚踝套",
+      "en": "ankle_wrap"
+    },
+    {
+      "zh": "骆驼趾",
+      "en": "cameltoe"
+    },
+    {
+      "zh": "挡住关键部位的腿",
+      "en": "convenient_leg"
+    },
+    {
+      "zh": "只画了一部分腿",
+      "en": "cropped_legs"
+    },
+    {
+      "zh": "双脚不在图内",
+      "en": "feet_out_of_frame"
+    },
+    {
+      "zh": "抬腿露阴",
+      "en": "folded"
+    },
+    {
+      "zh": "脚印",
+      "en": "footprints"
+    },
+    {
+      "zh": "凹版姿势",
+      "en": "gravure_pose"
+    },
+    {
+      "zh": "手放在自己的膝盖上",
+      "en": "hand_on_own_knee"
+    },
+    {
+      "zh": "手放在腿下",
+      "en": "hands under legs"
+    },
+    {
+      "zh": "抱住腿",
+      "en": "holding legs"
+    },
+    {
+      "zh": "KDA组合(英雄联盟)",
+      "en": "k/da_(league_of_legends)"
+    },
+    {
+      "zh": "顶起膝盖",
+      "en": "knee_up"
+    },
+    {
+      "zh": "下跪",
+      "en": "kneeling"
+    },
+    {
+      "zh": "膝盖",
+      "en": "knees"
+    },
+    {
+      "zh": "抱腿",
+      "en": "leg hug"
+    },
+    {
+      "zh": "腿部系着带子",
+      "en": "leg_belt"
+    },
+    {
+      "zh": "腿毛",
+      "en": "leg_hair"
+    },
+    {
+      "zh": "用双腿夹住",
+      "en": "leg_lock"
+    },
+    {
+      "zh": "双腿",
+      "en": "legs"
+    },
+    {
+      "zh": "双腿抬过头",
+      "en": "legs_over_head"
+    },
+    {
+      "zh": "M字摆腿",
+      "en": "lowleg"
+    },
+    {
+      "zh": "机械义足",
+      "en": "mechanical_legs"
+    },
+    {
+      "zh": "多足角色",
+      "en": "multiple_legs"
+    },
+    {
+      "zh": "没画出腿",
+      "en": "no_legs"
+    },
+    {
+      "zh": "裆胯以下裸着",
+      "en": "no_legwear"
+    },
+    {
+      "zh": "在膝盖上",
+      "en": "on_lap"
+    },
+    {
+      "zh": "一只膝盖",
+      "en": "one_knee"
+    },
+    {
+      "zh": "萌向的内八腿",
+      "en": "pigeon-toed"
+    },
+    {
+      "zh": "泡脚",
+      "en": "soaking_feet"
+    },
+    {
+      "zh": "张开双腿",
+      "en": "spread legs"
+    },
+    {
+      "zh": "蹲下",
+      "en": "squatting"
+    },
+    {
+      "zh": "蹲下分开双腿",
+      "en": "squatting,_open_legs"
+    },
+    {
+      "zh": "站立一字马",
+      "en": "standing split,leg up"
+    },
+    {
+      "zh": "尾巴蜷到两腿之间",
+      "en": "tail_between_legs"
+    },
+    {
+      "zh": "遮盖的动作",
+      "en": "covering"
+    },
+    {
+      "zh": "挡住脸",
+      "en": "covering_face"
+    },
+    {
+      "zh": "遮住眼睛",
+      "en": "covering_eyes"
+    },
+    {
+      "zh": "挡住嘴巴",
+      "en": "covering_mouth"
+    },
+    {
+      "zh": "用手遮住胸部",
+      "en": "covering_chest_by_hand"
+    },
+    {
+      "zh": "挡住乳头",
+      "en": "covering_nipples"
+    },
+    {
+      "zh": "遮着臀部",
+      "en": "covering_ass"
+    },
+    {
+      "zh": "遮着裆部",
+      "en": "covering_crotch"
+    },
+    {
+      "zh": "整理头发",
+      "en": "adjusting_hair"
+    },
+    {
+      "zh": "将刘海别在脑后",
+      "en": "bangs_pinned_back"
+    },
+    {
+      "zh": "拉头发",
+      "en": "hair_pull"
+    },
+    {
+      "zh": "头发往后扎",
+      "en": "hair_pulled_back"
+    },
+    {
+      "zh": "手指卷着头发",
+      "en": "hair_twirling"
+    },
+    {
+      "zh": "捏脸颊",
+      "en": "cheek_pinching"
+    },
+    {
+      "zh": "戳脸颊",
+      "en": "cheek_poking"
+    },
+    {
+      "zh": "托脸颊",
+      "en": "chin_rest"
+    },
+    {
+      "zh": "摸下巴",
+      "en": "chin_stroking"
+    },
+    {
+      "zh": "自我抚摸",
+      "en": "self_fondle"
+    },
+    {
+      "zh": "手圧在乳房上",
+      "en": "breast_suppress"
+    },
+    {
+      "zh": "摸索",
+      "en": "groping"
+    },
+    {
+      "zh": "手抓裆部",
+      "en": "crotch_grab"
+    },
+    {
+      "zh": "拨弄衣服",
+      "en": "adjusting_clothes"
+    },
+    {
+      "zh": "整理帽子",
+      "en": "adjusting_hat"
+    },
+    {
+      "zh": "拨弄手套",
+      "en": "adjusting_gloves"
+    },
+    {
+      "zh": "拨弄泳衣",
+      "en": "adjusting_swimsuit"
+    },
+    {
+      "zh": "调整过膝袜",
+      "en": "adjusting_thighhigh"
+    },
+    {
+      "zh": "扶正眼镜",
+      "en": "adjusting_eyewear"
+    },
+    {
+      "zh": "打喷嚏",
+      "en": "sneezing"
+    },
+    {
+      "zh": "打哈欠",
+      "en": "yawning"
+    },
+    {
+      "zh": "吹",
+      "en": "blowing"
+    },
+    {
+      "zh": "从嘴里吐出液体的动作",
+      "en": "spitting"
+    },
+    {
+      "zh": "从容器中倒出液体的动作",
+      "en": "spilling"
+    },
+    {
+      "zh": "咬",
+      "en": "biting"
+    },
+    {
+      "zh": "舔",
+      "en": "licking"
+    },
+    {
+      "zh": "舔嘴唇",
+      "en": "licking_lips"
+    },
+    {
+      "zh": "咬嘴唇",
+      "en": "lip_biting"
+    },
+    {
+      "zh": "出血",
+      "en": "bleeding"
+    },
+    {
+      "zh": "喷火",
+      "en": "breathing_fire"
+    },
+    {
+      "zh": "吹泡泡",
+      "en": "bubble_blowing"
+    },
+    {
+      "zh": "燃烧",
+      "en": "burning"
+    },
+    {
+      "zh": "眨眼",
+      "en": "eyelid_pull"
+    },
+    {
+      "zh": "拉",
+      "en": "pulling"
+    },
+    {
+      "zh": "(意外)掉落",
+      "en": "dropping"
+    },
+    {
+      "zh": "投掷",
+      "en": "tossing"
+    },
+    {
+      "zh": "吊起来的",
+      "en": "hanging"
+    },
+    {
+      "zh": "露出",
+      "en": "flashing"
+    },
+    {
+      "zh": "做梦",
+      "en": "dreaming"
+    },
+    {
+      "zh": "起风效果|上升气流",
+      "en": "wind_lift"
+    },
+    {
+      "zh": "掀起自己的衣物",
+      "en": "lifted_by_self"
+    },
+    {
+      "zh": "被对方掀起衣物",
+      "en": "lifted_by_another"
+    },
+    {
+      "zh": "手臂上贴着创可贴",
+      "en": "bandaid_on_arm"
+    },
+    {
+      "zh": "睡觉",
+      "en": "sleeping"
+    },
+    {
+      "zh": "醒来",
+      "en": "waking_up"
+    },
+    {
+      "zh": "喝",
+      "en": "drinking"
+    },
+    {
+      "zh": "烹饪",
+      "en": "cooking"
+    },
+    {
+      "zh": "刷牙",
+      "en": "brushing_teeth"
+    },
+    {
+      "zh": "淋浴",
+      "en": "showering"
+    },
+    {
+      "zh": "弄干(浴后)",
+      "en": "drying"
+    },
+    {
+      "zh": "洗涤",
+      "en": "washing"
+    },
+    {
+      "zh": "清理|打扫",
+      "en": "cleaning"
+    },
+    {
+      "zh": "清扫|扫除（家务）",
+      "en": "sweeping"
+    },
+    {
+      "zh": "化妆",
+      "en": "applying_makeup"
+    },
+    {
+      "zh": "梳头",
+      "en": "hair_brushing"
+    },
+    {
+      "zh": "撩头发",
+      "en": "hair_tucking"
+    },
+    {
+      "zh": "阅读",
+      "en": "reading"
+    },
+    {
+      "zh": "写作",
+      "en": "writing"
+    },
+    {
+      "zh": "拍照|自拍",
+      "en": "taking_picture"
+    },
+    {
+      "zh": "打电话",
+      "en": "talking_on_phone"
+    },
+    {
+      "zh": "唱歌",
+      "en": "singing"
+    },
+    {
+      "zh": "谈论",
+      "en": "talking"
+    },
+    {
+      "zh": "喂食",
+      "en": "feeding"
+    },
+    {
+      "zh": "缝纫",
+      "en": "sewing"
+    },
+    {
+      "zh": "购物",
+      "en": "shopping"
+    },
+    {
+      "zh": "冥想",
+      "en": "meditation"
+    },
+    {
+      "zh": "祈祷",
+      "en": "praying"
+    },
+    {
+      "zh": "打游戏",
+      "en": "playing_games"
+    },
+    {
+      "zh": "钓鱼",
+      "en": "fishing"
+    },
+    {
+      "zh": "画画",
+      "en": "Painting_(Action)"
+    },
+    {
+      "zh": "(不躺着)睡觉|直立睡觉",
+      "en": "sleeping_upright"
+    },
+    {
+      "zh": "抽烟",
+      "en": "smoking"
+    },
+    {
+      "zh": "上厕所",
+      "en": "toilet_use"
+    },
+    {
+      "zh": "憋气",
+      "en": "holding_breath"
+    },
+    {
+      "zh": "拥抱",
+      "en": "hug"
+    },
+    {
+      "zh": "拥抱",
+      "en": "cuddling"
+    },
+    {
+      "zh": "即将接吻",
+      "en": "imminent_kiss"
+    },
+    {
+      "zh": "面对另一个",
+      "en": "facing_another"
+    },
+    {
+      "zh": "背对背",
+      "en": "back-to-back"
+    },
+    {
+      "zh": "安慰",
+      "en": "comforting"
+    },
+    {
+      "zh": "膝枕",
+      "en": "lap_pillow"
+    },
+    {
+      "zh": "公主抱",
+      "en": "princess_carry"
+    },
+    {
+      "zh": "抱起",
+      "en": "carrying"
+    },
+    {
+      "zh": "将人抱起",
+      "en": "lifting_person"
+    },
+    {
+      "zh": "夹在腋下",
+      "en": "carrying_under_arm"
+    },
+    {
+      "zh": "肩扛",
+      "en": "carrying_over_shoulder"
+    },
+    {
+      "zh": "戏弄",
+      "en": "teasing"
+    },
+    {
+      "zh": "挠痒痒",
+      "en": "tickling"
+    },
+    {
+      "zh": "讲悄悄话",
+      "en": "whispering"
+    },
+    {
+      "zh": "递|赠送",
+      "en": "giving"
+    },
+    {
+      "zh": "递食物",
+      "en": "incoming_food"
+    },
+    {
+      "zh": "递礼物",
+      "en": "incoming_gift"
+    },
+    {
+      "zh": "共享食物|用嘴递食物",
+      "en": "shared_food"
+    },
+    {
+      "zh": "共浴|鸳鸯浴",
+      "en": "shared_bathing"
+    },
+    {
+      "zh": "坐在头上",
+      "en": "sitting_on_head"
+    },
+    {
+      "zh": "坐在肩膀上",
+      "en": "sitting_on_shoulder"
+    },
+    {
+      "zh": "掌掴",
+      "en": "slapping"
+    },
+    {
+      "zh": "打屁股",
+      "en": "spanking"
+    },
+    {
+      "zh": "胸挤胸",
+      "en": "symmetrical_docking"
+    },
+    {
+      "zh": "胸部互碰|胸顶着胸",
+      "en": "asymmetrical_docking"
+    },
+    {
+      "zh": "雪中打伞的恋人梗",
+      "en": "special_feeling_(meme)"
+    },
+    {
+      "zh": "模仿",
+      "en": "parody"
+    },
+    {
+      "zh": "恶搞行为",
+      "en": "trolling"
+    },
+    {
+      "zh": "走路",
+      "en": "walking"
+    },
+    {
+      "zh": "奔跑",
+      "en": "running"
+    },
+    {
+      "zh": "跳跃",
+      "en": "jumping"
+    },
+    {
+      "zh": "跳舞",
+      "en": "dancing"
+    },
+    {
+      "zh": "做运动",
+      "en": "exercise"
+    },
+    {
+      "zh": "秀肌肉",
+      "en": "flexing"
+    },
+    {
+      "zh": "游泳",
+      "en": "swimming"
+    },
+    {
+      "zh": "潜水",
+      "en": "diving"
+    },
+    {
+      "zh": "蹚水",
+      "en": "wading"
+    },
+    {
+      "zh": "飞溅",
+      "en": "splashing"
+    },
+    {
+      "zh": "站在水上或液体上",
+      "en": "standing_on_liquid"
+    },
+    {
+      "zh": "在液体上行走",
+      "en": "walking_on_liquid"
+    },
+    {
+      "zh": "攀爬",
+      "en": "climbing"
+    },
+    {
+      "zh": "飞行",
+      "en": "flying"
+    },
+    {
+      "zh": "骑",
+      "en": "riding"
+    },
+    {
+      "zh": "驾驶",
+      "en": "driving"
+    },
+    {
+      "zh": "足球运动",
+      "en": "soccer"
+    },
+    {
+      "zh": "摔角(运动)",
+      "en": "wrestling"
+    },
+    {
+      "zh": "钢管舞",
+      "en": "pole_dancing"
+    },
+    {
+      "zh": "旋转",
+      "en": "spinning"
+    },
+    {
+      "zh": "摆动",
+      "en": "swing"
+    },
+    {
+      "zh": "骑扫帚",
+      "en": "broom_riding"
+    },
+    {
+      "zh": "拍打动作",
+      "en": "flapping"
+    },
+    {
+      "zh": "战斗姿态",
+      "en": "fighting_stance"
+    },
+    {
+      "zh": "战斗中的",
+      "en": "fighting"
+    },
+    {
+      "zh": "挥拳",
+      "en": "punching"
+    },
+    {
+      "zh": "击打",
+      "en": "hitting"
+    },
+    {
+      "zh": "踢",
+      "en": "kicking"
+    },
+    {
+      "zh": "高踢",
+      "en": "high_kick"
+    },
+    {
+      "zh": "飞踢",
+      "en": "flying_kick"
+    },
+    {
+      "zh": "砍",
+      "en": "slashing"
+    },
+    {
+      "zh": "推搡",
+      "en": "pushing"
+    },
+    {
+      "zh": "拖某物",
+      "en": "dragging"
+    },
+    {
+      "zh": "绞首",
+      "en": "strangling"
+    },
+    {
+      "zh": "欺负",
+      "en": "bullying"
+    },
+    {
+      "zh": "投掷",
+      "en": "cast"
+    },
+    {
+      "zh": "射击",
+      "en": "firing"
+    },
+    {
+      "zh": "追逐",
+      "en": "chasing"
+    },
+    {
+      "zh": "在逃跑的",
+      "en": "fleeing"
+    },
+    {
+      "zh": "被绊倒",
+      "en": "tripping"
+    },
+    {
+      "zh": "掀起衣物",
+      "en": "clothes_lift"
+    },
+    {
+      "zh": "拉扯衣物",
+      "en": "clothes_pull"
+    },
+    {
+      "zh": "拉起掀起卷起衬衫",
+      "en": "shirt_lift"
+    },
+    {
+      "zh": "拉开衬衫",
+      "en": "shirt_pull"
+    },
+    {
+      "zh": "掀起裙子",
+      "en": "dress_lift"
+    },
+    {
+      "zh": "拉连衣裙",
+      "en": "dress_pull"
+    },
+    {
+      "zh": "掀裙子",
+      "en": "skirt_lift"
+    },
+    {
+      "zh": "被掀起裙子(含突发情况意义)",
+      "en": "skirt_flip"
+    },
+    {
+      "zh": "拉开裙子",
+      "en": "skirt_pull"
+    },
+    {
+      "zh": "褪下短裤",
+      "en": "shorts_pull"
+    },
+    {
+      "zh": "拉着裤子",
+      "en": "pants_pull"
+    },
+    {
+      "zh": "剥开连衣裤",
+      "en": "leotard_pull"
+    },
+    {
+      "zh": "扯下泳衣",
+      "en": "swimsuit_pull"
+    },
+    {
+      "zh": "掀起和服",
+      "en": "kimono_lift"
+    },
+    {
+      "zh": "拉和服",
+      "en": "kimono_pull"
+    },
+    {
+      "zh": "抬起肩带",
+      "en": "strap_lift"
+    },
+    {
+      "zh": "往上剥开的比基尼",
+      "en": "bikini_lift"
+    },
+    {
+      "zh": "扯着比基尼",
+      "en": "bikini_pull"
+    },
+    {
+      "zh": "打结(动作)",
+      "en": "tying"
+    },
+    {
+      "zh": "解开的",
+      "en": "untying"
+    },
+    {
+      "zh": "拉开拉链",
+      "en": "unzipping"
+    },
+    {
+      "zh": "拉链的拉片",
+      "en": "zipper_pull_tab"
+    },
+    {
+      "zh": "拉下自己的衣物",
+      "en": "pulled_by_self"
+    },
+    {
+      "zh": "被另一个人拉(或拉衣物)",
+      "en": "pulled_by_another"
+    },
+    {
+      "zh": "指掀起裙子时形成的篮子形状",
+      "en": "skirt_basket"
+    },
+    {
+      "zh": "扯脸颊",
+      "en": "cheek_pull"
+    },
+    {
+      "zh": "手持辫子",
+      "en": "bunching_hair"
+    },
+    {
+      "zh": "拉着口罩",
+      "en": "mask_pull"
+    },
+    {
+      "zh": "手持剑",
+      "en": "holding_sword"
+    },
+    {
+      "zh": "拿着刀",
+      "en": "holding_knife"
+    },
+    {
+      "zh": "手持匕首",
+      "en": "holding_dagger"
+    },
+    {
+      "zh": "拿着枪",
+      "en": "holding_gun"
+    },
+    {
+      "zh": "拿着弓(武器)",
+      "en": "holding_bow_(weapon)"
+    },
+    {
+      "zh": "拉着弓",
+      "en": "holding_arrow"
+    },
+    {
+      "zh": "握着斧头",
+      "en": "holding_axe"
+    },
+    {
+      "zh": "手持法杖",
+      "en": "holding_staff"
+    },
+    {
+      "zh": "握着棒子",
+      "en": "holding_wand"
+    },
+    {
+      "zh": "拉弓",
+      "en": "drawing_bow"
+    },
+    {
+      "zh": "出鞘",
+      "en": "unsheathing"
+    },
+    {
+      "zh": "双持",
+      "en": "dual_wielding"
+    },
+    {
+      "zh": "准备拔刀的姿势",
+      "en": "ready_to_draw"
+    },
+    {
+      "zh": "躲藏",
+      "en": "hiding"
+    },
+    {
+      "zh": "僵尸姿势",
+      "en": "zombie_pose"
+    },
+    {
+      "zh": "某著名伸手扭腰动作",
+      "en": "caramelldansen"
+    },
+    {
+      "zh": "挥舞着手臂",
+      "en": "waving_arms"
+    },
+    {
+      "zh": "壁咚",
+      "en": "Kabedon"
+    },
+    {
+      "zh": "向后坐",
+      "en": "sitting_backwards"
+    },
+    {
+      "zh": "坐在树上",
+      "en": "sitting_in_tree"
+    },
+    {
+      "zh": "坐在物体上",
+      "en": "sitting_on_xx"
+    },
+    {
+      "zh": "坐在栏杆上",
+      "en": "sitting_on_railing"
+    },
+    {
+      "zh": "坐在石头",
+      "en": "sitting_on_rock"
+    },
+    {
+      "zh": "坐在楼梯上",
+      "en": "sitting_on_stairs"
+    },
+    {
+      "zh": "坐在桌子上",
+      "en": "sitting_on_table"
+    },
+    {
+      "zh": "坐在水上",
+      "en": "sitting_on_water"
+    },
+    {
+      "zh": "坐在椅子上",
+      "en": "sitting_on_chair"
+    },
+    {
+      "zh": "侧坐在鞍上",
+      "en": "sidesaddle"
+    },
+    {
+      "zh": "躺在人身上",
+      "en": "lying_on_person"
+    },
+    {
+      "zh": "躺在湖面上",
+      "en": "lying_on_the_lake"
+    },
+    {
+      "zh": "躺在水中",
+      "en": "lying_on_water"
+    },
+    {
+      "zh": "举着手",
+      "en": "arm_up"
+    },
+    {
+      "zh": "单手搂腰",
+      "en": "arm_around_waist"
+    },
+    {
+      "zh": "挽手",
+      "en": "arm_hug"
+    },
+    {
+      "zh": "手臂刀刃",
+      "en": "arm_blade"
+    },
+    {
+      "zh": "手指",
+      "en": "fingering_through_clothes"
+    },
+    {
+      "zh": "手指并拢",
+      "en": "fingers_together"
+    },
+    {
+      "zh": "咬耳朵",
+      "en": "ear_biting"
+    },
+    {
+      "zh": "混浴",
+      "en": "mixed_bathing"
+    },
+    {
+      "zh": "自拍",
+      "en": "selfie"
+    },
+    {
+      "zh": "摇尾巴",
+      "en": "tail_wagging"
+    },
+    {
+      "zh": "下雪",
+      "en": "snowing"
+    },
+    {
+      "zh": "拉伸",
+      "en": "Stretching"
+    },
+    {
+      "zh": "脸贴脸",
+      "en": "cheek-to-cheek"
+    },
+    {
+      "zh": "摸头",
+      "en": "headpat"
+    },
+    {
+      "zh": "浸在水中",
+      "en": "partially submerged"
+    },
+    {
+      "zh": "水魔法",
+      "en": "((water drops)),wet clothes,((beautiful detailed water)),((floating)),dynamic angle"
+    },
+    {
+      "zh": "冰魔法",
+      "en": "beautiful detailed glow,(detailed ice),beautiful detailed water"
+    },
+    {
+      "zh": "冰系改",
+      "en": "beautiful detailed glow,detailed ice,beautiful detailed water,(floating palaces:1.2),(ice crystal texture wings),（Iridescence and rainbow hair:2.5）"
+    },
+    {
+      "zh": "星冰乐",
+      "en": "beautiful detailed glow,detailed ice,beautiful detailed water,(floating palaces:1.3),(((ice crystal texture wings)))"
+    },
+    {
+      "zh": "森林冰",
+      "en": "((detailed beautiful snow forest with trees)),((snowflakes)),floating"
+    },
+    {
+      "zh": "结晶法",
+      "en": "(((crystals texture Hair))),((beautiful detailed glass hair)),((glass shaped texture hand)),((crystallize texture body)),gem body,hands as clear as jewels,crystallization of clothes,((crystals texture skin)),sparkle,lens flare,light leaks,broken glass,detailed glass shaped clothes,beautiful detailed gemstone sky,gemstone sea,crystals texture flowers,((detailed crystallized clothing))"
+    },
+    {
+      "zh": "核爆法",
+      "en": "beautiful detailed glow,((flames of war)),(((nuclear explosion behide)))"
+    },
+    {
+      "zh": "风魔法",
+      "en": "((breeze)),flying splashes,flying petals,wind"
+    },
+    {
+      "zh": "流沙法",
+      "en": "((surrounded by heavy floating sand flow and floating sharp stones)),((((ink)))),((illustration)),((watercolor))"
+    },
+    {
+      "zh": "雷电法",
+      "en": "(detailed light),((lightning in hand)),lightning surrounds,(((lightning chain)))"
+    },
+    {
+      "zh": "圣光法",
+      "en": "(sunlight),(angel),dynamic angle,floating,wing,halo,floating white silk,(Holy Light),silver stars"
+    },
+    {
+      "zh": "苇名法",
+      "en": "beautiful detailed pampas grass field,open hakama,surrounded by floating sakura,yellow full moon,beautiful detailed dark midnight sky,messy white long hair"
+    },
+    {
+      "zh": "自然法",
+      "en": "beautiful and delicate water,the finest grass,very delicate light,nature,painting,water spray,breeze,flowers and grass meadow,near the water edge,(sunset,starry sky in a circle),randomly distributed clouds,river,splashing water,falling petals"
+    },
+    {
+      "zh": "森林法",
+      "en": "(detailed light),feather,leaves,nature,(sunlight),river,(forest),(bloom)"
+    },
+    {
+      "zh": "虹彩法",
+      "en": "floating and rainbow long hair,Iridescence and rainbow,beautiful detailed starry sky"
+    },
+    {
+      "zh": "暗锁法",
+      "en": "chain ring,chain storm,dark chain,((wholeblack bloomer)),darkside,night,deep dark,darkness,((dark clouds)),((ruins)),shadow,death garden"
+    },
+    {
+      "zh": "火烧云",
+      "en": "beautiful detailed glow,floating ashes,beautiful and detailed explosion,red moon,fire,fire cloud,wings on fire,a cloudy sky,smoke of gunpowder,burning,black dress,dove of peace,(floating cloud:1.2)"
+    },
+    {
+      "zh": "城堡法",
+      "en": "beautiful detailed glow,detailed ice,beautiful detailed water,(magic circle:1.2),(floating palaces:1.3)"
+    },
+    {
+      "zh": "黄昏法",
+      "en": "(water bloom),(delicate glow),(breeze),long Flowers meadow,(((sunset)),(less stars form a circle),randomly distributed clouds,(rivers),(willows with branches falling into the water)"
+    },
+    {
+      "zh": "泡泡法",
+      "en": "((colorful bubble)),(floating),detailed light"
+    },
+    {
+      "zh": "蔷薇法",
+      "en": "((rose)),(vine),cage,bandage,red rope,(detail light),falling rose petals"
+    },
+    {
+      "zh": "星空法",
+      "en": "(starry tornado:1.4),starry Nebula,beautiful detailed sky"
+    },
+    {
+      "zh": "月亮法",
+      "en": "((moon)),starry sky,(lighting particle),fog,snow,(bloom)"
+    },
+    {
+      "zh": "雪月法",
+      "en": "beautiful detailed glow,detailed ice,beautiful detailed water,(cold full moon),snowflake,(floating cloud:1.2)"
+    },
+    {
+      "zh": "森火法",
+      "en": "((burning forest)),spark,light leaks,burning sky,flame,flames burning around,(flying sparks)"
+    },
+    {
+      "zh": "废土法",
+      "en": "((destroyed)),explosion,buildings in disarray,The residual eaves DuanBi,cumulus,mouldy,floating,wind,Dead end machine,(broken robot),(Mechanical robot girl),in the rubble of a devastated city"
+    },
+    {
+      "zh": "战甲法",
+      "en": "mecha clothes,robot girl,sliver bodysuit,((sliver)) and (broken) body"
+    },
+    {
+      "zh": "黄金法",
+      "en": "Extremely gorgeous metal style,Metal crown with ornate stripes,Various metals background,Sputtered molten iron,floating hair,Hair like melted metal,Clothes made of silver,Clothes with gold lace,flowing gold and silver,everything flowing and melt,flowing iron,flowing silver,lace flowing and melt"
+    },
+    {
+      "zh": "机娘法",
+      "en": "mecha clothes,robot girl"
+    },
+    {
+      "zh": "死灵法",
+      "en": "ink,(((bone))),(((ribs))),rose,black hair,blue eyes,greyscale,no shadow,simple background,bright skin"
+    },
+    {
+      "zh": "水晶法",
+      "en": "(((gorgeous crystal armor))),(((crystal wings))),((altocumulus)),(clear_sky),(snow mountain),((flowery flowers)),(flowery bubbles),cloud map plane,crystal,crystal poppies,Brilliant light,thick_coating,glass tint,(watercolor)"
+    },
+    {
+      "zh": "水森法",
+      "en": "((an extremely delicate and beautiful)),floating,(detailed wet clothes),(detailed light),feather,nature,(sunlight),river,floating palace,beautiful and delicate water,(bloom),(shine)"
+    },
+    {
+      "zh": "冰火法",
+      "en": "(blue spark),(red and blue hair),blue eyes,burning sky,flame,Rainbow in the sky,((Flames burning ice)),(((fire butterflies))),(((ice crystal texture wings))),(Flying sparks),(detailed ice),((a lot of luminous ice crystals)),((burning feathers)),(feathers made of ice),(frozen feathers),(((ice and fire together)))"
+    },
+    {
+      "zh": "龙骑士",
+      "en": "(anger),dragon horns,(silver armor),metal,complex pattern,cape,indifference"
+    },
+    {
+      "zh": "坠落法",
+      "en": "((full body)),(helpless),tear,crying,(((((falling from the sky))))),((Weathering With You)),((falling)),((face towards the sky)),(hair flows upwards),((disheveled hair)),(1 girl),floating,beautiful detailed sky"
+    },
+    {
+      "zh": "水下法",
+      "en": "((underwater)),(beautiful detailed water),((coral)),dynamic angle,floating,(detailed light),floating hair,(splash),((fishes)),leaves dress,feather,nature,(sunlight),(underwater forest),(bloom),(detailed glow),drenched,seaweed,fish,(((Tyndall effect)))"
+    },
+    {
+      "zh": "秘境法",
+      "en": "(extremely detailed CG unity 8k wallpaper),(((masterpiece))),(((best quality))),((ultra-detailed)),(best illustration),(best shadow),((an extremely delicate and beautiful)),dynamic angle,floating,fairyland,dynamic angle,sea of flowers,beautiful detailed garden,wind,classic,spring,(detailed light),feather,nature,(sunlight),river,forest,(((floating palace))),((the best building)),beautiful and delicate water,(painting),(sketch),(bloom),(shine)"
+    },
+    {
+      "zh": "摄影法",
+      "en": "(((masterpiece))),((the best quality,super fine illustrations,beautiful and delicate water)),((very delicate light)),((nature,painting)),((fine lighting,more transparent stars,high-quality snowflakes,high-quality mountains,very fine 8KCG wallpapers)),(plateau),(((snow mountain))),sunrise,randomly distributed clouds,(snow field),cliff,((rotating star sky)),((lake in mountain stream)),luminous particles"
+    },
+    {
+      "zh": "摩登法",
+      "en": "1980s (style),simple background,retro artstyle"
+    },
+    {
+      "zh": "血魔法",
+      "en": "(white hair),red long hair,red eyes,(full body),(((with sword))),angry face,(beautiful detailed eyes),Blood drop,Blood fog,floating hair,disheveled hair,Splashing blood,(Bloodstain)"
+    },
+    {
+      "zh": "唤龙术",
+      "en": "((dragon)),((dragon background))"
+    },
+    {
+      "zh": "战姬法",
+      "en": "hair fluttering in the wind,((mechanical arm armor)),((mechanical body armor)),riding motor,bodysuit,((ruins of city in war,fire,burning cars,burning buildings)),air force fleet in the sky"
+    },
+    {
+      "zh": "龙机法",
+      "en": "mecha clothes,robot girl,sliver bodysuit,dragon wings,((a dragon stands behind the girl)),beautiful detailed sliver dragon armor"
+    },
+    {
+      "zh": "星蝶术",
+      "en": "((Beautiful butterflies in detail)),((Beautiful stars in detail)),(((halter dress ))),particle,(Starry sky in beautiful detail),(Hazy fog),(Ruins of beautiful details),(((Standing on the surface of the sea)))"
+    },
+    {
+      "zh": "学院法",
+      "en": "blonde wavy hair,(shiny long hair),((Gothic Lolita)),blue white skirt,((short skirt)),black Headdress,bowknot,(((hair ornament))),(hair flower),Lace,cross-laced footwear,ribbon-trimmed sleeves,building architecture,((gothic architecture)),starry sky,outdoors,church,(castle)"
+    },
+    {
+      "zh": "星霞海",
+      "en": "walking,waves,wind,(((glistening light of waves))),(detailed sunset glow),(floating flow),((coral)),(Luminous),coast,(floating colorful bubbles),beautiful detailed sky,(fluorescence),detailed shadow,(conch),beautiful detailed water,starfish,meteor,rainbow,(seabirds),(glinting stars),(glowworm),(splash),detailed cloud,shell,(fireworks)"
+    },
+    {
+      "zh": "冬雪法",
+      "en": "beautiful detailed sky,night,stars,(red plum blossom),((winter)),(((snowflakes))),((red and white flowers)),(starry sky),(sitting),((colorful)),scenery,lantern,(starfall)"
+    },
+    {
+      "zh": "万物熔炉",
+      "en": "((((melt)))),(((((black and white melt))))),(((wear Black and white Taoist robes))),((((gold and silver lace)))),(((gold and silver lace lace))),(((flowing ((black)) and white background))),extremely detailed gorgeous tiara"
+    },
+    {
+      "zh": "暗鸦法",
+      "en": "Floating black ashes,Beautiful and detailed black,red moon,((The black clouds)),(black Wings),a black cloudy sky,burning,black dress,((Black fog)),Red eyes,(black smoke),((Black feathers floating in the air)),bat,(floating black cloud:1.5),"
+    },
+    {
+      "zh": "花火基础",
+      "en": "dynamic angle,finely detail,(bloom),(shine),glinting stars,((((best detailed fireworks)))),((((depth of field)))),(((hanabi))),(((backlight))),"
+    },
+    {
+      "zh": "星之彩",
+      "en": "stars in the eyes,messy floating hair,colored inner hair,Starry sky adorns hair,(lots of big colorful Bubble),(pearl),(Galaxy),depth of field"
+    },
+    {
+      "zh": "沉入星海",
+      "en": "stars in the eyes,messy floating hair,colored inner hair,Starry sky adorns hair,depth of field"
+    },
+    {
+      "zh": "百溺法",
+      "en": "dynamic angle,detailed wet clothes,blank stare,overexplosure,floating,black long straight,red eyes,aqua eyes,gradient eyes,((blood)),white dress,frills,((expressionless)),extremely beautiful detailed water,((lying on the lake)),(bloodred water:1.5),(red background:1.3)"
+    },
+    {
+      "zh": "辉煌阳光法",
+      "en": "((messy hair)),(grassland),(yellow eyes),incredibly absurdres,(gold hair),floating hair,Large number of environments,the medieval,grace,prospect,water eyes,wind,breeze,god ray,lawn,Mountains and lakes in the distance,The sun shines through the trees,A vast expanse of grassland"
+    },
+    {
+      "zh": "星鬓法",
+      "en": "Starry sky adorns hair,sparkling anime eyes,beautiful detailed stars,blighting stars,emerging dark purple across with white hair,multicolored hair,beautiful detailed sky,beautiful detailed water,cinematic lighting,dramatic angle,"
+    },
+    {
+      "zh": "森罗法",
+      "en": "There are many scattered luminous petals,Hidden in the light yellow flowers,Depth of field,Many flying drops of water,Many scattered leaves,branch,angle,contour deepening,cinematic angle"
+    },
+    {
+      "zh": "星天使",
+      "en": "sunlight,extremely light,extremely clothes,Holy Light,dynamic angle,Light particle,very long hair,white hair,yellow eyes,glowing eyes,expressionless,((light smile)),((((white Tulle skirt)))),white silk,looking at viewer,angel wings,large wings,multiple wings,angel halo,(((starry sky))),dusk sky,Floating light spot,Lots of feathers"
+    },
+    {
+      "zh": "黄金律",
+      "en": "blonde hair,yellow eyes,white skin,mature female,sunrise,golden sky,magnificent architecture,beautiful detailed sky,overexposure,delicate gold metal decorations"
+    },
+    {
+      "zh": "机械姬",
+      "en": "mechanical prosthesis,mecha coverage,emerging dark purple across with white hair,fluorescent purple,cool movement,rose red eyes,beatiful detailed cyberpunk city,hd semirealistic anime cg concept art digital painting"
+    },
+    {
+      "zh": "人鱼法",
+      "en": "(incredibly absurdres),(highly detailed beautiful fishtail:1.6),(((human hands))),(the lower body is a fish:1.9)AND(no human thigh:1.2),seaweed,(full body),(white seashell),(curved and slender fish tail),(the lower body is bare:1.1),{beautiful tailfin},((underwater)),(illustration),detailed water,((fishes)),(floating),watercolor (medium),(small whirlpool),((The sensation of water flowing)),(detailed scales on a mermaid)"
+    },
+    {
+      "zh": "末日",
+      "en": "Blood Mist,background Urban rooftop,despair,Blood Cherry Blossom,torn clothes,crying with eyes open,solo,Blood Rain,bandages,Gunpowder smoke,beautiful deatailed shadow,Splashing blood,dust,tyndall effect"
+    },
+    {
+      "zh": "碎梦",
+      "en": "Space opera,Space port,robot arm,elbow gloves,night,glisten,stare,cyberpunk,((((citylight)))),science fiction,bodysuit,Mechanical armor headdress,(bare shoulders)"
+    },
+    {
+      "zh": "幻碎梦",
+      "en": "dynamic angle,rainbow hair,detailed cute anime face,((loli)),flower,cry,water,corrugated,flowers tire,broken glass,(broken screen),atlantis,transparent glass"
+    },
+    {
+      "zh": "血改法",
+      "en": "(white hair),(((red streaked hair))),red eyes,(((full body))),(red hair),(((((Hold a red sword))))),(angry face),((Blood drop)),((Blood fog)),light shafts,soft focus,((Splashing blood))),Long hair,((Bloodstain)),Fighting stance,{{{{{watercolor (medium)}}}},(((masterpiece))),((white clock)),((ultradetailed)),((Covered in blood)),flowing hair,Exquisite Flame,dynamic angle,floating,(shine),extremely delicate and beautiful girls,bright skin,lying red petals,Holy lighting"
+    },
+    {
+      "zh": "留影术",
+      "en": "dramatic shadows,black and white,monochrome,{{comic}},cross necklace,Cassock"
+    },
+    {
+      "zh": "飘花法",
+      "en": "((ink)),(water color),bloom effect,detailed beautiful grassland with petal,flower,butterfly,necklace,smile,petal,(((surrounded by heavy floating petal flow)))"
+    }
+  ],
+  "camera": [
+    {
+      "zh": "动态姿势（有活力）",
+      "en": "dynamic pose"
+    },
+    {
+      "zh": "动态角度",
+      "en": "dynamic_angle"
+    },
+    {
+      "zh": "从上面拍",
+      "en": "from_above"
+    },
+    {
+      "zh": "从下面拍",
+      "en": "from_below"
+    },
+    {
+      "zh": "电影角度",
+      "en": "cinematic_angle"
+    },
+    {
+      "zh": "倾斜角度",
+      "en": "dutch angle"
+    },
+    {
+      "zh": "透视法",
+      "en": "foreshortening"
+    },
+    {
+      "zh": "远景透视画法",
+      "en": "fisheye"
+    },
+    {
+      "zh": "相机平行",
+      "en": "camera level/Parallel angles"
+    },
+    {
+      "zh": "水平视角",
+      "en": "horizontal view angle"
+    },
+    {
+      "zh": "等距视图",
+      "en": "isometric view"
+    },
+    {
+      "zh": "俯视图",
+      "en": "Aerial View"
+    },
+    {
+      "zh": "顶视图",
+      "en": "Top-View"
+    },
+    {
+      "zh": "侧视图",
+      "en": "Side-View"
+    },
+    {
+      "zh": "卫星视图",
+      "en": "Satellite-View"
+    },
+    {
+      "zh": "手机屏幕",
+      "en": "phone_screen"
+    },
+    {
+      "zh": "多视角分解",
+      "en": "multiple_views"
+    },
+    {
+      "zh": "对镜自拍",
+      "en": "mirror selfie"
+    },
+    {
+      "zh": "3/4视角",
+      "en": "three-quarter view"
+    },
+    {
+      "zh": "正面视角",
+      "en": "front_view"
+    },
+    {
+      "zh": "侧面视角",
+      "en": "from_side"
+    },
+    {
+      "zh": "由室外向室内",
+      "en": "from_outside"
+    },
+    {
+      "zh": "后背视角",
+      "en": "from_back"
+    },
+    {
+      "zh": "后背视角",
+      "en": "from behind"
+    },
+    {
+      "zh": "微观视图",
+      "en": "Macro View"
+    },
+    {
+      "zh": "产品视图",
+      "en": "Product-View"
+    },
+    {
+      "zh": "特写视图",
+      "en": "Closeup-View"
+    },
+    {
+      "zh": "第一人称",
+      "en": "First-Person"
+    },
+    {
+      "zh": "第一人称视角",
+      "en": "First-Person view"
+    },
+    {
+      "zh": "第三人称",
+      "en": "Third-Person"
+    },
+    {
+      "zh": "第三人称视角",
+      "en": "Third-Person View"
+    },
+    {
+      "zh": "透视图",
+      "en": "Perspective"
+    },
+    {
+      "zh": "视场",
+      "en": "Field of View"
+    },
+    {
+      "zh": "下巴以上",
+      "en": "Extreme Close-up"
+    },
+    {
+      "zh": "颈部以上",
+      "en": "Medium Close-up"
+    },
+    {
+      "zh": "锁骨以上",
+      "en": "Full Close-up"
+    },
+    {
+      "zh": "肩膀以上",
+      "en": "Wide Close-up"
+    },
+    {
+      "zh": "胸部以上",
+      "en": "Close Shot"
+    },
+    {
+      "zh": "肚脐以上",
+      "en": "Medium Close Shot"
+    },
+    {
+      "zh": "肚脐以上",
+      "en": "Medium Shot"
+    },
+    {
+      "zh": "膝盖以上",
+      "en": "Medium Full Shot"
+    },
+    {
+      "zh": "全身像",
+      "en": "Full Shot"
+    },
+    {
+      "zh": "中景镜头",
+      "en": "mid_shot"
+    },
+    {
+      "zh": "半身像",
+      "en": "bust"
+    },
+    {
+      "zh": "上半身",
+      "en": "upper_body"
+    },
+    {
+      "zh": "下半身",
+      "en": "lower_body"
+    },
+    {
+      "zh": "上半身+上半大腿(牛仔镜头)",
+      "en": "cowboy_shot"
+    },
+    {
+      "zh": "肖像画(脸+肩+偶尔再加胸)",
+      "en": "portrait"
+    },
+    {
+      "zh": "接近肖像画（镜头更近）",
+      "en": "very close portrait"
+    },
+    {
+      "zh": "侧面肖像画(portrait的侧脸版)",
+      "en": "profile"
+    },
+    {
+      "zh": "特写镜头",
+      "en": "close-up"
+    },
+    {
+      "zh": "专注于脸",
+      "en": "focus on face"
+    },
+    {
+      "zh": "全身拍摄",
+      "en": "full-body shot"
+    },
+    {
+      "zh": "前置焦点",
+      "en": "foreground focus"
+    },
+    {
+      "zh": "全景镜头(广角镜头)",
+      "en": "wide_shot"
+    },
+    {
+      "zh": "微距镜头",
+      "en": "macro_shot"
+    },
+    {
+      "zh": "插入其他镜头或图片",
+      "en": "inset"
+    },
+    {
+      "zh": "剖面图",
+      "en": "cross-section"
+    },
+    {
+      "zh": "男性焦点(女性焦点)",
+      "en": "male focus"
+    },
+    {
+      "zh": "聚焦在单个人物(适合复杂场景)",
+      "en": "solo_focus"
+    },
+    {
+      "zh": "聚焦在xx上",
+      "en": "xx_focus"
+    },
+    {
+      "zh": "聚焦在面部",
+      "en": "face_focus"
+    },
+    {
+      "zh": "聚焦在眼睛",
+      "en": "eyes_focus"
+    },
+    {
+      "zh": "聚焦在脚上",
+      "en": "foot_focus"
+    },
+    {
+      "zh": "聚焦在臀部",
+      "en": "hip_focus"
+    },
+    {
+      "zh": "聚焦在屁股上",
+      "en": "ass_focus"
+    },
+    {
+      "zh": "聚焦在载具(车)上",
+      "en": "vehicle_focus"
+    },
+    {
+      "zh": "背对镜头",
+      "en": "turn_one's_back"
+    },
+    {
+      "zh": "(强调)两腿之间",
+      "en": "between_legs"
+    },
+    {
+      "zh": "(突出)胸部",
+      "en": "between_breasts"
+    },
+    {
+      "zh": "(突出)指间",
+      "en": "between_fingers"
+    },
+    {
+      "zh": "偷窥",
+      "en": "peeking"
+    },
+    {
+      "zh": "偷窥(的姿态)",
+      "en": "peeking_out"
+    },
+    {
+      "zh": "偷窥(强调视角)",
+      "en": "peeping"
+    },
+    {
+      "zh": "肚脐偷看",
+      "en": "midriff_peek"
+    },
+    {
+      "zh": "腋窝偷看",
+      "en": "armpit_peek"
+    },
+    {
+      "zh": "浦西偷看",
+      "en": "pussy_peek"
+    },
+    {
+      "zh": "内裤偷看",
+      "en": "panty_peek"
+    },
+    {
+      "zh": "内裤走光",
+      "en": "pantyshot"
+    },
+    {
+      "zh": "被抓现行",
+      "en": "caught"
+    },
+    {
+      "zh": "裙底视角",
+      "en": "upskirt"
+    },
+    {
+      "zh": "微距",
+      "en": "Macro"
+    },
+    {
+      "zh": "长焦",
+      "en": "Telephoto"
+    },
+    {
+      "zh": "放大",
+      "en": "Magnification"
+    },
+    {
+      "zh": "微观的",
+      "en": "Microscopic"
+    },
+    {
+      "zh": "电子显微镜",
+      "en": "Electron Microscope"
+    },
+    {
+      "zh": "超分辨率显微镜",
+      "en": "Super-Resolution Microscopy"
+    },
+    {
+      "zh": "广角",
+      "en": "Wide Angle"
+    },
+    {
+      "zh": "超广角",
+      "en": "Ultra-Wide Angle"
+    },
+    {
+      "zh": "全景",
+      "en": "panorama"
+    },
+    {
+      "zh": "360 全景",
+      "en": "360 Panorama"
+    },
+    {
+      "zh": "360 度视角",
+      "en": "360 Angle"
+    },
+    {
+      "zh": "鱼眼镜头",
+      "en": "Fisheye Lens"
+    },
+    {
+      "zh": "鱼眼镜头效果",
+      "en": "Fisheye Lens Effect"
+    },
+    {
+      "zh": "微缩模型效果",
+      "en": "Miniature Faking"
+    },
+    {
+      "zh": "螺旋拍摄",
+      "en": "Brenizer Method"
+    },
+    {
+      "zh": "帕尼尼投影",
+      "en": "Panini Projection"
+    },
+    {
+      "zh": "正投影",
+      "en": "Orthographic"
+    },
+    {
+      "zh": "等角投影",
+      "en": "Isometric"
+    },
+    {
+      "zh": "景深",
+      "en": "DOF"
+    },
+    {
+      "zh": "风景镜头(远景)",
+      "en": "landscape"
+    },
+    {
+      "zh": "锐聚焦",
+      "en": "Sharp Focus"
+    },
+    {
+      "zh": "变焦",
+      "en": "Zoom"
+    },
+    {
+      "zh": "多莉变焦",
+      "en": "Dolly Zoom"
+    },
+    {
+      "zh": "肖像照",
+      "en": "Portrait Photogram"
+    },
+    {
+      "zh": "相片拟真",
+      "en": "Photorealistic"
+    },
+    {
+      "zh": "电影感",
+      "en": "Cinematic"
+    },
+    {
+      "zh": "色彩分级",
+      "en": "Color Grading"
+    },
+    {
+      "zh": "戏剧性",
+      "en": "Dramatic"
+    },
+    {
+      "zh": "社论摄影",
+      "en": "Editorial Photography"
+    },
+    {
+      "zh": "电影质感",
+      "en": "filmic"
+    },
+    {
+      "zh": "胶片静止图像",
+      "en": "film still"
+    },
+    {
+      "zh": "胶片颗粒",
+      "en": "film grain"
+    },
+    {
+      "zh": "迷人镜头",
+      "en": "Glamor Shot"
+    },
+    {
+      "zh": "黄金时段",
+      "en": "Golden Hour"
+    },
+    {
+      "zh": "高速摄影",
+      "en": "High-Speed Photograph"
+    },
+    {
+      "zh": "故意的相机移动",
+      "en": "Intentional camera movement"
+    },
+    {
+      "zh": "狗仔摄影",
+      "en": "Paparazzi Photography"
+    },
+    {
+      "zh": "摄影",
+      "en": "Photography"
+    },
+    {
+      "zh": "照片拍摄",
+      "en": "Photoshoot"
+    },
+    {
+      "zh": "照片",
+      "en": "photo"
+    },
+    {
+      "zh": "照片(拍立得)",
+      "en": "polaroid"
+    },
+    {
+      "zh": "海报/主题聚焦",
+      "en": "poster,caustics"
+    },
+    {
+      "zh": "万花筒摄影",
+      "en": "Kaleidoscope Photography"
+    },
+    {
+      "zh": "新闻摄影",
+      "en": "Photojournalism"
+    },
+    {
+      "zh": "卫星图像",
+      "en": "Satellite Imagery"
+    },
+    {
+      "zh": "战争摄影",
+      "en": "War Photography"
+    },
+    {
+      "zh": "野生动物摄影",
+      "en": "Wildlife Photography"
+    },
+    {
+      "zh": "复古胶片质感",
+      "en": "Fujifilm XT3,film still,film grain,sharp focus on subject,cinematic"
+    },
+    {
+      "zh": "模糊",
+      "en": "Blurry"
+    },
+    {
+      "zh": "模糊效果",
+      "en": "Blur Effect"
+    },
+    {
+      "zh": "倾斜模糊",
+      "en": "Tilt Blur"
+    },
+    {
+      "zh": "镜头畸变",
+      "en": "Lens Distortion"
+    },
+    {
+      "zh": "闪光灯拍摄",
+      "en": "flash photography"
+    },
+    {
+      "zh": "曝光",
+      "en": "Exposure"
+    },
+    {
+      "zh": "短曝光",
+      "en": "Short Exposure"
+    },
+    {
+      "zh": "长曝光",
+      "en": "Long Exposure"
+    },
+    {
+      "zh": "双重曝光",
+      "en": "Double-Exposure"
+    },
+    {
+      "zh": "快门速度 1/1000",
+      "en": "Shutter Speed 1/1000"
+    },
+    {
+      "zh": "快门速度 1/2",
+      "en": "Shutter Speed 1/2"
+    },
+    {
+      "zh": "光圈/2.8",
+      "en": "F/2.8"
+    },
+    {
+      "zh": "F/22",
+      "en": "F/22"
+    },
+    {
+      "zh": "伽马",
+      "en": "Gamma"
+    },
+    {
+      "zh": "白平衡",
+      "en": "White Balance"
+    },
+    {
+      "zh": "光波干涉",
+      "en": "Schlieren"
+    },
+    {
+      "zh": "微光摄像",
+      "en": "Night Vision"
+    },
+    {
+      "zh": "高光谱成像",
+      "en": "Hyperspectral Imaging"
+    },
+    {
+      "zh": "多光谱成像",
+      "en": "Multispectral Imaging"
+    },
+    {
+      "zh": "摄像机效果",
+      "en": "Camcorder Effect"
+    },
+    {
+      "zh": "单反",
+      "en": "DSLR"
+    },
+    {
+      "zh": "35mm",
+      "en": "35mm"
+    },
+    {
+      "zh": "Tri-X 400 TX",
+      "en": "Tri-X 400 TX"
+    },
+    {
+      "zh": "拍立得",
+      "en": "Instax"
+    },
+    {
+      "zh": "柯达 Ektachrome",
+      "en": "Ektachrome"
+    },
+    {
+      "zh": "富士胶片",
+      "en": "Fujifilm Superia"
+    },
+    {
+      "zh": "富士相机 XT3",
+      "en": "Fujifilm XT3"
+    },
+    {
+      "zh": "拍立得",
+      "en": "Polaroid SX-70"
+    },
+    {
+      "zh": "伊尔福 HP5",
+      "en": "Ilford HP5"
+    },
+    {
+      "zh": "柯达 Ektar",
+      "en": "Kodak Ektar"
+    },
+    {
+      "zh": "柯达金 200",
+      "en": "Kodak Gold 200"
+    },
+    {
+      "zh": "柯达 Portra",
+      "en": "Kodak Portra"
+    },
+    {
+      "zh": "Lomo",
+      "en": "Lomo"
+    },
+    {
+      "zh": "尼康 D750",
+      "en": "Nikon D750"
+    },
+    {
+      "zh": "富士 Provia",
+      "en": "Provia"
+    },
+    {
+      "zh": "70 毫米胶片拍摄",
+      "en": "Shot on 70mm"
+    },
+    {
+      "zh": "富士 Velvia",
+      "en": "Velvia"
+    },
+    {
+      "zh": "复古拍摄",
+      "en": "Vintage"
+    },
+    {
+      "zh": "针孔摄影",
+      "en": "Pinhole Photography"
+    },
+    {
+      "zh": "相片",
+      "en": "Photogram"
+    },
+    {
+      "zh": "达盖尔银版",
+      "en": "Daguerrotype"
+    },
+    {
+      "zh": "旧式照相",
+      "en": "Ambrotype"
+    },
+    {
+      "zh": "光力摄影法",
+      "en": "Calotype"
+    },
+    {
+      "zh": "锡版摄影",
+      "en": "Tintype"
+    },
+    {
+      "zh": "行车记录仪录像",
+      "en": "Dashcam-Footage"
+    },
+    {
+      "zh": "一元",
+      "en": "Unary"
+    },
+    {
+      "zh": "二进制",
+      "en": "Binary"
+    },
+    {
+      "zh": "三进制",
+      "en": "Ternary"
+    },
+    {
+      "zh": "四进制",
+      "en": "Quaternary"
+    },
+    {
+      "zh": "五进制",
+      "en": "Quinary"
+    },
+    {
+      "zh": "六进制",
+      "en": "Senary"
+    },
+    {
+      "zh": "七进制",
+      "en": "Septenary"
+    },
+    {
+      "zh": "八进制",
+      "en": "Octal"
+    },
+    {
+      "zh": "九进制",
+      "en": "Nonary"
+    },
+    {
+      "zh": "十进制",
+      "en": "Decimal"
+    },
+    {
+      "zh": "十六进制",
+      "en": "Hexadecimal"
+    },
+    {
+      "zh": "景深（协调人景）",
+      "en": "depth of field"
+    },
+    {
+      "zh": "运动导致的模糊",
+      "en": "motion_blur"
+    },
+    {
+      "zh": "体现运动的线",
+      "en": "motion_lines"
+    },
+    {
+      "zh": "速度线",
+      "en": "speed_lines"
+    },
+    {
+      "zh": "焦散（背景虚化）",
+      "en": "bokeh"
+    },
+    {
+      "zh": "色差、色失焦",
+      "en": "chromatic_aberration"
+    },
+    {
+      "zh": "过曝",
+      "en": "overexposure"
+    },
+    {
+      "zh": "晕影",
+      "en": "Vignette"
+    },
+    {
+      "zh": "分离调色",
+      "en": "Split Toning"
+    },
+    {
+      "zh": "重摄影",
+      "en": "Rephotography"
+    },
+    {
+      "zh": "微缩模型电影",
+      "en": "miniature model film"
+    },
+    {
+      "zh": "扫描摄影",
+      "en": "Scanography"
+    },
+    {
+      "zh": "狭缝扫描摄影",
+      "en": "Slit-Scan Photography"
+    },
+    {
+      "zh": "逼真，仿真",
+      "en": "photorealistic,realistic"
+    },
+    {
+      "zh": "写实",
+      "en": "realistic"
+    },
+    {
+      "zh": "半写实",
+      "en": "semi-realistic"
+    },
+    {
+      "zh": "现实的阴影",
+      "en": "realistic shadows"
+    },
+    {
+      "zh": "手部细节",
+      "en": "detailed hands and detailed 5 fingers and detailed 5 finger nails"
+    },
+    {
+      "zh": "脚部细节",
+      "en": "detailed feet and detailed 5 toes and detailed 5 toenails"
+    },
+    {
+      "zh": "移轴摄影",
+      "en": "Tilt‑Shift Photography"
+    },
+    {
+      "zh": "延时拍摄",
+      "en": "Time-Lapse"
+    },
+    {
+      "zh": "镜头推进",
+      "en": "Camera Push‑In"
+    },
+    {
+      "zh": "镜头拉远",
+      "en": "Camera Pull‑Out"
+    },
+    {
+      "zh": "镜头向右移动",
+      "en": "Camera Dolly Right"
+    },
+    {
+      "zh": "镜头向左移动",
+      "en": "Camera Dolly Left"
+    },
+    {
+      "zh": "镜头上摇",
+      "en": "Camera Tilt‑Up"
+    },
+    {
+      "zh": "手持镜头",
+      "en": "Handheld Shot"
+    },
+    {
+      "zh": "复合运镜",
+      "en": "Complex Camera Movement"
+    },
+    {
+      "zh": "跟随镜头",
+      "en": "Follow Shot"
+    },
+    {
+      "zh": "环绕运镜",
+      "en": "Orbit Shot"
+    }
+  ],
+  "lighting": [
+    {
+      "zh": "日光",
+      "en": "Sunlight"
+    },
+    {
+      "zh": "人工光",
+      "en": "Artificial Lighting"
+    },
+    {
+      "zh": "月光",
+      "en": "Moonlight"
+    },
+    {
+      "zh": "实用光",
+      "en": "Practical Light"
+    },
+    {
+      "zh": "火光",
+      "en": "Firelight"
+    },
+    {
+      "zh": "荧光",
+      "en": "Fluorescence"
+    },
+    {
+      "zh": "磷光",
+      "en": "Phosphorescence"
+    },
+    {
+      "zh": "阴天光",
+      "en": "Overcast Light"
+    },
+    {
+      "zh": "混合光",
+      "en": "Mixed Lighting"
+    },
+    {
+      "zh": "晴天光",
+      "en": "Direct Sunlight"
+    },
+    {
+      "zh": "自然采光",
+      "en": "Natural Lighting"
+    },
+    {
+      "zh": "摄影棚灯光",
+      "en": "Studio Lighting"
+    },
+    {
+      "zh": "体积光",
+      "en": "Volumetric Lighting"
+    },
+    {
+      "zh": "泛光灯",
+      "en": "Floodlight"
+    },
+    {
+      "zh": "LED 灯",
+      "en": "LED light"
+    },
+    {
+      "zh": "聚光灯",
+      "en": "Spotlight"
+    },
+    {
+      "zh": "跑马灯",
+      "en": "Marquee"
+    },
+    {
+      "zh": "闪光灯",
+      "en": "Strobe"
+    },
+    {
+      "zh": "闪光灯光",
+      "en": "Strobe Light"
+    },
+    {
+      "zh": "频闪灯",
+      "en": "Stroboscope"
+    },
+    {
+      "zh": "明亮的",
+      "en": "bright"
+    },
+    {
+      "zh": "超亮",
+      "en": "Ultrabright"
+    },
+    {
+      "zh": "电磁频谱",
+      "en": "Electromagnetic Spectrum"
+    },
+    {
+      "zh": "红外线的",
+      "en": "Infrared"
+    },
+    {
+      "zh": "紫外线",
+      "en": "Ultraviolet"
+    },
+    {
+      "zh": "UV",
+      "en": "UV"
+    },
+    {
+      "zh": "X 射线",
+      "en": "X-Ray"
+    },
+    {
+      "zh": "正面光",
+      "en": "Frontlight"
+    },
+    {
+      "zh": "半侧背光",
+      "en": "Halfrear Lighting"
+    },
+    {
+      "zh": "背光",
+      "en": "Backlight"
+    },
+    {
+      "zh": "柔光",
+      "en": "Soft Lighting"
+    },
+    {
+      "zh": "硬光/强光",
+      "en": "Hard Lighting"
+    },
+    {
+      "zh": "顶光",
+      "en": "Top Lighting"
+    },
+    {
+      "zh": "侧光",
+      "en": "Side Lighting"
+    },
+    {
+      "zh": "底光",
+      "en": "Bottom Lighting"
+    },
+    {
+      "zh": "边缘光/轮廓光",
+      "en": "Rim Light"
+    },
+    {
+      "zh": "剪影",
+      "en": "silhouette"
+    },
+    {
+      "zh": "电影级光照",
+      "en": "Cinematic Lighting"
+    },
+    {
+      "zh": "氛围光照",
+      "en": "Moody lighting"
+    },
+    {
+      "zh": "丁达尔效应",
+      "en": "Tyndall effect"
+    },
+    {
+      "zh": "漏光光效",
+      "en": "light leaks"
+    },
+    {
+      "zh": "霓虹灯",
+      "en": "glowing neon lights"
+    },
+    {
+      "zh": "闪烁光线",
+      "en": "Rays of Shimmering Light"
+    },
+    {
+      "zh": "昏暗光线",
+      "en": "Crepuscular Rays"
+    },
+    {
+      "zh": "火花管",
+      "en": "Crackle Tube"
+    },
+    {
+      "zh": "特斯拉线圈",
+      "en": "Tesla Coil"
+    },
+    {
+      "zh": "等离子球",
+      "en": "Plasma Globe"
+    },
+    {
+      "zh": "荧光棒",
+      "en": "Glow Stick"
+    },
+    {
+      "zh": "霓虹灯",
+      "en": "Neon Lamp"
+    },
+    {
+      "zh": "透镜光晕（逆光）",
+      "en": "lens flare"
+    },
+    {
+      "zh": "反白日",
+      "en": "Contre-Jour"
+    },
+    {
+      "zh": "伦勃朗灯光",
+      "en": "Rembrandt Lighting"
+    },
+    {
+      "zh": "分体照明",
+      "en": "Split Lighting"
+    },
+    {
+      "zh": "美丽的灯光",
+      "en": "Beautiful Lighting"
+    },
+    {
+      "zh": "重点照明",
+      "en": "Accent Lighting"
+    },
+    {
+      "zh": "全局光照",
+      "en": "Global Illumination"
+    },
+    {
+      "zh": "流明全局照明",
+      "en": "Lumen Global Illumination"
+    },
+    {
+      "zh": "屏幕空间全局光照",
+      "en": "Screen Space Global Illumination"
+    },
+    {
+      "zh": "光线追踪全局光照",
+      "en": "Ray Tracing Global Illumination"
+    },
+    {
+      "zh": "白炽灯",
+      "en": "Incandescent"
+    },
+    {
+      "zh": "荧光的",
+      "en": "Fluorescent"
+    },
+    {
+      "zh": "日光灯管",
+      "en": "Fluorescent Lamp"
+    },
+    {
+      "zh": "卤素",
+      "en": "Halogen"
+    },
+    {
+      "zh": "卤素灯",
+      "en": "Halogen Lamp"
+    },
+    {
+      "zh": "氙气灯",
+      "en": "Xenon Lamp"
+    },
+    {
+      "zh": "氪气灯",
+      "en": "Krypton Lamp"
+    },
+    {
+      "zh": "氩气灯",
+      "en": "Argon Lamp"
+    },
+    {
+      "zh": "氦气灯",
+      "en": "Helium Lamp"
+    },
+    {
+      "zh": "爱迪生灯泡",
+      "en": "Edison Bulb"
+    },
+    {
+      "zh": "真空管灯",
+      "en": "Vacuum Tube Lamp"
+    },
+    {
+      "zh": "辉光管",
+      "en": "Nixie Tube"
+    },
+    {
+      "zh": "碳化钙灯",
+      "en": "Carbide Lamp"
+    },
+    {
+      "zh": "阿尔干灯",
+      "en": "Argand Lamp"
+    },
+    {
+      "zh": "酥油灯",
+      "en": "Diya Lamp"
+    },
+    {
+      "zh": "灯笼",
+      "en": "Lantern"
+    },
+    {
+      "zh": "黑兰特灯笼",
+      "en": "Schwarz Lantern"
+    },
+    {
+      "zh": "小夜灯",
+      "en": "Nightlight"
+    },
+    {
+      "zh": "圣诞彩灯",
+      "en": "Christmas Lights"
+    },
+    {
+      "zh": "光纤",
+      "en": "Optical Fiber"
+    },
+    {
+      "zh": "发光导线",
+      "en": "Electroluminescent Wire"
+    },
+    {
+      "zh": "激光",
+      "en": "Laser"
+    },
+    {
+      "zh": "耀斑",
+      "en": "Flare"
+    },
+    {
+      "zh": "金属光泽",
+      "en": "metallic luster"
+    },
+    {
+      "zh": "背景光",
+      "en": "background light"
+    },
+    {
+      "zh": "自然光",
+      "en": "available light"
+    },
+    {
+      "zh": "电弧",
+      "en": "Electric Arc"
+    },
+    {
+      "zh": "阴极射线管",
+      "en": "CRT"
+    },
+    {
+      "zh": "液晶显示器",
+      "en": "LCD"
+    },
+    {
+      "zh": "LED 显示器",
+      "en": "LED"
+    },
+    {
+      "zh": "OLED 显示器",
+      "en": "OLED"
+    },
+    {
+      "zh": "AMOLED 显示器",
+      "en": "AMOLED"
+    },
+    {
+      "zh": "七段显示器",
+      "en": "7 Segment Display"
+    },
+    {
+      "zh": "点阵显示器",
+      "en": "Dot Matrix Display"
+    },
+    {
+      "zh": "电致发光显示器",
+      "en": "Electroluminescent Display"
+    },
+    {
+      "zh": "真空荧光显示器",
+      "en": "Vacuum Fluorescent Display"
+    },
+    {
+      "zh": "荧光显示器",
+      "en": "Phosphor Display"
+    },
+    {
+      "zh": "等离子显示器",
+      "en": "Plasma Display"
+    },
+    {
+      "zh": "量子点",
+      "en": "Quantum Dot"
+    },
+    {
+      "zh": "量子点显示器",
+      "en": "Quantum Dot Display"
+    },
+    {
+      "zh": "光学",
+      "en": "Optics"
+    },
+    {
+      "zh": "透明",
+      "en": "Transparent"
+    },
+    {
+      "zh": "半透明",
+      "en": "Translucent"
+    },
+    {
+      "zh": "不透明",
+      "en": "Opaque"
+    },
+    {
+      "zh": "粗糙的",
+      "en": "Rough"
+    },
+    {
+      "zh": "哑光的",
+      "en": "Matte"
+    },
+    {
+      "zh": "光泽",
+      "en": "Glossy"
+    },
+    {
+      "zh": "光滑的",
+      "en": "smooth"
+    },
+    {
+      "zh": "闪亮的",
+      "en": "Shiny"
+    },
+    {
+      "zh": "反光",
+      "en": "Reflective"
+    },
+    {
+      "zh": "抛光",
+      "en": "Polished"
+    },
+    {
+      "zh": "阴影",
+      "en": "Shadows"
+    },
+    {
+      "zh": "微光",
+      "en": "Shimmer"
+    },
+    {
+      "zh": "闪闪发光",
+      "en": "Shimmering"
+    },
+    {
+      "zh": "焦散",
+      "en": "Caustics"
+    },
+    {
+      "zh": "折射",
+      "en": "Refractive"
+    },
+    {
+      "zh": "光线反射",
+      "en": "reflection light"
+    },
+    {
+      "zh": "光线追踪反射",
+      "en": "Ray Tracing Reflections"
+    },
+    {
+      "zh": "流明反射",
+      "en": "Lumen Reflections"
+    },
+    {
+      "zh": "屏幕空间反射",
+      "en": "Screen Space Reflections"
+    },
+    {
+      "zh": "光线追踪",
+      "en": "ray tracing"
+    },
+    {
+      "zh": "环境光遮蔽",
+      "en": "Ambient Occlusion"
+    },
+    {
+      "zh": "散射",
+      "en": "Scattering"
+    },
+    {
+      "zh": "衍射光栅",
+      "en": "Diffraction Grading"
+    },
+    {
+      "zh": "RGB 位移",
+      "en": "RGB Displacement"
+    },
+    {
+      "zh": "发光",
+      "en": "Glowing"
+    },
+    {
+      "zh": "夜光",
+      "en": "Glow-In-The-Dark"
+    },
+    {
+      "zh": "生物发光",
+      "en": "Bioluminescence"
+    },
+    {
+      "zh": "光致发光",
+      "en": "Photoluminescence"
+    },
+    {
+      "zh": "化学发光",
+      "en": "Chemiluminescence"
+    },
+    {
+      "zh": "阴极发光",
+      "en": "Cathodoluminescence"
+    },
+    {
+      "zh": "电致发光",
+      "en": "Electroluminescence"
+    },
+    {
+      "zh": "放射发光",
+      "en": "Radioluminescence"
+    },
+    {
+      "zh": "热发光",
+      "en": "Thermoluminescence"
+    },
+    {
+      "zh": "电化学发光",
+      "en": "Electrochemiluminescence"
+    },
+    {
+      "zh": "晶体发光",
+      "en": "Crystalloluminescence"
+    },
+    {
+      "zh": "压电发光",
+      "en": "Piezoluminescence"
+    },
+    {
+      "zh": "摩擦发光",
+      "en": "Triboluminescence"
+    },
+    {
+      "zh": "机械发光",
+      "en": "Mechanoluminescence"
+    },
+    {
+      "zh": "光致发光",
+      "en": "Lyoluminescence"
+    },
+    {
+      "zh": "烛光",
+      "en": "Candoluminescence"
+    },
+    {
+      "zh": "碎片发光",
+      "en": "Fractoluminescence"
+    },
+    {
+      "zh": "声致发光",
+      "en": "Sonoluminescence"
+    },
+    {
+      "zh": "半透明发光",
+      "en": "Translucidluminescence"
+    },
+    {
+      "zh": "材质性",
+      "en": "Materiality"
+    }
+  ],
+  "color": [
+    {
+      "zh": "黑色",
+      "en": "black"
+    },
+    {
+      "zh": "深灰色",
+      "en": "darkgray"
+    },
+    {
+      "zh": "灰色",
+      "en": "gray"
+    },
+    {
+      "zh": "亮石板灰",
+      "en": "lightslategray"
+    },
+    {
+      "zh": "灰石色",
+      "en": "slategray"
+    },
+    {
+      "zh": "深绿色",
+      "en": "darkslategray"
+    },
+    {
+      "zh": "浅灰色",
+      "en": "lightgray"
+    },
+    {
+      "zh": "庚氏灰色",
+      "en": "gainsboro"
+    },
+    {
+      "zh": "白色",
+      "en": "white"
+    },
+    {
+      "zh": "白烟色",
+      "en": "whitesmoke"
+    },
+    {
+      "zh": "雪白色",
+      "en": "snow"
+    },
+    {
+      "zh": "幽灵白",
+      "en": "ghostwhite"
+    },
+    {
+      "zh": "花白色",
+      "en": "floralwhite"
+    },
+    {
+      "zh": "亚麻色",
+      "en": "linen"
+    },
+    {
+      "zh": "古董白",
+      "en": "antiquewhite"
+    },
+    {
+      "zh": "老花色",
+      "en": "oldlace"
+    },
+    {
+      "zh": "象牙色",
+      "en": "ivory"
+    },
+    {
+      "zh": "贝壳白",
+      "en": "seashell"
+    },
+    {
+      "zh": "薄荷奶油色",
+      "en": "mintcream"
+    },
+    {
+      "zh": "蜜色",
+      "en": "honeydew"
+    },
+    {
+      "zh": "饼干色",
+      "en": "bisque"
+    },
+    {
+      "zh": "鹿皮鞋色",
+      "en": "moccasin"
+    },
+    {
+      "zh": "浅棕色",
+      "en": "light_brown"
+    },
+    {
+      "zh": "金黄色的",
+      "en": "blonde"
+    },
+    {
+      "zh": "银色",
+      "en": "silver"
+    },
+    {
+      "zh": "暗灰蓝色",
+      "en": "darkslateblue"
+    },
+    {
+      "zh": "蔚蓝色",
+      "en": "azure"
+    },
+    {
+      "zh": "艾莉丝蓝",
+      "en": "aliceblue"
+    },
+    {
+      "zh": "薰衣草色",
+      "en": "lavender"
+    },
+    {
+      "zh": "淡钢蓝色",
+      "en": "lightsteelblue"
+    },
+    {
+      "zh": "淡蓝色",
+      "en": "lightblue"
+    },
+    {
+      "zh": "粉蓝色",
+      "en": "powderblue"
+    },
+    {
+      "zh": "深天蓝",
+      "en": "skyblue"
+    },
+    {
+      "zh": "淡青色",
+      "en": "paleturquoise"
+    },
+    {
+      "zh": "绿松石色",
+      "en": "darkseagreen"
+    },
+    {
+      "zh": "军服蓝色",
+      "en": "lightseagreen"
+    },
+    {
+      "zh": "草绿色",
+      "en": "lightgreen"
+    },
+    {
+      "zh": "淡绿色",
+      "en": "palegreen"
+    },
+    {
+      "zh": "草坪绿",
+      "en": "lawngreen"
+    },
+    {
+      "zh": "黄绿色",
+      "en": "chartreuse"
+    },
+    {
+      "zh": "酸橙色",
+      "en": "greenyellow"
+    },
+    {
+      "zh": "橄榄绿色",
+      "en": "yellowgreen"
+    },
+    {
+      "zh": "浅黄色",
+      "en": "lightyellow"
+    },
+    {
+      "zh": "亮金黄色",
+      "en": "lightgoldenrodyellow"
+    },
+    {
+      "zh": "柠檬绸色",
+      "en": "lemonchiffon"
+    },
+    {
+      "zh": "米色",
+      "en": "beige"
+    },
+    {
+      "zh": "玉米色",
+      "en": "cornsilk"
+    },
+    {
+      "zh": "小麦色",
+      "en": "wheat"
+    },
+    {
+      "zh": "桃肉色",
+      "en": "peachpuff"
+    },
+    {
+      "zh": "番木瓜色",
+      "en": "papayawhip"
+    },
+    {
+      "zh": "漂白杏仁色",
+      "en": "blanchedalmond"
+    },
+    {
+      "zh": "纳瓦霍白",
+      "en": "navajowhite"
+    },
+    {
+      "zh": "浅粉色",
+      "en": "lightpink"
+    },
+    {
+      "zh": "粉色",
+      "en": "pink"
+    },
+    {
+      "zh": "淡紫罗兰红色",
+      "en": "palevioletred"
+    },
+    {
+      "zh": "淡紫红色",
+      "en": "lavenderblush"
+    },
+    {
+      "zh": "洋李色",
+      "en": "plum"
+    },
+    {
+      "zh": "薄雾玫瑰",
+      "en": "mistyrose"
+    },
+    {
+      "zh": "蓟色",
+      "en": "thistle"
+    },
+    {
+      "zh": "石蓝色",
+      "en": "slateblue"
+    },
+    {
+      "zh": "中石板蓝色",
+      "en": "mediumslateblue"
+    },
+    {
+      "zh": "暗灰蓝色",
+      "en": "teal"
+    },
+    {
+      "zh": "深青色",
+      "en": "cadetblue"
+    },
+    {
+      "zh": "中海绿色",
+      "en": "seagreen"
+    },
+    {
+      "zh": "中绿宝石色",
+      "en": "mediumseagreen"
+    },
+    {
+      "zh": "橄榄色",
+      "en": "darkolivegreen"
+    },
+    {
+      "zh": "橄榄褐色",
+      "en": "olivedrab"
+    },
+    {
+      "zh": "橄榄色",
+      "en": "olive"
+    },
+    {
+      "zh": "暗卡其色",
+      "en": "darkkhaki"
+    },
+    {
+      "zh": "卡其色",
+      "en": "khaki"
+    },
+    {
+      "zh": "琥珀色",
+      "en": "burlywood"
+    },
+    {
+      "zh": "橙褐色",
+      "en": "sandybrown"
+    },
+    {
+      "zh": "秘鲁色",
+      "en": "peru"
+    },
+    {
+      "zh": "巧克力色",
+      "en": "chocolate"
+    },
+    {
+      "zh": "马鞍棕色",
+      "en": "saddlebrown"
+    },
+    {
+      "zh": "黄土赭色",
+      "en": "sienna"
+    },
+    {
+      "zh": "玫瑰棕色",
+      "en": "rosybrown"
+    },
+    {
+      "zh": "棕色",
+      "en": "brown"
+    },
+    {
+      "zh": "热粉红色",
+      "en": "hotpink"
+    },
+    {
+      "zh": "深粉色",
+      "en": "deeppink"
+    },
+    {
+      "zh": "中紫罗兰红色",
+      "en": "mediumvioletred"
+    },
+    {
+      "zh": "深粉色",
+      "en": "dark_pink"
+    },
+    {
+      "zh": "变幻色彩的",
+      "en": "Iridescent"
+    },
+    {
+      "zh": "多彩的",
+      "en": "Chromatic"
+    },
+    {
+      "zh": "色散（不同颜色的光被分离的现象）",
+      "en": "Dispersion"
+    },
+    {
+      "zh": "有棱镜效果的",
+      "en": "Prismatic"
+    },
+    {
+      "zh": "矢车菊蓝",
+      "en": "cornflowerblue"
+    },
+    {
+      "zh": "皇家蓝",
+      "en": "royalblue"
+    },
+    {
+      "zh": "中蓝色",
+      "en": "mediumblue"
+    },
+    {
+      "zh": "蓝色",
+      "en": "blue"
+    },
+    {
+      "zh": "深蓝色",
+      "en": "darkblue"
+    },
+    {
+      "zh": "海军蓝",
+      "en": "navy"
+    },
+    {
+      "zh": "午夜蓝",
+      "en": "midnightblue"
+    },
+    {
+      "zh": "水鸭色",
+      "en": "darkcyan"
+    },
+    {
+      "zh": "深绿松石色",
+      "en": "mediumturquoise"
+    },
+    {
+      "zh": "浅海绿色",
+      "en": "darkturquoise"
+    },
+    {
+      "zh": "中绿松石色",
+      "en": "turquoise"
+    },
+    {
+      "zh": "绿松石色",
+      "en": "aquamarine"
+    },
+    {
+      "zh": "青色",
+      "en": "lightcyan"
+    },
+    {
+      "zh": "碧绿色",
+      "en": "cyan"
+    },
+    {
+      "zh": "道奇蓝",
+      "en": "dodgerblue"
+    },
+    {
+      "zh": "绿色",
+      "en": "darkgreen"
+    },
+    {
+      "zh": "森林绿色",
+      "en": "green"
+    },
+    {
+      "zh": "海绿色",
+      "en": "forestgreen"
+    },
+    {
+      "zh": "暗海绿色",
+      "en": "mediumaquamarine"
+    },
+    {
+      "zh": "中春绿色",
+      "en": "springgreen"
+    },
+    {
+      "zh": "草坪绿",
+      "en": "mediumspringgreen"
+    },
+    {
+      "zh": "酸橙绿",
+      "en": "lime"
+    },
+    {
+      "zh": "橄榄褐色",
+      "en": "limegreen"
+    },
+    {
+      "zh": "淡金菊色",
+      "en": "palegoldenrod"
+    },
+    {
+      "zh": "金色",
+      "en": "gold"
+    },
+    {
+      "zh": "黄色",
+      "en": "yellow"
+    },
+    {
+      "zh": "暗橙色",
+      "en": "darkorange"
+    },
+    {
+      "zh": "橙色",
+      "en": "orange"
+    },
+    {
+      "zh": "暗金菊色",
+      "en": "darkgoldenrod"
+    },
+    {
+      "zh": "金菊色",
+      "en": "goldenrod"
+    },
+    {
+      "zh": "深鲑鱼肉色",
+      "en": "darksalmon"
+    },
+    {
+      "zh": "鲑鱼肉色",
+      "en": "salmon"
+    },
+    {
+      "zh": "亮鲑鱼肉色",
+      "en": "lightsalmon"
+    },
+    {
+      "zh": "印第安红色",
+      "en": "indianred"
+    },
+    {
+      "zh": "耐火砖色",
+      "en": "firebrick"
+    },
+    {
+      "zh": "栗色",
+      "en": "maroon"
+    },
+    {
+      "zh": "暗红色",
+      "en": "darkred"
+    },
+    {
+      "zh": "红色",
+      "en": "red"
+    },
+    {
+      "zh": "橙红色",
+      "en": "orangered"
+    },
+    {
+      "zh": "番茄红",
+      "en": "tomato"
+    },
+    {
+      "zh": "深粉红色",
+      "en": "crimson"
+    },
+    {
+      "zh": "珊瑚色",
+      "en": "coral"
+    },
+    {
+      "zh": "浅珊瑚色",
+      "en": "lightcoral"
+    },
+    {
+      "zh": "中兰花紫色",
+      "en": "mediumorchid"
+    },
+    {
+      "zh": "紫色",
+      "en": "violet"
+    },
+    {
+      "zh": "洋红色",
+      "en": "magenta"
+    },
+    {
+      "zh": "紫红色",
+      "en": "fuchsia"
+    },
+    {
+      "zh": "暗洋红色",
+      "en": "darkmagenta"
+    },
+    {
+      "zh": "紫色",
+      "en": "purple"
+    },
+    {
+      "zh": "暗兰花紫色",
+      "en": "darkorchid"
+    },
+    {
+      "zh": "暗紫罗兰色",
+      "en": "darkviolet"
+    },
+    {
+      "zh": "蓝紫色",
+      "en": "blueviolet"
+    },
+    {
+      "zh": "中紫色",
+      "en": "mediumpurple"
+    },
+    {
+      "zh": "靛蓝色",
+      "en": "indigo"
+    },
+    {
+      "zh": "钢蓝色",
+      "en": "steelblue"
+    },
+    {
+      "zh": "黄色主色调",
+      "en": "yellow color scheme"
+    },
+    {
+      "zh": "暖色调",
+      "en": "Warm Color Palette"
+    },
+    {
+      "zh": "冷色调",
+      "en": "Cool Color Palette"
+    },
+    {
+      "zh": "丰富多彩的",
+      "en": "Colorful"
+    },
+    {
+      "zh": "光谱颜色",
+      "en": "Spectral Color"
+    },
+    {
+      "zh": "反色",
+      "en": "Inverted Colors"
+    },
+    {
+      "zh": "色度",
+      "en": "Chroma"
+    },
+    {
+      "zh": "双色性",
+      "en": "Dichromatism"
+    },
+    {
+      "zh": "四色视觉",
+      "en": "Tetrachromacy"
+    },
+    {
+      "zh": "饱和",
+      "en": "Saturated"
+    },
+    {
+      "zh": "霓虹",
+      "en": "Neon"
+    },
+    {
+      "zh": "电子色",
+      "en": "Electric Colors"
+    },
+    {
+      "zh": "色调颜色",
+      "en": "Tonal Colors"
+    },
+    {
+      "zh": "鲜艳的颜色",
+      "en": "Vivid Colors"
+    },
+    {
+      "zh": "互补色",
+      "en": "Complimentary-Colors"
+    },
+    {
+      "zh": "分裂互补色",
+      "en": "Split-Complementary-Colors"
+    },
+    {
+      "zh": "补充色",
+      "en": "Supplementary-Colors"
+    },
+    {
+      "zh": "相似色",
+      "en": "Analogous-Colors"
+    },
+    {
+      "zh": "三元色",
+      "en": "Triadic-Colors"
+    },
+    {
+      "zh": "四色（矩形配色）",
+      "en": "Tetradic-Colors"
+    },
+    {
+      "zh": "多色彩",
+      "en": "Polychromatic-Colors"
+    },
+    {
+      "zh": "明亮",
+      "en": "Light"
+    },
+    {
+      "zh": "黑暗",
+      "en": "Dark"
+    },
+    {
+      "zh": "浅色模式",
+      "en": "Light Mode"
+    },
+    {
+      "zh": "深色模式",
+      "en": "Dark Mode"
+    },
+    {
+      "zh": "黑色调",
+      "en": "Tones of Black"
+    },
+    {
+      "zh": "背景黑色调",
+      "en": "Tones of Black in Background"
+    },
+    {
+      "zh": "浅蓝色背景",
+      "en": "Light Blue Background"
+    },
+    {
+      "zh": "浅蓝色前景",
+      "en": "Light Blue Foreground"
+    },
+    {
+      "zh": "浅蓝色",
+      "en": "Light Blue"
+    },
+    {
+      "zh": "怀旧的",
+      "en": "nostalgia"
+    },
+    {
+      "zh": "高饱和",
+      "en": "High saturation"
+    },
+    {
+      "zh": "单色",
+      "en": "monochrome"
+    },
+    {
+      "zh": "黑白",
+      "en": "Black and White"
+    },
+    {
+      "zh": "去饱和",
+      "en": "Desaturated"
+    },
+    {
+      "zh": "褐色调",
+      "en": "Sepia"
+    },
+    {
+      "zh": "平面色",
+      "en": "flat_color"
+    },
+    {
+      "zh": "纯色",
+      "en": "spot_color"
+    },
+    {
+      "zh": "半色调",
+      "en": "halftone"
+    },
+    {
+      "zh": "灰度",
+      "en": "greyscale"
+    },
+    {
+      "zh": "部分着色",
+      "en": "partially_colored"
+    },
+    {
+      "zh": "轮廓加深",
+      "en": "contour_deepening"
+    },
+    {
+      "zh": "线条变粗",
+      "en": "(lineart)"
+    },
+    {
+      "zh": "轮廓线",
+      "en": "outline"
+    },
+    {
+      "zh": "高对比度",
+      "en": "high_contrast"
+    },
+    {
+      "zh": "低对比度",
+      "en": "low_contrast"
+    },
+    {
+      "zh": "红绿蓝",
+      "en": "RGB"
+    },
+    {
+      "zh": "CMYK",
+      "en": "CMYK"
+    },
+    {
+      "zh": "VGA",
+      "en": "VGA"
+    },
+    {
+      "zh": "EGA",
+      "en": "EGA"
+    },
+    {
+      "zh": "CGA",
+      "en": "CGA"
+    },
+    {
+      "zh": "HDR",
+      "en": "HDR"
+    },
+    {
+      "zh": "雅达利图形",
+      "en": "Atari Graphics"
+    },
+    {
+      "zh": "IIGS 图形",
+      "en": "IIGS Graphics"
+    },
+    {
+      "zh": "Amiga OCS 图形",
+      "en": "Amiga OCS Graphics"
+    },
+    {
+      "zh": "sRGB",
+      "en": "sRGB"
+    },
+    {
+      "zh": "Adobe RGB",
+      "en": "Adobe RGB"
+    },
+    {
+      "zh": "DCI-P3",
+      "en": "DCI-P3"
+    },
+    {
+      "zh": "色相、饱和度、明度",
+      "en": "HSV"
+    },
+    {
+      "zh": "色相、饱和度、亮度",
+      "en": "HSL"
+    },
+    {
+      "zh": "色相、色度、照度",
+      "en": "HCL"
+    },
+    {
+      "zh": "YCbCr",
+      "en": "YCbCr"
+    },
+    {
+      "zh": "YPbPr",
+      "en": "YPbPr"
+    },
+    {
+      "zh": "单色 RGB",
+      "en": "scRGB"
+    },
+    {
+      "zh": "Coloroid",
+      "en": "Coloroid"
+    },
+    {
+      "zh": "潘通",
+      "en": "Pantone"
+    },
+    {
+      "zh": "ProPhoto RGB",
+      "en": "ProPhoto RGB"
+    },
+    {
+      "zh": "1 位",
+      "en": "1-bit"
+    },
+    {
+      "zh": "2 位",
+      "en": "2-bit"
+    },
+    {
+      "zh": "3 位",
+      "en": "3-bit"
+    },
+    {
+      "zh": "4 位",
+      "en": "4-bit"
+    },
+    {
+      "zh": "6 位",
+      "en": "6-bit"
+    },
+    {
+      "zh": "8 位",
+      "en": "8-bit"
+    },
+    {
+      "zh": "12 位",
+      "en": "12-bit"
+    },
+    {
+      "zh": "16 位",
+      "en": "16-bit"
+    },
+    {
+      "zh": "4 位 RGB",
+      "en": "4-bit RGB"
+    },
+    {
+      "zh": "8 位 RGB",
+      "en": "8-bit RGB"
+    },
+    {
+      "zh": "12 位 RGB",
+      "en": "12-bit RGB"
+    },
+    {
+      "zh": "16 位 RGB",
+      "en": "16-bit RGB"
+    },
+    {
+      "zh": "技术色彩",
+      "en": "Technicolor"
+    },
+    {
+      "zh": "电影色彩",
+      "en": "Kinemacolor"
+    },
+    {
+      "zh": "柯达彩",
+      "en": "Kodachrome"
+    },
+    {
+      "zh": "电影色",
+      "en": "Cinecolor"
+    },
+    {
+      "zh": "爱克发彩",
+      "en": "Agfacolor"
+    },
+    {
+      "zh": "清新",
+      "en": "Refreshing"
+    },
+    {
+      "zh": "静音",
+      "en": "Muted"
+    },
+    {
+      "zh": "神圣的",
+      "en": "divine"
+    }
+  ],
+  "material": [
+    {
+      "zh": "凹凸贴图",
+      "en": "Bump Map"
+    },
+    {
+      "zh": "带凹凸贴图",
+      "en": "Bump Mapped"
+    },
+    {
+      "zh": "凹凸映射",
+      "en": "Bump Mapping"
+    },
+    {
+      "zh": "法线贴图",
+      "en": "Normal Map"
+    },
+    {
+      "zh": "深度图",
+      "en": "Depth Map"
+    },
+    {
+      "zh": "软体",
+      "en": "Soft Body"
+    },
+    {
+      "zh": "松软的",
+      "en": "Squishy"
+    },
+    {
+      "zh": "各向异性",
+      "en": "Anisotropy"
+    },
+    {
+      "zh": "碳酸的",
+      "en": "Carbonated"
+    },
+    {
+      "zh": "起泡",
+      "en": "Effervescent"
+    },
+    {
+      "zh": "冰冷的",
+      "en": "Icy"
+    },
+    {
+      "zh": "炭化",
+      "en": "Charred"
+    },
+    {
+      "zh": "起皱的",
+      "en": "Corrugated"
+    },
+    {
+      "zh": "穿孔",
+      "en": "Perforated"
+    },
+    {
+      "zh": "木质",
+      "en": "Wooden"
+    },
+    {
+      "zh": "木材",
+      "en": "Lumber"
+    },
+    {
+      "zh": "胶合板",
+      "en": "Plywood"
+    },
+    {
+      "zh": "刨花板",
+      "en": "Particle-Board"
+    },
+    {
+      "zh": "锯末",
+      "en": "Sawdust"
+    },
+    {
+      "zh": "软木",
+      "en": "Cork"
+    },
+    {
+      "zh": "樱桃木",
+      "en": "Cherry-Wood"
+    },
+    {
+      "zh": "枫木",
+      "en": "Maple-Wood"
+    },
+    {
+      "zh": "松林",
+      "en": "Pine-Wood"
+    },
+    {
+      "zh": "橡木",
+      "en": "Oak-Wood"
+    },
+    {
+      "zh": "桦木",
+      "en": "Birch-Wood"
+    },
+    {
+      "zh": "相思木",
+      "en": "Acacia-Wood"
+    },
+    {
+      "zh": "雪松木",
+      "en": "Cedar-Wood"
+    },
+    {
+      "zh": "木材染色",
+      "en": "Wood-Stain"
+    },
+    {
+      "zh": "木板",
+      "en": "Planks"
+    },
+    {
+      "zh": "木质板",
+      "en": "Wooden Planks"
+    },
+    {
+      "zh": "钉木",
+      "en": "Nailed-Wood"
+    },
+    {
+      "zh": "木栅栏",
+      "en": "Wooden Fence"
+    },
+    {
+      "zh": "硬纸板",
+      "en": "Cardboard"
+    },
+    {
+      "zh": "瓦楞纸板",
+      "en": "Corrugated Fiberboard"
+    },
+    {
+      "zh": "纸板",
+      "en": "Paperboard"
+    },
+    {
+      "zh": "卡纸",
+      "en": "Cardstock"
+    },
+    {
+      "zh": "纸",
+      "en": "Paper"
+    },
+    {
+      "zh": "施工图纸",
+      "en": "Construction Paper"
+    },
+    {
+      "zh": "卫生纸",
+      "en": "Tissue Paper"
+    },
+    {
+      "zh": "方格纸",
+      "en": "Graph Paper"
+    },
+    {
+      "zh": "牛皮纸",
+      "en": "Kraft Paper"
+    },
+    {
+      "zh": "和纸",
+      "en": "Washi"
+    },
+    {
+      "zh": "瓦斯里纸",
+      "en": "Wasli"
+    },
+    {
+      "zh": "莎草纸",
+      "en": "Papyrus"
+    },
+    {
+      "zh": "手稿纸",
+      "en": "Manuscript Paper"
+    },
+    {
+      "zh": "包装纸",
+      "en": "Wrapping Paper"
+    },
+    {
+      "zh": "羊皮纸",
+      "en": "Parchment"
+    },
+    {
+      "zh": "烤肉纸",
+      "en": "Parchment Paper"
+    },
+    {
+      "zh": "中世纪的羊皮纸",
+      "en": "Medieval Parchment"
+    },
+    {
+      "zh": "卫生纸",
+      "en": "Toilet Paper"
+    },
+    {
+      "zh": "纸巾",
+      "en": "Paper Towel"
+    },
+    {
+      "zh": "马尼拉纸",
+      "en": "Manila Paper"
+    },
+    {
+      "zh": "马尼拉文件夹",
+      "en": "Manila Folder"
+    },
+    {
+      "zh": "信封",
+      "en": "Envelope"
+    },
+    {
+      "zh": "防伪纸",
+      "en": "Security Paper"
+    },
+    {
+      "zh": "卷烟纸",
+      "en": "Rolling Paper"
+    },
+    {
+      "zh": "棉纸",
+      "en": "Cotton Paper"
+    },
+    {
+      "zh": "麻纤维",
+      "en": "Hemp Fiber"
+    },
+    {
+      "zh": "麻纸",
+      "en": "Hemp Paper"
+    },
+    {
+      "zh": "纤维素",
+      "en": "Cellulose"
+    },
+    {
+      "zh": "塑料涂层纸",
+      "en": "Plastic-Coated Paper"
+    },
+    {
+      "zh": "沥青纸",
+      "en": "Tar Paper"
+    },
+    {
+      "zh": "土壤",
+      "en": "Soil"
+    },
+    {
+      "zh": "尘土",
+      "en": "Dirt"
+    },
+    {
+      "zh": "泥浆",
+      "en": "Mud"
+    },
+    {
+      "zh": "泥砖",
+      "en": "Mud Brick"
+    },
+    {
+      "zh": "黏土",
+      "en": "Clay"
+    },
+    {
+      "zh": "沙子",
+      "en": "Sand"
+    },
+    {
+      "zh": "碎石",
+      "en": "Gravel"
+    },
+    {
+      "zh": "淤泥",
+      "en": "Silt"
+    },
+    {
+      "zh": "灰尘",
+      "en": "Dust"
+    },
+    {
+      "zh": "针叶林土",
+      "en": "Spodosol"
+    },
+    {
+      "zh": "针叶林土壤",
+      "en": "Podzol"
+    },
+    {
+      "zh": "砂纸",
+      "en": "Sandpaper"
+    },
+    {
+      "zh": "石头",
+      "en": "Stone"
+    },
+    {
+      "zh": "鹅卵石",
+      "en": "Cobblestone"
+    },
+    {
+      "zh": "卵石",
+      "en": "Pebbles"
+    },
+    {
+      "zh": "岩石",
+      "en": "Rock"
+    },
+    {
+      "zh": "多岩",
+      "en": "Rocky"
+    },
+    {
+      "zh": "基岩",
+      "en": "Bedrock"
+    },
+    {
+      "zh": "燧石",
+      "en": "Flint"
+    },
+    {
+      "zh": "砂岩",
+      "en": "Sandstone"
+    },
+    {
+      "zh": "玄武岩",
+      "en": "Basalt"
+    },
+    {
+      "zh": "大理石",
+      "en": "Marble"
+    },
+    {
+      "zh": "花岗岩",
+      "en": "Granite"
+    },
+    {
+      "zh": "闪长岩",
+      "en": "Diorite"
+    },
+    {
+      "zh": "安山岩",
+      "en": "Andesite"
+    },
+    {
+      "zh": "石膏",
+      "en": "Gypsum"
+    },
+    {
+      "zh": "煤炭",
+      "en": "Coal"
+    },
+    {
+      "zh": "硫黄",
+      "en": "Sulfur"
+    },
+    {
+      "zh": "石墨烯",
+      "en": "Graphene"
+    },
+    {
+      "zh": "碳纳米管",
+      "en": "Carbon Nanotubes"
+    },
+    {
+      "zh": "碳纤维",
+      "en": "Carbon Fiber"
+    },
+    {
+      "zh": "混凝土",
+      "en": "Concrete"
+    },
+    {
+      "zh": "人行道",
+      "en": "Sidewalk"
+    },
+    {
+      "zh": "沥青",
+      "en": "Asphalt"
+    },
+    {
+      "zh": "麻絮混凝土",
+      "en": "Hempcrete"
+    },
+    {
+      "zh": "砖",
+      "en": "Brick"
+    },
+    {
+      "zh": "红陶土",
+      "en": "Terracotta"
+    },
+    {
+      "zh": "陶器",
+      "en": "Pottery"
+    },
+    {
+      "zh": "陶瓷制品",
+      "en": "Ceramic"
+    },
+    {
+      "zh": "搪瓷",
+      "en": "Enamel"
+    },
+    {
+      "zh": "石膏板",
+      "en": "Sheetrock"
+    },
+    {
+      "zh": "灰泥",
+      "en": "Plaster"
+    },
+    {
+      "zh": "石棉",
+      "en": "Asbestos"
+    },
+    {
+      "zh": "矿渣",
+      "en": "Slag"
+    },
+    {
+      "zh": "蛭石",
+      "en": "Vermiculite"
+    },
+    {
+      "zh": "珍珠岩",
+      "en": "Perlite"
+    },
+    {
+      "zh": "硼砂",
+      "en": "Borax"
+    },
+    {
+      "zh": "金属质的",
+      "en": "Metallic"
+    },
+    {
+      "zh": "金属",
+      "en": "Metal"
+    },
+    {
+      "zh": "液态金属",
+      "en": "Liquid Metal"
+    },
+    {
+      "zh": "箔",
+      "en": "Foil"
+    },
+    {
+      "zh": "生锈的",
+      "en": "Rusty"
+    },
+    {
+      "zh": "白镴",
+      "en": "Pewter"
+    },
+    {
+      "zh": "铜",
+      "en": "Copper"
+    },
+    {
+      "zh": "锡",
+      "en": "Tin"
+    },
+    {
+      "zh": "铝",
+      "en": "Aluminum"
+    },
+    {
+      "zh": "拉丝铝",
+      "en": "Brushed Aluminum"
+    },
+    {
+      "zh": "青铜",
+      "en": "Bronze"
+    },
+    {
+      "zh": "黄铜",
+      "en": "Brass"
+    },
+    {
+      "zh": "铁",
+      "en": "Iron"
+    },
+    {
+      "zh": "锻铁",
+      "en": "Wrought Iron"
+    },
+    {
+      "zh": "钢",
+      "en": "Steel"
+    },
+    {
+      "zh": "不锈钢",
+      "en": "Stainless Steel"
+    },
+    {
+      "zh": "大马士革钢",
+      "en": "Damascus Steel"
+    },
+    {
+      "zh": "钛",
+      "en": "Titanium"
+    },
+    {
+      "zh": "阳极氧化钛",
+      "en": "Anodized Titanium"
+    },
+    {
+      "zh": "大马士革钛",
+      "en": "Damascus Titanium"
+    },
+    {
+      "zh": "纯银",
+      "en": "Sterling Silver"
+    },
+    {
+      "zh": "标准银",
+      "en": "Sterling"
+    },
+    {
+      "zh": "玫瑰金",
+      "en": "Rose-Gold"
+    },
+    {
+      "zh": "铂",
+      "en": "Platinum"
+    },
+    {
+      "zh": "铬",
+      "en": "Chromium"
+    },
+    {
+      "zh": "镀铬",
+      "en": "Chrome"
+    },
+    {
+      "zh": "汞",
+      "en": "Mercury"
+    },
+    {
+      "zh": "汞金属",
+      "en": "Mercury Metal"
+    },
+    {
+      "zh": "熔融水银",
+      "en": "Molten Mercury"
+    },
+    {
+      "zh": "熔融汞金属",
+      "en": "Molten Mercury Metal"
+    },
+    {
+      "zh": "镓",
+      "en": "Gallium"
+    },
+    {
+      "zh": "镁",
+      "en": "Magnesium"
+    },
+    {
+      "zh": "锌",
+      "en": "Zinc"
+    },
+    {
+      "zh": "铅",
+      "en": "Lead"
+    },
+    {
+      "zh": "钨",
+      "en": "Tungsten"
+    },
+    {
+      "zh": "锆",
+      "en": "Zirconium"
+    },
+    {
+      "zh": "立方锆石",
+      "en": "Cubic Zirconium"
+    },
+    {
+      "zh": "钴",
+      "en": "Cobalt"
+    },
+    {
+      "zh": "铀",
+      "en": "Uranium"
+    },
+    {
+      "zh": "钠",
+      "en": "Sodium"
+    },
+    {
+      "zh": "钾",
+      "en": "Potassium"
+    },
+    {
+      "zh": "康铜",
+      "en": "Constantan"
+    },
+    {
+      "zh": "赫帕铜",
+      "en": "Hepatizon"
+    },
+    {
+      "zh": "镍铬合金",
+      "en": "Nichrome"
+    },
+    {
+      "zh": "大马士革",
+      "en": "Damascus"
+    },
+    {
+      "zh": "铁屑",
+      "en": "Iron Filings"
+    },
+    {
+      "zh": "硫酸铜",
+      "en": "Copper-Sulfate"
+    },
+    {
+      "zh": "焊锡",
+      "en": "Solder"
+    },
+    {
+      "zh": "金属纤维",
+      "en": "Metallic Fiber"
+    },
+    {
+      "zh": "铠装线",
+      "en": "Armature Wire"
+    },
+    {
+      "zh": "金属泡沫",
+      "en": "Metal Foam"
+    },
+    {
+      "zh": "针",
+      "en": "Needle"
+    },
+    {
+      "zh": "螺丝",
+      "en": "Screw"
+    },
+    {
+      "zh": "回形针",
+      "en": "Paper Clips"
+    },
+    {
+      "zh": "链条",
+      "en": "Chain-link"
+    },
+    {
+      "zh": "铁丝网",
+      "en": "Chicken Wire"
+    },
+    {
+      "zh": "链式围栏",
+      "en": "Chain-link Fence"
+    },
+    {
+      "zh": "玻璃质",
+      "en": "Glassy"
+    },
+    {
+      "zh": "彩绘玻璃",
+      "en": "Stained Glass"
+    },
+    {
+      "zh": "彩色玻璃窗",
+      "en": "Stained Glass Windows"
+    },
+    {
+      "zh": "海玻璃",
+      "en": "Seaglass"
+    },
+    {
+      "zh": "镜子",
+      "en": "Mirror"
+    },
+    {
+      "zh": "玻璃纤维",
+      "en": "Fiberglass"
+    },
+    {
+      "zh": "玻璃纤维",
+      "en": "Glass Fiber"
+    },
+    {
+      "zh": "玻璃和水晶",
+      "en": "Glass and Crystals"
+    },
+    {
+      "zh": "晶体",
+      "en": "Crystalline"
+    },
+    {
+      "zh": "钻石",
+      "en": "Diamond"
+    },
+    {
+      "zh": "紫晶",
+      "en": "Amethyst"
+    },
+    {
+      "zh": "石英",
+      "en": "Quartz"
+    },
+    {
+      "zh": "烟熏石英",
+      "en": "Smoky Quartz"
+    },
+    {
+      "zh": "玫瑰石英",
+      "en": "Rose Quartz"
+    },
+    {
+      "zh": "乳白石英",
+      "en": "Milky Quartz"
+    },
+    {
+      "zh": "钛晶石英",
+      "en": "Rutilated Quartz"
+    },
+    {
+      "zh": "节晶石英",
+      "en": "Sceptred Quartz"
+    },
+    {
+      "zh": "赫基默钻石",
+      "en": "Herkimer Diamond"
+    },
+    {
+      "zh": "红宝石",
+      "en": "Ruby"
+    },
+    {
+      "zh": "蓝宝石",
+      "en": "Sapphire"
+    },
+    {
+      "zh": "祖母绿",
+      "en": "Emerald"
+    },
+    {
+      "zh": "珍珠",
+      "en": "Pearl"
+    },
+    {
+      "zh": "黄水晶",
+      "en": "Citrine"
+    },
+    {
+      "zh": "萤石",
+      "en": "Fluorite"
+    },
+    {
+      "zh": "玛瑙",
+      "en": "Onyx"
+    },
+    {
+      "zh": "青金石",
+      "en": "Lapis Lazuli"
+    },
+    {
+      "zh": "黑曜石",
+      "en": "Obsidian"
+    },
+    {
+      "zh": "透明石膏",
+      "en": "Selenite"
+    },
+    {
+      "zh": "红玉髓",
+      "en": "Jasper"
+    },
+    {
+      "zh": "蛋白石",
+      "en": "Opal"
+    },
+    {
+      "zh": "蛋白石玛瑙",
+      "en": "Opalite"
+    },
+    {
+      "zh": "黄玉",
+      "en": "Topaz"
+    },
+    {
+      "zh": "玛瑙",
+      "en": "Agate"
+    },
+    {
+      "zh": "红玛瑙",
+      "en": "Carnelian"
+    },
+    {
+      "zh": "紫黄晶",
+      "en": "Ametrine"
+    },
+    {
+      "zh": "绿碧玺",
+      "en": "Aventurine"
+    },
+    {
+      "zh": "硼砂晶体",
+      "en": "Borax Crystals"
+    },
+    {
+      "zh": "胶体晶体",
+      "en": "Colloidal Crystal"
+    },
+    {
+      "zh": "塑料",
+      "en": "Plastic"
+    },
+    {
+      "zh": "收缩膜",
+      "en": "Shrink Wrap"
+    },
+    {
+      "zh": "保鲜膜",
+      "en": "Plastic Wrap"
+    },
+    {
+      "zh": "粘包装膜",
+      "en": "Cling Wrap"
+    },
+    {
+      "zh": "铁氟龙",
+      "en": "Teflon"
+    },
+    {
+      "zh": "乐高",
+      "en": "Lego"
+    },
+    {
+      "zh": "聚氨酯",
+      "en": "Polyurethane"
+    },
+    {
+      "zh": "聚乙烯",
+      "en": "Polyethylene"
+    },
+    {
+      "zh": "聚乙烯",
+      "en": "Polyvinyl"
+    },
+    {
+      "zh": "聚丙烯",
+      "en": "Polypropylene"
+    },
+    {
+      "zh": "聚酰亚胺",
+      "en": "Polyimide"
+    },
+    {
+      "zh": "保丽龙",
+      "en": "Styrofoam"
+    },
+    {
+      "zh": "泡沫",
+      "en": "Foam"
+    },
+    {
+      "zh": "橡胶",
+      "en": "Rubber"
+    },
+    {
+      "zh": "橡皮筋",
+      "en": "Rubber Band"
+    },
+    {
+      "zh": "橡皮筋球",
+      "en": "Rubber Band Ball"
+    },
+    {
+      "zh": "气球",
+      "en": "Balloon"
+    },
+    {
+      "zh": "丁腈橡胶",
+      "en": "Nitrile"
+    },
+    {
+      "zh": "硅胶",
+      "en": "Silicone"
+    },
+    {
+      "zh": "乙烯基塑料",
+      "en": "Vinyl"
+    },
+    {
+      "zh": "油毡",
+      "en": "Linoleum"
+    },
+    {
+      "zh": "橡皮筋",
+      "en": "Silly Band"
+    },
+    {
+      "zh": "蜡",
+      "en": "Wax"
+    },
+    {
+      "zh": "蜡纸",
+      "en": "Wax Paper"
+    },
+    {
+      "zh": "巴西棕榈蜡",
+      "en": "Carnauba Wax"
+    },
+    {
+      "zh": "小烛树蜡",
+      "en": "Candelilla Wax"
+    },
+    {
+      "zh": "石蜡",
+      "en": "Paraffin Wax"
+    },
+    {
+      "zh": "虫胶",
+      "en": "Shellac"
+    },
+    {
+      "zh": "冰",
+      "en": "Ice"
+    },
+    {
+      "zh": "蓝冰",
+      "en": "Blue-Ice"
+    },
+    {
+      "zh": "干冰",
+      "en": "Dry Ice"
+    },
+    {
+      "zh": "毛茸茸的",
+      "en": "Hairy"
+    },
+    {
+      "zh": "绒毛",
+      "en": "Fuzz"
+    },
+    {
+      "zh": "胡须",
+      "en": "Beard"
+    },
+    {
+      "zh": "羽毛",
+      "en": "Feathers"
+    },
+    {
+      "zh": "斑马",
+      "en": "Zebra"
+    },
+    {
+      "zh": "灰兔子",
+      "en": "Dust-Bunny"
+    },
+    {
+      "zh": "液体",
+      "en": "Liquid"
+    },
+    {
+      "zh": "水",
+      "en": "Water"
+    },
+    {
+      "zh": "岩浆",
+      "en": "Lava"
+    },
+    {
+      "zh": "熔岩",
+      "en": "Magma"
+    },
+    {
+      "zh": "熔化岩石",
+      "en": "Molten Rock"
+    },
+    {
+      "zh": "铁磁流体",
+      "en": "Ferro Fluid"
+    },
+    {
+      "zh": "液晶",
+      "en": "Liquid Crystal"
+    },
+    {
+      "zh": "汽油",
+      "en": "Gasoline"
+    },
+    {
+      "zh": "松节油",
+      "en": "Turpentine"
+    },
+    {
+      "zh": "矿物油",
+      "en": "Mineral Oil"
+    },
+    {
+      "zh": "机油",
+      "en": "Motor Oil"
+    },
+    {
+      "zh": "海沫",
+      "en": "Sea Foam"
+    },
+    {
+      "zh": "乳化",
+      "en": "Emulsion"
+    },
+    {
+      "zh": "脂质",
+      "en": "Lipid"
+    },
+    {
+      "zh": "弹力布",
+      "en": "Flubber"
+    },
+    {
+      "zh": "密封和填充空隙的黏合剂",
+      "en": "Putty"
+    },
+    {
+      "zh": "海报胶",
+      "en": "Poster Tack"
+    },
+    {
+      "zh": "凝胶",
+      "en": "Gel"
+    },
+    {
+      "zh": "气凝胶",
+      "en": "Aerogel"
+    },
+    {
+      "zh": "软胶囊",
+      "en": "Softgel"
+    },
+    {
+      "zh": "硅胶",
+      "en": "Silica Gel"
+    },
+    {
+      "zh": "弹道凝胶",
+      "en": "Ballistic Gel"
+    },
+    {
+      "zh": "海蜇",
+      "en": "Jellyfish"
+    },
+    {
+      "zh": "弹道泡沫",
+      "en": "Ballistic Foam"
+    },
+    {
+      "zh": "海绵",
+      "en": "Sponge"
+    },
+    {
+      "zh": "海绵状",
+      "en": "Spongy"
+    },
+    {
+      "zh": "胶带",
+      "en": "Tape"
+    },
+    {
+      "zh": "胶布",
+      "en": "Duct Tape"
+    },
+    {
+      "zh": "透明胶",
+      "en": "Scotch Tape"
+    },
+    {
+      "zh": "透明胶带",
+      "en": "Clear Tape"
+    },
+    {
+      "zh": "封箱胶带",
+      "en": "Packing Tape"
+    },
+    {
+      "zh": "美纹纸胶带",
+      "en": "Masking Tape"
+    },
+    {
+      "zh": "卡普顿",
+      "en": "Kapton"
+    },
+    {
+      "zh": "卡普顿胶带",
+      "en": "Kapton Tape"
+    },
+    {
+      "zh": "粘合剂",
+      "en": "Adhesive"
+    },
+    {
+      "zh": "胶水",
+      "en": "Glue"
+    },
+    {
+      "zh": "环氧树脂",
+      "en": "Epoxy"
+    },
+    {
+      "zh": "聚合物",
+      "en": "Polymer"
+    },
+    {
+      "zh": "水珠",
+      "en": "Orbeez"
+    },
+    {
+      "zh": "混合淀粉溶液",
+      "en": "Oobleck"
+    },
+    {
+      "zh": "蒸汽",
+      "en": "Vapor"
+    },
+    {
+      "zh": "云",
+      "en": "Clouds"
+    },
+    {
+      "zh": "雾",
+      "en": "Fog"
+    },
+    {
+      "zh": "薄雾",
+      "en": "Mist"
+    },
+    {
+      "zh": "气体",
+      "en": "Gas"
+    },
+    {
+      "zh": "气溶胶",
+      "en": "Aerosol"
+    },
+    {
+      "zh": "粉末",
+      "en": "Powder"
+    },
+    {
+      "zh": "烟",
+      "en": "Smoke"
+    },
+    {
+      "zh": "等离子",
+      "en": "Plasma"
+    },
+    {
+      "zh": "电",
+      "en": "Electric"
+    },
+    {
+      "zh": "电力",
+      "en": "Electricity"
+    },
+    {
+      "zh": "火",
+      "en": "Fire"
+    },
+    {
+      "zh": "燃烧",
+      "en": "Burn"
+    },
+    {
+      "zh": "地狱火",
+      "en": "Inferno"
+    },
+    {
+      "zh": "菌类",
+      "en": "Fungi"
+    },
+    {
+      "zh": "蘑菇",
+      "en": "Mushrooms"
+    },
+    {
+      "zh": "菌丝",
+      "en": "Mycelium"
+    },
+    {
+      "zh": "发霉的",
+      "en": "Moldy"
+    },
+    {
+      "zh": "靛青乳菇",
+      "en": "Lactarius-Indigo"
+    },
+    {
+      "zh": "格子柄灯盏菌",
+      "en": "Latticed-Stinkhorn"
+    },
+    {
+      "zh": "红笼菌",
+      "en": "Clathrus-Ruber"
+    },
+    {
+      "zh": "紫蘑",
+      "en": "Laccaria-Amethystina"
+    },
+    {
+      "zh": "霍氏粉褶菌",
+      "en": "Entoloma-Hochstetteri"
+    },
+    {
+      "zh": "紫红珊瑚菌",
+      "en": "Clavaria-Zollingeri"
+    },
+    {
+      "zh": "青绿木耳",
+      "en": "Chlorociboria"
+    },
+    {
+      "zh": "金丝乌鸦脚蘑菇",
+      "en": "Golden-Scruffy-Collybia"
+    },
+    {
+      "zh": "隐色锯脚蘑",
+      "en": "Cyptotrama-Asprata"
+    },
+    {
+      "zh": "尖锐鬼笔菌",
+      "en": "Mycena Acicula"
+    },
+    {
+      "zh": "黄褐红脚灯蘑",
+      "en": "Hygrocybe-Cantharellus"
+    },
+    {
+      "zh": "红白鹅膏菌",
+      "en": "Amanita-Muscaria"
+    },
+    {
+      "zh": "红猩猩手指菌",
+      "en": "Favolaschia-Calocera"
+    },
+    {
+      "zh": "红头发菌",
+      "en": "Marasmius-Haematocephalus"
+    },
+    {
+      "zh": "三硫囊菇",
+      "en": "Cystoagaricus-Trisulphuratus"
+    },
+    {
+      "zh": "黄脑菌",
+      "en": "Tremella-Mesenterica"
+    },
+    {
+      "zh": "银耳",
+      "en": "Tremella-Fuciformis"
+    },
+    {
+      "zh": "琥珀",
+      "en": "Amber"
+    },
+    {
+      "zh": "镶嵌",
+      "en": "Inlay"
+    },
+    {
+      "zh": "细胞",
+      "en": "Cells"
+    },
+    {
+      "zh": "网状的",
+      "en": "Cellular"
+    },
+    {
+      "zh": "电线",
+      "en": "Wires"
+    },
+    {
+      "zh": "晶体管",
+      "en": "Transistor"
+    },
+    {
+      "zh": "二极管",
+      "en": "Diode"
+    }
+  ],
+  "style": [
+    {
+      "zh": "新艺术主义",
+      "en": "((art nouveau))"
+    },
+    {
+      "zh": "古典主义",
+      "en": "((classicism))"
+    },
+    {
+      "zh": "新古典主义",
+      "en": "((neoclassicism))"
+    },
+    {
+      "zh": "浪漫主义",
+      "en": "((romanticism))"
+    },
+    {
+      "zh": "哥特式艺术",
+      "en": "Gothic art"
+    },
+    {
+      "zh": "巴洛克",
+      "en": "Baroque"
+    },
+    {
+      "zh": "先拉斐尔派",
+      "en": "Pre-Raphaelite Brotherhood"
+    },
+    {
+      "zh": "文艺复兴风格",
+      "en": "renaissance art"
+    },
+    {
+      "zh": "学院派",
+      "en": "academic art"
+    },
+    {
+      "zh": "学院主义",
+      "en": "academicism"
+    },
+    {
+      "zh": "古希腊艺术",
+      "en": "ancient greek art"
+    },
+    {
+      "zh": "古埃及",
+      "en": "ancient egypt"
+    },
+    {
+      "zh": "极简主义",
+      "en": "Minimalism"
+    },
+    {
+      "zh": "现代艺术",
+      "en": "Modern Art"
+    },
+    {
+      "zh": "当代艺术",
+      "en": "contemporary art"
+    },
+    {
+      "zh": "概念艺术",
+      "en": "Concept Art"
+    },
+    {
+      "zh": "数字艺术",
+      "en": "Digital Art"
+    },
+    {
+      "zh": "视觉艺术",
+      "en": "visionary art"
+    },
+    {
+      "zh": "超写实",
+      "en": "Hyperrealistic"
+    },
+    {
+      "zh": "写实主义",
+      "en": "hyperrealism"
+    },
+    {
+      "zh": "抽象表现主义",
+      "en": "abstract expressionism"
+    },
+    {
+      "zh": "立体主义",
+      "en": "cubism"
+    },
+    {
+      "zh": "印象派",
+      "en": "impressionism"
+    },
+    {
+      "zh": "后印象派",
+      "en": "Neo-impressionism"
+    },
+    {
+      "zh": "野兽派",
+      "en": "fauvism"
+    },
+    {
+      "zh": "表现主义",
+      "en": "expressionism"
+    },
+    {
+      "zh": "波普艺术",
+      "en": "Pop art"
+    },
+    {
+      "zh": "抽象艺术",
+      "en": "((abstract art))"
+    },
+    {
+      "zh": "达达主义",
+      "en": "((Dadaism))"
+    },
+    {
+      "zh": "未来主义",
+      "en": "((futurism))"
+    },
+    {
+      "zh": "安迪·沃霍尔风格",
+      "en": "Warhol"
+    },
+    {
+      "zh": "街头艺术",
+      "en": "street art"
+    },
+    {
+      "zh": "民间艺术",
+      "en": "folk art"
+    },
+    {
+      "zh": "包豪斯风格",
+      "en": "Bauhaus Style"
+    },
+    {
+      "zh": "光色主义",
+      "en": "Luminsm"
+    },
+    {
+      "zh": "建构主义",
+      "en": "Constructivism"
+    },
+    {
+      "zh": "柴油朋克",
+      "en": "((dieselpunk))"
+    },
+    {
+      "zh": "蒸汽朋克",
+      "en": "streampunk"
+    },
+    {
+      "zh": "迪士尼风格",
+      "en": "Disney style"
+    },
+    {
+      "zh": "皮克斯风格",
+      "en": "Picos style"
+    },
+    {
+      "zh": "现实主义",
+      "en": "realism"
+    },
+    {
+      "zh": "超现实主义",
+      "en": "Surrealistic"
+    },
+    {
+      "zh": "社会现实主义",
+      "en": "Social realism"
+    },
+    {
+      "zh": "魔幻现实主义",
+      "en": "Magic Realism"
+    },
+    {
+      "zh": "魔幻现实主义",
+      "en": "Fantastic Realism"
+    },
+    {
+      "zh": "批判现实主义",
+      "en": "Classical Realism"
+    },
+    {
+      "zh": "愁苦主义（批评社会的贫困不公）",
+      "en": "miserablism"
+    },
+    {
+      "zh": "当代写实主义",
+      "en": "Contemporary Realism"
+    },
+    {
+      "zh": "纪实的",
+      "en": "Non-Fiction"
+    },
+    {
+      "zh": "风水",
+      "en": "Feng Shui"
+    },
+    {
+      "zh": "精华",
+      "en": "Essence"
+    },
+    {
+      "zh": "无法言喻",
+      "en": "Ineffable"
+    },
+    {
+      "zh": "悖论",
+      "en": "Paradox"
+    },
+    {
+      "zh": "完美主义",
+      "en": "Perfectionism"
+    },
+    {
+      "zh": "强迫症",
+      "en": "OCD"
+    },
+    {
+      "zh": "视觉感知",
+      "en": "Visual Perception"
+    },
+    {
+      "zh": "视觉失认症",
+      "en": "Visual Agnosia"
+    },
+    {
+      "zh": "融入",
+      "en": "Infused"
+    },
+    {
+      "zh": "日本浮世绘",
+      "en": "ukiyoe"
+    },
+    {
+      "zh": "浮世绘(组)",
+      "en": "illustration,(((ukiyoe))),((sketch)),((japanese_art))"
+    },
+    {
+      "zh": "中国国画",
+      "en": "traditional chinese painting"
+    },
+    {
+      "zh": "日式风格",
+      "en": "Japonism"
+    },
+    {
+      "zh": "日本漫画风格",
+      "en": "Japanese manga style"
+    },
+    {
+      "zh": "动画风格",
+      "en": "anime style"
+    },
+    {
+      "zh": "唯美主义绘画",
+      "en": "Aestheticism Painting"
+    },
+    {
+      "zh": "速涂风格",
+      "en": "pastel color,sketch"
+    },
+    {
+      "zh": "墨水涂鸦",
+      "en": "ink doodle"
+    },
+    {
+      "zh": "炭笔素描",
+      "en": "charcoal sketch"
+    },
+    {
+      "zh": "素描艺术",
+      "en": "sketch art"
+    },
+    {
+      "zh": "素描纸",
+      "en": "sketch paper"
+    },
+    {
+      "zh": "手稿",
+      "en": "manuscript"
+    },
+    {
+      "zh": "褪色的边界",
+      "en": "fading border"
+    },
+    {
+      "zh": "浓重的对比 (强调颜色)",
+      "en": "heavy contrast"
+    },
+    {
+      "zh": "透明水彩绘",
+      "en": "watercolor (medium)"
+    },
+    {
+      "zh": "宝丽来艺术",
+      "en": "Polaroid art"
+    },
+    {
+      "zh": "欧泊渲染",
+      "en": "opal render"
+    },
+    {
+      "zh": "色谱图",
+      "en": "chemigram"
+    },
+    {
+      "zh": "穆夏风格",
+      "en": "((alphonse mucha))"
+    },
+    {
+      "zh": "莫奈风格",
+      "en": "((Monet style))"
+    },
+    {
+      "zh": "威廉森风格",
+      "en": "style of Al Williamson"
+    },
+    {
+      "zh": "明暗对比",
+      "en": "chiaroscuro"
+    },
+    {
+      "zh": "黑色电影（罪恶、欲望、复仇）",
+      "en": "film noir"
+    },
+    {
+      "zh": "暗黑主题艺术",
+      "en": "dark theme"
+    },
+    {
+      "zh": "适合科幻场景",
+      "en": "fantasy"
+    },
+    {
+      "zh": "科幻的",
+      "en": "fiction"
+    },
+    {
+      "zh": "科幻",
+      "en": "science fiction"
+    },
+    {
+      "zh": "科幻风格",
+      "en": "sci-fi"
+    },
+    {
+      "zh": "赛博朋克",
+      "en": "cyber punk"
+    },
+    {
+      "zh": "黑暗奇幻",
+      "en": "Dark Fantasy"
+    },
+    {
+      "zh": "飘渺奇幻",
+      "en": "Ethereal Fantasy"
+    },
+    {
+      "zh": "黑暗幻想风格",
+      "en": "dark fantasy style"
+    },
+    {
+      "zh": "ww3 风格",
+      "en": "ww3 style"
+    },
+    {
+      "zh": "魔法旋涡",
+      "en": "Magic Vortex"
+    },
+    {
+      "zh": "80动画",
+      "en": "1980s anime"
+    },
+    {
+      "zh": "80电影",
+      "en": "80s movie"
+    },
+    {
+      "zh": "80 年代风格",
+      "en": "80s (style)"
+    },
+    {
+      "zh": "90 年代风格",
+      "en": "90s (style)"
+    },
+    {
+      "zh": "迪士尼电影",
+      "en": "disney movie"
+    },
+    {
+      "zh": "哥特摇滚",
+      "en": "goth"
+    },
+    {
+      "zh": "泡泡龙",
+      "en": "bubble bobble"
+    },
+    {
+      "zh": "皮克斯动画",
+      "en": "style of Pixar"
+    },
+    {
+      "zh": "吉卜力风格",
+      "en": "Studio Ghibli"
+    },
+    {
+      "zh": "吉卜力色彩",
+      "en": "Ghibli-like colours"
+    },
+    {
+      "zh": "原神冲击",
+      "en": "genshin impact"
+    },
+    {
+      "zh": "碧蓝航线",
+      "en": "azur lane"
+    },
+    {
+      "zh": "舰队收藏",
+      "en": "kantai collection"
+    },
+    {
+      "zh": "边缘行者",
+      "en": "rebecca (cyberpunk)"
+    },
+    {
+      "zh": "电锯人",
+      "en": "chainsaw man"
+    },
+    {
+      "zh": "蒸汽波",
+      "en": "synthwave"
+    },
+    {
+      "zh": "动画截图",
+      "en": "anime screeshot"
+    },
+    {
+      "zh": "抱枕",
+      "en": "dakimakura"
+    },
+    {
+      "zh": "角色扮演",
+      "en": "cosplay"
+    },
+    {
+      "zh": "猎奇",
+      "en": "guro"
+    },
+    {
+      "zh": "拟人",
+      "en": "personification"
+    },
+    {
+      "zh": "四格",
+      "en": "4koma"
+    },
+    {
+      "zh": "8bit游戏",
+      "en": "8 Bit Game"
+    },
+    {
+      "zh": "能生成美漫封面的漫画画面",
+      "en": "DC Comics"
+    },
+    {
+      "zh": "卡通",
+      "en": "cartoon"
+    },
+    {
+      "zh": "专辑",
+      "en": "album"
+    },
+    {
+      "zh": "专辑封面",
+      "en": "album cover"
+    },
+    {
+      "zh": "杂志内页",
+      "en": "magazine scan"
+    },
+    {
+      "zh": "杂志封面",
+      "en": "magazine cover"
+    },
+    {
+      "zh": "封面",
+      "en": "cover"
+    },
+    {
+      "zh": "原画",
+      "en": "artbook"
+    },
+    {
+      "zh": "一列列小图组成大图",
+      "en": "column lineup"
+    },
+    {
+      "zh": "背景是前景的放大版",
+      "en": "zoom layer"
+    },
+    {
+      "zh": "三维渲染",
+      "en": "3D Item Render"
+    },
+    {
+      "zh": "GIF格式图片",
+      "en": "animated gif"
+    },
+    {
+      "zh": "名画模仿",
+      "en": "fine art parody"
+    },
+    {
+      "zh": "视觉错误",
+      "en": "optical illusion"
+    },
+    {
+      "zh": "ASCII艺术",
+      "en": "((ASCII art))"
+    },
+    {
+      "zh": "时间协调性",
+      "en": "Synchronism"
+    },
+    {
+      "zh": "厚涂（风格）",
+      "en": "highres"
+    },
+    {
+      "zh": "图上有字样",
+      "en": "sample"
+    },
+    {
+      "zh": "梦幻",
+      "en": "dreamlike"
+    },
+    {
+      "zh": "纯二次元风格人像",
+      "en": "pixiv"
+    }
+  ]
+}

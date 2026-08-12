@@ -7,6 +7,16 @@
 
 📖 完整使用指南见 [docs/MANUAL.md](docs/MANUAL.md)
 
+## 独立视频提示词优化引擎（video_prompt_engine）
+
+与图片提示词引擎**完全分离**的独立视频引擎（端口 8020，独立知识库/策略/模型/配置，不 import `prompt_engine.*`）。
+
+- 启动：`python -m video_prompt_engine`（默认 8020，`config_video.yaml` / `VIDEO_LLM_*` 环境变量）
+- 构建视频知识库：`python -m video_prompt_engine.cli --build-kb`
+- 端点：`GET /health`、`POST /v1/video/optimize`、`POST /v1/video/optimize/batch`（≤20，并发 8）、`GET /v1/video/platforms`、`GET /v1/video/keywords`
+- 视频知识库：`video_prompt_engine/knowledge/`（keywords_video.json 7 维度 + seed_video_prompts.json 结构化种子）
+- 详情见 `01-docs/PRD-video-prompt-engine.md` / `ARCH-video-prompt-engine.md`
+
 ## 特性
 
 - 🎯 **多平台适配**：Midjourney / Stable Diffusion / DALL·E / 通义万相 / 文心一格 / 即梦 / 通用
