@@ -2,6 +2,12 @@
 
 本项目更新日志。
 
+## [未发布] 功能：视频提示词输出语言按目标平台路由（2026-08-12 增强）
+
+- **语言路由**：output_language 解析升级为「显式参数 → 目标平台集合 → model 关键词兜底 → 文本 CJK 检测」；国产视频模型（minimax/seedance/kling/hailuo/doubao/cogvideo/hunyuan/wan/agnes）→ zh，国外模型（veo/runway/sora/ltx/pika/luma）→ en，避免中文提示词发给 Veo/Runway 的错配。
+- **策略对齐**：doubao 平台注记明确中文优先（zh 保真最高）、veo 明确英文提示词最优（en）。
+- **测试**：策略注记断言 + 回归；Multi-Publish contract 语言路由 8 用例（中文文案+veo→en / 中文文案+seedance→zh / 英文+minimax→zh / 显式覆盖 / 别名归一 / model 兜底 / 未知兜底 / 单元）。
+
 ## [未发布] 功能：视频提示词优化引擎全面增强（video-prompt-engine-enhancement，2026-08-12）
 
 - **知识库扩充**：视频种子 11 → **140 条**（awesome-video-prompts 105 + seedance2-skill 28 + awesome-seedance 7），按平台分层（generic_video/seedance）

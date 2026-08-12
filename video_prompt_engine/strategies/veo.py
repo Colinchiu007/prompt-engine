@@ -15,5 +15,6 @@ class VeoStrategy(GenericVideoStrategy):
 - Veo excels at long continuous takes, realistic physics, and natural camera language.
 - Prefer smooth, continuous camera motion; avoid rapid cuts unless specified.
 - Keep subject motion physically plausible with realistic lighting and texture detail.
-- Output duration can be 5-15s; describe a single continuous shot unless multi-shot is intended."""
+- Output duration can be 5-15s; describe a single continuous shot unless multi-shot is intended.
+- Veo is optimized for English prompts; prefer English descriptive prose for best quality (aligns with language routing: veo -> en)."""
         return base.replace("## Output Format (MANDATORY)", platform_note + "\n\n## Output Format (MANDATORY)")

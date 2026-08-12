@@ -144,6 +144,11 @@ class TestPlatformStrategies:
         for p, note in notes.items():
             assert note in get_strategy(p).build_system_prompt(), p
 
+    def test_language_routing_alignment_notes(self):
+        """语言路由对齐：veo 英文优先 / doubao 中文优先 平台注记存在（与 Multi-Publish 路由一致）。"""
+        assert "Veo is optimized for English prompts" in get_strategy("veo").build_system_prompt()
+        assert "Prefer Chinese output" in get_strategy("doubao").build_system_prompt()
+
     def test_zh_language_section_all_strategies(self):
         for p in list_strategies():
             sp = get_strategy(p).build_system_prompt(output_language="zh")
