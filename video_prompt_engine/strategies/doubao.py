@@ -13,5 +13,6 @@ class DoubaoStrategy(GenericVideoStrategy):
         note = """
 ## Doubao Platform Notes
 - Doubao has strong Chinese-language understanding; Chinese descriptions are well supported.
+- Prefer Chinese output (output_language=zh): Chinese subject-action-environment structure yields the highest fidelity (aligns with language routing: doubao -> zh).
 - Prefer vivid scene description with clear subject-action-environment structure."""
         return base.replace("## Output Format (MANDATORY)", note + "\n\n## Output Format (MANDATORY)")

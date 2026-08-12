@@ -101,7 +101,8 @@
 ### 3.9 videogen 集成（Multi-Publish）
 - `video-prompt-engine-contract.js`：新增 `buildStandaloneVideoOptimizeRequest`（8020 请求，无 domain、含 output_language）、`isStandaloneVideoEngineEnabled`（`VIDEO_PROMPT_PORT` 合法端口）、`getStandaloneVideoEngineTarget`（host 默认 127.0.0.1）。
 - `prompt-bridge.js`：`optimizeVideo`/`optimizeVideosBatch` 独立引擎（8020 `/v1/video/optimize[/batch]`）优先；连接失败/超时 → warning + 回退 8013 `/v1/optimize[/batch]`（domain=video）。
-- `output_language` 自动检测：文本 CJK 字符占比 ≥30% → zh，否则 en；显式 `output_language`/`outputLanguage` 优先。
+- `output_language` 解析（2026-08-12 语言路由增强）：显式 `output_language`/`outputLanguage` → 目标平台集合（国产模型 minimax/seedance/kling/hailuo/doubao/cogvideo/hunyuan/wan/agnes → zh；国外模型 veo/runway/sora/ltx/pika/luma → en）→ model 名关键词兜底（通用网关 provider）→ 文本 CJK 占比检测兜底。
+- 与平台策略对齐：doubao 中文优先（zh 保真最高）、veo 英文提示词最优（en）；避免「中文提示词发给 Veo」的错配。
 - 独立引擎需单独启动（`python -m video_prompt_engine`，8020）；未配置 `VIDEO_PROMPT_PORT` 时零回归走 8013。
 ## 4. 数据校验
 
