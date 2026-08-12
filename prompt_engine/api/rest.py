@@ -80,12 +80,17 @@ async def optimize(request: OptimizeRequest):
 
 @app.post("/v1/optimize/batch", response_model=list[OptimizeResult])
 async def batch_optimize(request: BatchOptimizeRequest):
-    """批量优化多条提示词（最多 10 条，并行执行）"""
+    """批量优化多条提示词（最多 20 条，有界并发执行）"""
     import asyncio
     optimizer = get_optimizer()
+    # 有界并发：批量上限放大到 20 后，避免一次性对 LLM 发起全量并发请求（每条内部是 LLM 网络调用），
+    # 以 8 为并发闸；gather 保证结果顺序与请求顺序一致。
+    _BATCH_CONCURRENCY = 8
+    semaphore = asyncio.Semaphore(_BATCH_CONCURRENCY)
 
     async def run_one(req: OptimizeRequest) -> OptimizeResult:
-        return await asyncio.to_thread(optimizer.optimize, req)
+        async with semaphore:
+            return await asyncio.to_thread(optimizer.optimize, req)
 
     results = await asyncio.gather(*[run_one(r) for r in request.requests])
     return results

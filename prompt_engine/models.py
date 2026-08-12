@@ -178,7 +178,7 @@ class OptimizeRequest(BaseModel):
 
 class BatchOptimizeRequest(BaseModel):
     """批量优化请求"""
-    requests: list[OptimizeRequest] = Field(..., min_length=1, max_length=10, description="优化请求列表，最多 10 条")
+    requests: list[OptimizeRequest] = Field(..., min_length=1, max_length=20, description="优化请求列表，最多 20 条（覆盖 videogen 12 场景单批；>20 由客户端分块）")
 
 
 class ReverseRequest(BaseModel):
