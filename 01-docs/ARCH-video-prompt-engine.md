@@ -88,7 +88,8 @@ fail closed：error → 502；detail → 422 语义；optimized_prompt 空 → �
 `platform|prompt|creative_level|max_length|language|num_candidates|negative_prompt|context_sha1[:16]`（含语言隔离；SQLite 主键）。
 
 ### 3.5 反馈（/v1/video/feedback）
-`{prompt_text, result_prompt, good, source}`：空值 422；好评 → 结果入种子（quality_score=9，id=时间戳+序号防撞）；坏评 → 源提示词匹配种子质量分 -1（下限 1）。
+`{prompt_text, result_prompt, good, source}`：空值 422；好评 → 结果入反馈种子文件（quality_score=9，id=时间戳+序号防撞）；坏评 → 源提示词匹配种子质量分 -1（下限 1）。
+落盘：可写数据目录（默认 `video_prompt_cache/feedback_seed.json`，`VIDEO_FEEDBACK_PATH` 覆盖）；进程内锁 + 原子写（tmp + os.replace）。
 ## 4. 视频知识库（7 仓库 → 两类资产）
 
 | 资产 | 来源 | 内容 | 用途 |

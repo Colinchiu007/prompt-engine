@@ -79,7 +79,7 @@
 
 ### 3.5 缓存（双级）
 - `VideoCacheManager`：L1 内存 dict（容量 512，超限截断）+ L2 SQLite `video_prompt_cache.db`（`INSERT OR REPLACE`，key 主键）。
-- key：`platform|prompt|creative_level|max_length|language|num_candidates|negative_prompt|context_sha1[:16]`。
+- key：`platform|language|sha1(prompt)|sha1(style)|creative_level|max_length|num_candidates|sha1(negative_prompt)|context_sha1[:16]`（组件哈希防 `|` 碰撞；style 纳入避免跨风格误命中）。
 - 命中：直接返回缓存结果（`cache_hit=true`），不调 LLM；`GET /v1/video/cache/stats` 返回内存/容量/SQLite 计数。
 - 配置：`cache.enabled`（默认 true）、`cache.dir`（默认 video_prompt_cache，`VIDEO_CACHE_DIR` 可覆盖）、`cache.memory_size`。
 
@@ -91,7 +91,7 @@
 ### 3.7 评估与反馈
 - `evaluator.py`：score = 长度(20) + 六要素(30) + shot(20) + camera(15) + motion(15) + 保真(20)，0-100；zh 长度按字符（120-4000），en 按词（100-400）。
 - 多候选择优：`select_best` 返回最高分候选；`candidates` 按分降序。
-- `feedback.py`：`POST /v1/video/feedback`，prompt_text/result_prompt 空值 422；好评 → 结果提示词入种子（quality_score=9，id 时间戳防撞）；坏评 → 匹配源提示词质量分 -1（最低 1）。
+- `feedback.py`：`POST /v1/video/feedback`，prompt_text/result_prompt 空值 422；好评 → 结果提示词入反馈种子文件（quality_score=9，id 时间戳防撞）；坏评 → 匹配源提示词质量分 -1（最低 1）。**落盘路径为可写数据目录**（默认 `video_prompt_cache/feedback_seed.json`，`VIDEO_FEEDBACK_PATH` 覆盖），避免写入 wheel 包内只读的 `knowledge/seed_video_prompts.json`；进程内锁 + 原子写（临时文件 + replace）防并发丢失更新。
 
 ### 3.8 中文输出
 - 请求 `output_language`：en（默认）/zh；`pattern="^(zh|en)$"`，非法 422。
