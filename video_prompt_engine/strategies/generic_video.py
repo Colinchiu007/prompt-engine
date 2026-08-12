@@ -70,6 +70,11 @@ class GenericVideoStrategy(BaseVideoStrategy):
 
 ## Detail Level Control
 - creative_level={creative_level}/10: {detail_instruction}
+
+## Length & Detail (MANDATORY)
+- Write a RICH, DETAILED video prompt of 150-300 words (about 900-2000 chars) — NOT a short one-liner.
+- Describe subject appearance/wardrobe/pose/expression, concrete action & motion, environment & props, color palette, lighting direction/quality, artistic style, shot scale, camera angle & motion, and cross-clip continuity.
+- Professional video prompts are long and specific: every visual element the model needs to render should be in the text. Do not truncate early.
 {keywords}
 ## Output Format (MANDATORY)
 Output ONLY a JSON object with EXACTLY these keys:
