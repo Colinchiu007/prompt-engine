@@ -131,6 +131,18 @@ class Optimizer:
 
     # ── 核心编排方法 ───────────────────────────────────────────
 
+
+    @staticmethod
+    def _warn_unknown_context_keys(context) -> None:
+        """context 白名单：未知键忽略并记录 warning（对齐 openspec video-content-fidelity）。"""
+        import logging
+        if not context or not isinstance(context, dict):
+            return
+        known = {"synopsis", "character", "setting", "character_list", "narrative_intent", "scene_type", "full_text"}
+        unknown = sorted(set(context.keys()) - known)
+        for key in unknown:
+            logging.getLogger("prompt_engine.optimizer").warning("unknown context key ignored: %s", key)
+
     def optimize(self, request: OptimizeRequest) -> OptimizeResult:
         """单条提示词优化主流程"""
         start_time = time.time()
@@ -186,6 +198,8 @@ class Optimizer:
             )
 
             # 2.5 PROJECT-012 上下文注入（角色一致性）
+                        # video-content-fidelity S4b：context 白名单校验（未知键忽略 + warning，不改变优化行为）
+            self._warn_unknown_context_keys(request.context)
             system_prompt += PromptBuilder.build_context_section(request.context)
 
             # 3. RAG few-shot 注入
