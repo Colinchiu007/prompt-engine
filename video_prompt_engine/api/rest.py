@@ -76,9 +76,16 @@ def video_classify(request: VideoClassifyRequest):
 def video_feedback(request: VideoFeedbackRequest):
     """好/坏反馈闭环：好评结果沉淀入种子库；坏评源提示词质量分降级。"""
     try:
+        # 反馈沉淀到可写数据目录（默认缓存目录，env VIDEO_FEEDBACK_PATH 覆盖），
+        # 避免写入 wheel 包内只读的 knowledge/seed_video_prompts.json。
+        import os
         from pathlib import Path
-        seed_path = Path(__file__).parent.parent / "knowledge" / "seed_video_prompts.json"
         from video_prompt_engine.feedback import VideoFeedbackStore
+        default_dir = get_optimizer().config.get("cache", {}).get("dir", "video_prompt_cache")
+        p = Path(default_dir)
+        if not p.is_absolute():
+            p = Path(__file__).parent.parent.parent / p
+        seed_path = Path(os.environ.get("VIDEO_FEEDBACK_PATH", str(p / "feedback_seed.json")))
         store = VideoFeedbackStore(seed_path)
         return store.submit(request.prompt_text, request.result_prompt, request.good, request.source)
     except ValueError as e:

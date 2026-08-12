@@ -118,6 +118,12 @@ def assert_no_sensitive_context(context: dict, field: str = "context") -> None:
             raise ValueError(f"{field}.{key} 包含敏感凭据键，已拒绝外发")
         if isinstance(value, dict):
             assert_no_sensitive_context(value, f"{field}.{key}")
+        elif isinstance(value, list):
+            for j, item in enumerate(value):
+                if isinstance(item, dict):
+                    assert_no_sensitive_context(item, f"{field}.{key}[{j}]")
+                elif isinstance(item, list):
+                    assert_no_sensitive_context({"__nested_list__": item}, f"{field}.{key}[{j}]")
 
 
 class VideoFeedbackRequest(BaseModel):

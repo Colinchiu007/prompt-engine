@@ -62,6 +62,13 @@ def strip_reasoning_blocks(text: str) -> str:
 class VideoOptimizer:
     """视频提示词优化编排器。"""
 
+    @staticmethod
+    def _safe_int(value, default: int) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
     def __init__(self, config: Optional[dict] = None, cache_dir: Optional[str] = None):
         self.config = config or load_config()
         self._provider = BaseVideoLLMProvider(self.config)
@@ -116,6 +123,9 @@ class VideoOptimizer:
             logger.warning("unknown context key ignored: %s", key)
 
     def _cache_key(self, request: VideoOptimizeRequest, platform: str, lang: str) -> str:
+        """缓存 key：对每个可变组件做 sha1 哈希后拼接，避免 `|` 碰撞并覆盖全部影响结果的参数。"""
+        def _h(value: str) -> str:
+            return hashlib.sha1(str(value or "").encode("utf-8")).hexdigest()[:16]
         ctx_hash = ""
         if request.context:
             ctx_hash = hashlib.sha1(
@@ -123,12 +133,13 @@ class VideoOptimizer:
             ).hexdigest()[:16]
         return "|".join([
             str(platform),
-            request.prompt,
+            lang,
+            _h(request.prompt),
+            _h(request.style or ""),
             str(request.creative_level),
             str(request.max_length),
-            lang,
             str(request.num_candidates),
-            request.negative_prompt or "",
+            _h(request.negative_prompt or ""),
             ctx_hash,
         ])
 
@@ -164,9 +175,10 @@ class VideoOptimizer:
             if self._cache_mgr is not None:
                 cached = self._cache_mgr.get(cache_key)
                 if cached:
-                    cached["cache_hit"] = True
-                    cached["duration_ms"] = round((time.time() - start) * 1000, 1)
-                    return VideoOptimizeResult(**cached)
+                    hit = dict(cached)  # 拷贝，避免变异缓存内共享对象
+                    hit["cache_hit"] = True
+                    hit["duration_ms"] = round((time.time() - start) * 1000, 1)
+                    return VideoOptimizeResult(**hit)
 
             strategy_cls = get_strategy(platform) or get_strategy("generic_video")
             classification = classify(request.prompt)
@@ -183,11 +195,11 @@ class VideoOptimizer:
             )
             system_prompt += self._build_classification_section(classification, dims)
             system_prompt += self._builder.build_context_section(request.context)
-            few_shot = self._rag.retrieve_few_shot(request, platform=platform, language=lang)
+            few_shot = self._rag.retrieve_few_shot(request, platform=platform)
             if few_shot:
                 system_prompt += few_shot
 
-            max_retries = max(0, int(self.config.get("optimizer", {}).get("max_retries", 2)))
+            max_retries = max(0, self._safe_int(self.config.get("optimizer", {}).get("max_retries", 2), 2))
             candidates: list[tuple[str, dict]] = []
             total_retried = 0
             for i in range(request.num_candidates):
@@ -217,15 +229,13 @@ class VideoOptimizer:
 
             # 多候选择优：evaluator 评分，最优在前
             if len(candidates) > 1:
-                optimized, video_meta, _best_score = select_best(
-                    candidates, source_prompt=request.prompt, language=lang
-                )
-                ordered = sorted(
-                    candidates,
-                    key=lambda c: evaluate(c[0], c[1], source_prompt=request.prompt, language=lang)["score"],
-                    reverse=True,
-                )
-                final_candidates = [p for p, _ in ordered]
+                scored = [
+                    (evaluate(p, m, source_prompt=request.prompt, language=lang)["score"], p, m)
+                    for p, m in candidates
+                ]
+                scored.sort(key=lambda x: x[0], reverse=True)
+                optimized, video_meta = scored[0][1], scored[0][2]
+                final_candidates = [p for _, p, _ in scored]
             else:
                 optimized, video_meta = candidates[0]
                 final_candidates = []

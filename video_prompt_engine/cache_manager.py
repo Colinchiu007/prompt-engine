@@ -19,13 +19,16 @@ class VideoCacheManager:
 
     def _init_db(self):
         with self._lock:
-            conn = sqlite3.connect(str(self._db_path))
+            conn = sqlite3.connect(str(self._db_path), timeout=5.0)
+            conn.execute("PRAGMA busy_timeout=5000")
             conn.execute("CREATE TABLE IF NOT EXISTS cache (cache_key TEXT PRIMARY KEY, result TEXT, created_at TEXT DEFAULT (datetime('now')))")
             conn.commit()
             conn.close()
 
     def _conn(self):
-        return sqlite3.connect(str(self._db_path))
+        conn = sqlite3.connect(str(self._db_path), timeout=5.0)
+        conn.execute("PRAGMA busy_timeout=5000")
+        return conn
 
     def get(self, cache_key: str) -> dict | None:
         with self._lock:
@@ -69,6 +72,15 @@ class VideoCacheManager:
                 "INSERT OR REPLACE INTO cache (cache_key, result) VALUES (?, ?)",
                 (cache_key, json.dumps(result, ensure_ascii=False)),
             )
+            # 持久层容量裁剪：超过 memory_size*4 时按最旧淘汰（防止 DB 无限增长）
+            try:
+                conn.execute(
+                    "DELETE FROM cache WHERE cache_key IN ("
+                    " SELECT cache_key FROM cache ORDER BY created_at DESC LIMIT -1 OFFSET ?)",
+                    (self._mem_size * 4,),
+                )
+            except Exception:
+                pass
             conn.commit()
             conn.close()
         except Exception:

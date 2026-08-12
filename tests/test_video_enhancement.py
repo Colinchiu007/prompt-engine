@@ -284,7 +284,7 @@ class TestRagFallback:
         cfg = {"knowledge": {"enabled": True, "persist_dir": str(Path(tempfile.mkdtemp()) / "no-index"), "retrieval": {"top_k": 3}}}
         rr = VideoRAGRetriever(cfg)
         req = VideoOptimizeRequest(prompt="运镜 广告 分镜编排", platform="seedance")
-        section = rr.retrieve_few_shot(req, platform="seedance", language="zh")
+        section = rr.retrieve_few_shot(req, platform="seedance")
         assert "高质量视频参考示例" in section
 
 
@@ -341,3 +341,50 @@ class TestApiEnhancements:
         body = r.json()
         assert body["language"] == "zh"
         assert body["optimized_prompt"]
+
+class TestReviewFixes:
+    """外部审查（claude targeted review）修复回归。"""
+
+    def test_cache_key_includes_style(self):
+        """Critical: 缓存 key 必须包含 style（style 改变 system prompt → 输出）。"""
+        o = make_optimizer()
+        o._provider = mock_provider(VIDEO_LLM_JSON)
+        o.optimize(VideoOptimizeRequest(prompt="a cat", style="cinematic", platform="generic_video"))
+        o.optimize(VideoOptimizeRequest(prompt="a cat", style="realistic", platform="generic_video"))
+        assert o._provider.call.call_count == 2  # style 不同 → 不同 key
+
+    def test_cache_key_no_pipe_collision(self):
+        """Warning: 组件哈希后，含 | 的 prompt/negative 不再碰撞。"""
+        o = make_optimizer()
+        o._provider = mock_provider(VIDEO_LLM_JSON)
+        # (prompt="a|b", neg="c") 与 (prompt="a", neg="b|c") 必须不同 key
+        o.optimize(VideoOptimizeRequest(prompt="a|b", negative_prompt="c", platform="generic_video"))
+        o.optimize(VideoOptimizeRequest(prompt="a", negative_prompt="b|c", platform="generic_video"))
+        assert o._provider.call.call_count == 2
+
+    def test_sensitive_context_in_list_rejected(self):
+        """Warning: 敏感键递归进 list 元素。"""
+        from video_prompt_engine.models import assert_no_sensitive_context
+        with pytest.raises(ValueError, match="敏感"):
+            assert_no_sensitive_context({"character_list": [{"name": "关羽", "api_key": "sk-xxx"}]})
+        with pytest.raises(ValueError, match="敏感"):
+            assert_no_sensitive_context({"nested": [{"a": [{"token": "t"}]}]})
+
+    def test_classifier_single_char_no_false_positive(self):
+        """Info: 去掉单字「战」后，「战斗动作」不再误判为历史题材。"""
+        info = classify("激烈的战斗动作场面，武术对决")
+        assert "history" not in info["genres"]
+        assert classify("三国 古代 战争 战场")["genres"] == ["history"]
+
+    def test_feedback_writes_writable_dir_not_package(self):
+        """Warning: feedback 落可写目录（非包内种子文件）。"""
+        from video_prompt_engine.api import rest
+        o = make_optimizer()
+        rest._optimizer = o
+        # 用临时目录作为 cache.dir
+        o.config.setdefault("cache", {})["dir"] = tempfile.mkdtemp()
+        client = TestClient(rest.app)
+        r = client.post("/v1/video/feedback", json={"prompt_text": "原文", "result_prompt": "结果", "good": True})
+        assert r.status_code == 200
+        fb = Path(o.config["cache"]["dir"]) / "feedback_seed.json"
+        assert fb.exists()

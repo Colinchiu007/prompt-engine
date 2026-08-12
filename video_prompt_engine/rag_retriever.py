@@ -44,7 +44,8 @@ class VideoRAGRetriever:
         persist = kb_cfg.get("persist_dir", "video_prompts_db")
         persist_dir = Path(persist)
         if not persist_dir.is_absolute():
-            persist_dir = Path(__file__).parent.parent.parent / persist_dir
+            # 仓库根目录（与 optimizer 缓存目录解析一致：video_prompt_engine/rag_retriever.py → 上两级）
+            persist_dir = Path(__file__).parent.parent / persist_dir
         if not persist_dir.exists():
             logger.info("video knowledge base not built yet; run build_knowledge_base()")
             return
@@ -105,7 +106,7 @@ class VideoRAGRetriever:
             section += f"\n### 参考 {i}: {title}\n```\n{item['document']}\n```\n"
         return section
 
-    def retrieve_few_shot(self, request: VideoOptimizeRequest, platform: str | None = None, language: str = "en") -> str:
+    def retrieve_few_shot(self, request: VideoOptimizeRequest, platform: str | None = None) -> str:
         query = f"{request.style + ' ' if request.style else ''}{request.prompt}"
         top_k = self._top_k()
         platform = platform or (request.platform.value if hasattr(request.platform, "value") else str(request.platform))
