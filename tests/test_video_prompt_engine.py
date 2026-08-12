@@ -135,6 +135,19 @@ class TestOptimizer:
         results = o.optimize_batch(reqs)
         assert len(results) == 12
         assert all(r.optimized_prompt for r in results)
+    def test_think_block_stripped(self):
+        """真实 LLM（MiniMax-M2.7）输出含 <think> 推理块时剥离后再结构化。"""
+        raw_with_think = "<think>Let me plan the shot...</think>{\"prompt\": \"a cat runs\", \"shot\": \"wide\", \"camera\": \"dolly\", \"motion_intensity\": 6, \"scene_transition\": \"cut\", \"continuity_token\": \"cat\", \"duration_hint\": 5}"
+        from unittest.mock import Mock
+        o = VideoOptimizer()
+        o._provider = Mock()
+        o._provider.call.return_value = (raw_with_think, 100)
+        o._provider.model_name = "mock-video"
+        result = o.optimize(VideoOptimizeRequest(prompt="a cat running", platform="generic_video"))
+        assert "<think>" not in result.optimized_prompt
+        assert result.video is not None
+        assert result.video.shot == "wide"
+
 
 
 class TestApi:

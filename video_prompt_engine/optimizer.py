@@ -22,6 +22,24 @@ from video_prompt_engine.knowledge.loader import load_keywords_video
 logger = logging.getLogger(__name__)
 
 
+def strip_reasoning_blocks(text: str) -> str:
+    """剥离模型输出中的推理块（<think>...</think>），返回实际提示词内容。
+
+    带推理能力的模型（如 MiniMax-M2.7）可能把思考过程写进返回内容：
+    - 完整推理块 <think>...</think>：移除后保留 </think> 之后的内容；
+    - 无闭合标签的 <think> 前缀：视为没有实际内容，返回空串（由调用方回退原文）。
+    """
+    if not text:
+        return text
+    import re
+    stripped = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    lower = stripped.lower()
+    think_idx = lower.find("<think>")
+    if think_idx >= 0:
+        stripped = stripped[:think_idx]
+    return stripped.strip()
+
+
 class VideoOptimizer:
     """视频提示词优化编排器。"""
 
@@ -104,6 +122,12 @@ class VideoOptimizer:
             video_meta = {}
             for i in range(request.num_candidates):
                 raw, _tokens = self._provider.call(system_prompt, request.prompt, variant=i)
+                raw = strip_reasoning_blocks(raw)
+                if not raw:
+                    optimized = request.prompt
+                    video_meta = {}
+                    candidates.append(optimized)
+                    continue
                 optimized, video_meta = strategy_cls.post_process_video(raw, creative_level=request.creative_level)
                 if len(optimized) > request.max_length:
                     optimized = optimized[:request.max_length]
