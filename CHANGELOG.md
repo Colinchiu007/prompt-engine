@@ -2,6 +2,22 @@
 
 本项目更新日志。
 
+## [v0.24.0] — 2026-08-12
+
+### 调整：批量优化上限 10 -> 20（+ 有界并发）
+
+- **背景**：真实 E2E（animation 流水线）发现 storyboard 最多产出 12 个视频场景，一次性批量优化触发 `BatchOptimizeRequest` 上限 10 → 422 整线失败。
+- **调整**：`/v1/optimize/batch` 单批上限 10 → **20**（覆盖 videogen 12 场景单批 + 余量）；服务端执行从全量并行改为**有界并发（asyncio.Semaphore(8)）**，避免放大上限后对 LLM 造成并发风暴，`gather` 保证结果顺序与请求顺序一致；>20 由客户端分块兜底。
+- **测试**：test_batch 上限断言 20 / 超限 21 / 新增 12 条单批合法用例；与 video 领域测试合计通过。
+
+### 变更文件
+
+| 文件 | 说明 |
+|------|------|
+| `prompt_engine/models.py` | `BatchOptimizeRequest.requests.max_length` 10 -> 20 |
+| `prompt_engine/api/rest.py` | batch 有界并发（Semaphore 8）+ docstring |
+| `04-tests/test_batch.py` | 上限 20 / 超限 21 / 12 条单批合法 |
+
 ## [v0.23.0] — 2026-08-11
 
 ### 新增：视频提示词优化（domain=video，Phase 1）
