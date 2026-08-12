@@ -2,6 +2,16 @@
 
 本项目更新日志。
 
+## [v0.24.1] — 2026-08-12
+
+### 记录：对比验证页（/v1/compare/*）真实端到端验证 + 生图格式契约细节
+
+- **真实验证（用户需求：300 字以上文案 → 分句 → 提示词 → 双图对比）**：326 字山村茶事文案 → `/v1/compare/split` 11 句（经 8002 真实分句）；
+  抽样 3 句 → `/v1/compare/prompt` 生成英文生图提示词（MiniMax LLM，8.5~14s/句）→ `/v1/compare/images` 每提示词 2 张（MiniMax image-01，19~60s），共 6 张全部成功且互不相同（SHA-256 验证）；
+- **格式契约细节**：MiniMax image-01 `response_format=url` 实际返回 **JPEG**（1024×1024）但 URL 以 `.png` 结尾——浏览器 `<img>` 按内容嗅探可正常显示，无需改前端；记录供下载落盘/二次处理方参考（勿按扩展名假定格式）；
+- **API Key 流转验证**：请求体 `api_key` > 环境变量 `MINIMAX_API_KEY`；服务端注入 env key 时前端可免填（`/v1/compare/status.has_env_key=true`）；
+- 无 Key 时 `400 MiniMax API Key 未配置`、错误 Key 时 `400 MiniMax 鉴权失败`（fail-closed 契约已按测试验证）。
+
 ## [v0.24.0] — 2026-08-12
 
 ### 调整：批量优化上限 10 -> 20（+ 有界并发）
