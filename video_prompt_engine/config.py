@@ -28,6 +28,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "cache_size": 512,
         "max_retries": 2,
     },
+    "cache": {
+        "dir": "video_prompt_cache",
+        "memory_size": 512,
+        "enabled": True,
+    },
 }
 
 
@@ -67,4 +72,8 @@ def load_config(config_path: str | None = None) -> dict:
             cfg["server"]["port"] = int(env["VIDEO_ENGINE_PORT"])
         except ValueError:
             pass
+    if env.get("VIDEO_CACHE_DIR"):
+        cfg.setdefault("cache", {})["dir"] = env["VIDEO_CACHE_DIR"]
+    if env.get("VIDEO_CACHE_DISABLED", "").lower() in ("1", "true", "yes"):
+        cfg.setdefault("cache", {})["enabled"] = False
     return cfg

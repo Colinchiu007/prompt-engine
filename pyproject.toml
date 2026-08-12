@@ -42,4 +42,5 @@ all = [
 prompt-engine = "prompt_engine.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["prompt_engine*"]
+include = ["prompt_engine*", "video_prompt_engine*"]
+

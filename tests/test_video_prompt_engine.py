@@ -55,33 +55,12 @@ class TestStrategies:
     def test_registry(self):
         assert "generic_video" in list_strategies()
         assert "seedance" in list_strategies()
+        assert {"veo", "kling", "hailuo", "doubao"} <= set(list_strategies())
 
     def test_generic_video_fact_fidelity(self):
         sp = get_strategy("generic_video").build_system_prompt()
         assert "Fact-Fidelity" in sp
         assert "Do NOT change the subject's identity" in sp
-
-    def test_default_max_length_1800(self):
-        """视频提示词专业长度：默认 max_length=1800（非 500），支持 200-4000。"""
-        req = VideoOptimizeRequest(prompt="x")
-        assert req.max_length == 1800
-
-    def test_generic_video_detail_instruction(self):
-        """策略要求详细（150-300 词），避免短提示词。"""
-        sp = get_strategy("generic_video").build_system_prompt()
-        assert "150-300 words" in sp
-        assert "RICH, DETAILED" in sp
-
-    def test_default_max_length_1800(self):
-        """视频提示词专业长度：默认 max_length=1800（非 500），支持 200-4000。"""
-        req = VideoOptimizeRequest(prompt="x")
-        assert req.max_length == 1800
-
-    def test_generic_video_detail_instruction(self):
-        """策略要求详细（150-300 词），避免短提示词。"""
-        sp = get_strategy("generic_video").build_system_prompt()
-        assert "150-300 words" in sp
-        assert "RICH, DETAILED" in sp
 
     def test_default_max_length_1800(self):
         """视频提示词专业长度：默认 max_length=1800（非 500），支持 200-4000。"""
@@ -107,7 +86,8 @@ class TestStrategies:
         assert meta["continuity_token"] == "cat_neon_alley"
 
     def test_unknown_platform_fallback(self):
-        assert get_strategy("veo") is None  # 未注册 → optimizer 回退 generic_video
+        assert get_strategy("runway") is None  # 未注册 → optimizer 回退 generic_video
+        assert get_strategy("veo") is not None  # 专项策略已注册
 
 
 class TestKnowledge:
@@ -172,7 +152,9 @@ class TestOptimizer:
         """真实 LLM（MiniMax-M2.7）输出含 <think> 推理块时剥离后再结构化。"""
         raw_with_think = "<think>Let me plan the shot...</think>{\"prompt\": \"a cat runs\", \"shot\": \"wide\", \"camera\": \"dolly\", \"motion_intensity\": 6, \"scene_transition\": \"cut\", \"continuity_token\": \"cat\", \"duration_hint\": 5}"
         from unittest.mock import Mock
-        o = VideoOptimizer()
+        # 独立缓存目录：避免同 prompt 命中 SQLite 缓存绕过 mock
+        import tempfile
+        o = VideoOptimizer(cache_dir=tempfile.mkdtemp())
         o._provider = Mock()
         o._provider.call.return_value = (raw_with_think, 100)
         o._provider.model_name = "mock-video"

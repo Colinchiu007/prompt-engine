@@ -55,8 +55,25 @@ class BaseVideoStrategy(ABC):
         max_length: int = 500,
         negative_prompt: Optional[str] = None,
         keywords_hint: str = "",
+        output_language: str = "en",
     ) -> str:
         raise NotImplementedError
+
+    @classmethod
+    def build_language_section(cls, output_language: str = "en") -> str:
+        """输出语言指令段：zh=中文主体 + 镜头术语双语；en=英文 prose。"""
+        if str(output_language or "en").lower().startswith("zh"):
+            return (
+                "\n## Output Language (MANDATORY)\n"
+                "- The `prompt` field MUST be written primarily in Chinese (中文) flowing prose, rich and detailed (equivalent to 150-300 English words).\n"
+                "- Camera/shot/lighting terms MAY be bilingual (e.g. 中景 medium shot, 推镜 dolly-in, 金色时刻 golden hour).\n"
+                "- Structured fields `shot` / `camera` / `scene_transition` MUST remain English enum values; `prompt` is the only Chinese field."
+            )
+        return (
+            "\n## Output Language (MANDATORY)\n"
+            "- The `prompt` field MUST be written in English flowing prose.\n"
+            "- Structured fields `shot` / `camera` / `scene_transition` MUST remain English enum values."
+        )
 
     @classmethod
     def build_negative_section(cls, negative_prompt: Optional[str]) -> str:

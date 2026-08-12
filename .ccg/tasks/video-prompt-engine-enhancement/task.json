@@ -1,0 +1,13 @@
+{
+  "id": "video-prompt-engine-enhancement",
+  "title": "视频提示词引擎全面增强（知识库/RAG/重试/多平台/缓存/评估/反馈/中文/集成）",
+  "status": "review",
+  "complexity": "L",
+  "risk": "medium",
+  "domain": "video-prompt-engine",
+  "currentPhase": "review",
+  "nextAction": "PR + CI + 合并 + 三同步归档",
+  "createdAt": "2026-08-12T19:00:00Z",
+  "branch": "codex/vpe-enhance",
+  "openspecChange": "video-prompt-engine-enhancement"
+}

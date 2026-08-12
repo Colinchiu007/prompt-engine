@@ -61,6 +61,7 @@ class VideoOptimizeRequest(BaseModel):
     num_candidates: int = Field(default=1, ge=1, le=5, description="候选版本数量")
     negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词")
     context: Optional[dict] = Field(default=None, description="上下文（白名单键）")
+    output_language: str = Field(default="en", pattern="^(zh|en)$", description="输出语言：en/zh；zh 保留中文主体 + 镜头术语双语，结构化枚举仍英文")
 
 
 class VideoBatchOptimizeRequest(BaseModel):
@@ -90,6 +91,10 @@ class VideoOptimizeResult(BaseModel):
     video: Optional[VideoPromptMeta] = Field(default=None, description="结构化视频字段")
     error: Optional[str] = Field(default=None)
     detail: Optional[str] = Field(default=None)
+    language: str = Field(default="en", description="实际输出语言（zh/en）")
+    cache_hit: bool = Field(default=False, description="是否命中缓存（跳过 LLM）")
+    retried: int = Field(default=0, description="结构化输出 JSON 重试次数")
+    classification: Optional[dict] = Field(default=None, description="输入题材/镜头意图检测结果")
 
 
 def normalize_video_platform(value: Any) -> str:
@@ -113,3 +118,24 @@ def assert_no_sensitive_context(context: dict, field: str = "context") -> None:
             raise ValueError(f"{field}.{key} 包含敏感凭据键，已拒绝外发")
         if isinstance(value, dict):
             assert_no_sensitive_context(value, f"{field}.{key}")
+        elif isinstance(value, list):
+            for j, item in enumerate(value):
+                if isinstance(item, dict):
+                    assert_no_sensitive_context(item, f"{field}.{key}[{j}]")
+                elif isinstance(item, list):
+                    assert_no_sensitive_context({"__nested_list__": item}, f"{field}.{key}[{j}]")
+
+
+class VideoFeedbackRequest(BaseModel):
+    """视频提示词反馈（好/坏反馈 → 种子库沉淀或质量分降级）。"""
+
+    prompt_text: str = Field(..., min_length=1, max_length=2000, description="源提示词（用户输入原文）")
+    result_prompt: str = Field(..., min_length=1, max_length=4000, description="引擎输出的优化提示词")
+    good: bool = Field(default=True, description="true=好评（结果沉淀入种子库，质量分 9）；false=坏评（源提示词质量分降级）")
+    source: str = Field(default="user-feedback", max_length=100, description="反馈来源标注")
+
+
+class VideoClassifyRequest(BaseModel):
+    """输入分类请求（题材/镜头意图检测，用于自动选策略与关键词维度）。"""
+
+    prompt: str = Field(..., min_length=1, max_length=2000, description="原始输入提示词/文案")

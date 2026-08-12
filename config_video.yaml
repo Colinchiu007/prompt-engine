@@ -20,3 +20,8 @@ llm:
 optimizer:
   cache_size: 512
   max_retries: 2
+
+cache:
+  enabled: true
+  dir: video_prompt_cache
+  memory_size: 512

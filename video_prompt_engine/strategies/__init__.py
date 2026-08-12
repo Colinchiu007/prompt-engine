@@ -4,5 +4,9 @@ from video_prompt_engine.strategies.base import BaseVideoStrategy, get_strategy,
 # 显式导入使 @register 生效
 from video_prompt_engine.strategies import generic_video  # noqa: F401
 from video_prompt_engine.strategies import seedance       # noqa: F401
+from video_prompt_engine.strategies import veo          # noqa: F401
+from video_prompt_engine.strategies import kling        # noqa: F401
+from video_prompt_engine.strategies import hailuo       # noqa: F401
+from video_prompt_engine.strategies import doubao       # noqa: F401
 
 __all__ = ["BaseVideoStrategy", "register", "get_strategy", "list_strategies"]
