@@ -20,3 +20,6 @@ keyword_weights.json
 
 # 视频引擎构建产物（运行时生成）
 video_prompts_db/
+
+# 视频引擎 SQLite 缓存（运行时生成）
+video_prompt_cache/

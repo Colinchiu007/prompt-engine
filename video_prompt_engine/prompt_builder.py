@@ -16,6 +16,7 @@ class VideoPromptBuilder:
         max_length: int,
         negative_prompt: Optional[str] = None,
         keywords_hint: str = "",
+        output_language: str = "en",
     ) -> str:
         return strategy_cls.build_system_prompt(
             style=style,
@@ -23,6 +24,7 @@ class VideoPromptBuilder:
             max_length=max_length,
             negative_prompt=negative_prompt,
             keywords_hint=keywords_hint,
+            output_language=output_language,
         )
 
     @staticmethod

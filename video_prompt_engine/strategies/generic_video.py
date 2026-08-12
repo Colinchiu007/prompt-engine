@@ -30,6 +30,7 @@ class GenericVideoStrategy(BaseVideoStrategy):
         max_length: int = 500,
         negative_prompt: Optional[str] = None,
         keywords_hint: str = "",
+        output_language: str = "en",
     ) -> str:
         style_text = f"，风格：{style}" if style else ""
         negative_text = cls.build_negative_section(negative_prompt)
@@ -41,6 +42,8 @@ class GenericVideoStrategy(BaseVideoStrategy):
             detail_instruction = "丰富细腻：细节、氛围、情绪、镜头调度"
 
         keywords = f"\n## 视频关键词参考\n{keywords_hint}" if keywords_hint else ""
+        lang_note = "Chinese 中文主体 + 英文镜头术语双语" if str(output_language or "en").lower().startswith("zh") else "English"
+        lang_section = cls.build_language_section(output_language)
 
         return f"""You are an expert prompt engineer for AI VIDEO generation. Transform user descriptions into high-quality, platform-agnostic video prompts.
 
@@ -75,11 +78,11 @@ class GenericVideoStrategy(BaseVideoStrategy):
 - Write a RICH, DETAILED video prompt of 150-300 words (about 900-2000 chars) — NOT a short one-liner.
 - Describe subject appearance/wardrobe/pose/expression, concrete action & motion, environment & props, color palette, lighting direction/quality, artistic style, shot scale, camera angle & motion, and cross-clip continuity.
 - Professional video prompts are long and specific: every visual element the model needs to render should be in the text. Do not truncate early.
-{keywords}
+{keywords}{lang_section}
 ## Output Format (MANDATORY)
 Output ONLY a JSON object with EXACTLY these keys:
 {{
-  "prompt": "the rendered single-string video prompt (English, flowing prose, within {max_length} chars)",
+  "prompt": "the rendered single-string video prompt ({lang_note}, flowing prose, within {max_length} chars)",
   "shot": "one of {VIDEO_SHOT_TYPES}",
   "camera": "one of {VIDEO_CAMERA_MOTIONS}",
   "motion_intensity": {creative_level},

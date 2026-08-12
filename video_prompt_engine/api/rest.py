@@ -1,23 +1,28 @@
 """独立视频提示词优化引擎 REST API（端口 8020）。
 
 端点：
-- GET  /health
-- POST /v1/video/optimize          单条优化
-- POST /v1/video/optimize/batch    批量（≤20，有界并发 8，顺序一致）
-- GET  /v1/video/platforms         平台枚举
-- GET  /v1/video/keywords          视频关键词词典（按维度）
+- GET  /health                           健康检查
+- POST /v1/video/optimize                单条优化（支持 output_language / num_candidates / context）
+- POST /v1/video/optimize/batch          批量（≤20，有界并发 8，顺序一致）
+- GET  /v1/video/platforms               已注册平台策略枚举
+- GET  /v1/video/keywords                视频关键词词典（按维度）
+- POST /v1/video/classify                输入题材/镜头意图检测
+- POST /v1/video/feedback                好/坏反馈 → 种子库沉淀
+- GET  /v1/video/cache/stats             双级缓存统计
 """
 from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
 
 from video_prompt_engine.models import (
-    VideoOptimizeRequest, VideoBatchOptimizeRequest, VideoPlatformType,
-    normalize_video_platform,
+    VideoOptimizeRequest, VideoBatchOptimizeRequest,
+    VideoFeedbackRequest, VideoClassifyRequest,
 )
 from video_prompt_engine.optimizer import VideoOptimizer
+from video_prompt_engine.strategies import list_strategies
+from video_prompt_engine.classifier import classify
 
-app = FastAPI(title="Video Prompt Engine", version="0.1.0")
+app = FastAPI(title="Video Prompt Engine", version="0.2.0")
 _optimizer: VideoOptimizer | None = None
 
 
@@ -30,12 +35,13 @@ def get_optimizer() -> VideoOptimizer:
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "engine": "video", "version": "0.1.0"}
+    return {"status": "ok", "engine": "video", "version": "0.2.0"}
 
 
 @app.get("/v1/video/platforms")
 def platforms():
-    return {"platforms": [p.value for p in VideoPlatformType]}
+    """返回实际已注册的平台策略（未知平台由 optimizer 回退 generic_video）。"""
+    return {"platforms": list_strategies()}
 
 
 @app.get("/v1/video/keywords")
@@ -58,3 +64,29 @@ def optimize_batch(request: VideoBatchOptimizeRequest):
     optimizer = get_optimizer()
     results = optimizer.optimize_batch(request.requests)
     return [r.model_dump(exclude_none=True) for r in results]
+
+
+@app.post("/v1/video/classify", response_model=dict)
+def video_classify(request: VideoClassifyRequest):
+    """输入题材/镜头意图检测（自动选策略与关键词维度的依据）。"""
+    return classify(request.prompt)
+
+
+@app.post("/v1/video/feedback", response_model=dict)
+def video_feedback(request: VideoFeedbackRequest):
+    """好/坏反馈闭环：好评结果沉淀入种子库；坏评源提示词质量分降级。"""
+    try:
+        from pathlib import Path
+        seed_path = Path(__file__).parent.parent / "knowledge" / "seed_video_prompts.json"
+        from video_prompt_engine.feedback import VideoFeedbackStore
+        store = VideoFeedbackStore(seed_path)
+        return store.submit(request.prompt_text, request.result_prompt, request.good, request.source)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"feedback failed: {e}")
+
+
+@app.get("/v1/video/cache/stats", response_model=dict)
+def cache_stats():
+    return get_optimizer().cache_stats()
