@@ -2,6 +2,20 @@
 
 本项目更新日志。
 
+## [未发布] 功能：视频提示词优化引擎全面增强（video-prompt-engine-enhancement，2026-08-12）
+
+- **知识库扩充**：视频种子 11 → **140 条**（awesome-video-prompts 105 + seedance2-skill 28 + awesome-seedance 7），按平台分层（generic_video/seedance）
+- **SQLite 双级缓存**：`VideoCacheManager`（内存 512 + `video_prompt_cache.db` 持久），key=platform|prompt|creative|max_length|language|num_candidates|negative|context_hash；命中跳过 LLM；`GET /v1/video/cache/stats`
+- **JSON 结构化输出重试**：解析失败带「只输出严格 JSON」提示重试 ≤2 次，耗尽回退原文并标记 `retried`（真实 LLM MiniMax-M2.7 验证）
+- **多平台专项策略**：veo（长镜头/真实感）、kling（运动物理/细节）、hailuo（节奏/剪辑）、doubao（中文优先）——与 generic_video/seedance 共 6 策略注册；未知平台回退 generic_video
+- **输入分类**：题材（历史/科幻/广告/短剧/自然/人物/电影感）+ 镜头意图（动态/静态/全景/特写）→ system prompt 注入 + 关键词维度建议；`POST /v1/video/classify`
+- **评估与反馈闭环**：evaluator（保真/六要素/镜头字段/长度 → 0-100）多候选择优；`POST /v1/video/feedback` 好评沉淀种子库/坏评降质量分
+- **中文输出**：`output_language=zh`（默认 en），中文主体 + 镜头术语双语，结构化枚举保持英文
+- **RAG 关键词兜底**：向量无命中 → 按关键词匹配平台种子 few-shot
+- **videogen 集成（Multi-Publish）**：`VIDEO_PROMPT_PORT=8020` 启用独立引擎优先，失败回退 8013 domain=video；output_language 按文本 CJK 占比自动检测（zh/en）
+- **测试**：视频引擎测试 51 项（含新增强 31 项）+ Multi-Publish contract 集成测试；真实 LLM E2E 全过（中文长文案 385 字详细提示词、批量 12、缓存命中）
+- 文档：`01-docs/PRD-video-prompt-engine.md`（v2.0）/ `ARCH-video-prompt-engine.md`（v2.0）详细补档
+
 ## [v0.24.3] — 2026-08-12
 
 ### 记录：对比验证页完整生图对比 UI 级验证（Playwright）

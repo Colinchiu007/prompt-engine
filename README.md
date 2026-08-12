@@ -11,10 +11,12 @@
 
 与图片提示词引擎**完全分离**的独立视频引擎（端口 8020，独立知识库/策略/模型/配置，不 import `prompt_engine.*`）。
 
-- 启动：`python -m video_prompt_engine`（默认 8020，`config_video.yaml` / `VIDEO_LLM_*` 环境变量）
+- 启动：`python -m video_prompt_engine`（默认 8020，`config_video.yaml` / `VIDEO_LLM_*` 环境变量；`VIDEO_CACHE_DIR` 可指定缓存目录）
 - 构建视频知识库：`python -m video_prompt_engine.cli --build-kb`
-- 端点：`GET /health`、`POST /v1/video/optimize`、`POST /v1/video/optimize/batch`（≤20，并发 8）、`GET /v1/video/platforms`、`GET /v1/video/keywords`
-- 视频知识库：`video_prompt_engine/knowledge/`（keywords_video.json 7 维度 + seed_video_prompts.json 结构化种子）
+- 端点：`GET /health`、`POST /v1/video/optimize`（支持 output_language/num_candidates/context）、`POST /v1/video/optimize/batch`（≤20，并发 8）、`GET /v1/video/platforms`（已注册策略）、`GET /v1/video/keywords`、`POST /v1/video/classify`、`POST /v1/video/feedback`、`GET /v1/video/cache/stats`
+- 增强能力：SQLite 双级缓存（命中跳过 LLM）、JSON 结构化输出重试（≤2）、输入分类（题材/镜头意图）、多候选择优（evaluator 0-100）、中文输出（output_language=zh）、多平台策略（veo/kling/hailuo/doubao/seedance/generic_video）、RAG 关键词兜底
+- 视频知识库：`video_prompt_engine/knowledge/`（keywords_video.json 7 维度 + seed_video_prompts.json 140 条结构化种子）
+- Multi-Publish videogen 集成：设置 `VIDEO_PROMPT_PORT=8020` 启用独立引擎优先，失败/未配置自动回退 8013 domain=video（`video-prompt-engine-contract.js` / `prompt-bridge.js`）
 - 详情见 `01-docs/PRD-video-prompt-engine.md` / `ARCH-video-prompt-engine.md`
 
 ## 特性
