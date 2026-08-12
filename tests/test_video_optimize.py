@@ -216,3 +216,50 @@ class TestVideoOptimizeEndpoint:
         data = resp.json()
         assert len(data) == 2
         assert all("optimized_prompt" in item for item in data)
+
+
+class TestVideoFactFidelity:
+    """video-content-fidelity S4b：事实保真指令 + context 锚点注入 + 未知键忽略"""
+
+    @pytest.fixture(autouse=True)
+    def _no_cache(self, monkeypatch):
+        monkeypatch.setattr(Optimizer, "_cache_get", lambda self, *a, **k: None)
+        monkeypatch.setattr(Optimizer, "_cache_set", lambda self, *a, **k: None)
+
+    def test_generic_video_system_prompt_has_fact_fidelity(self):
+        prompt = GenericVideoStrategy.build_system_prompt()
+        assert "Fact-Fidelity" in prompt
+        assert "Do NOT change the subject's identity, era/setting, or event facts" in prompt
+
+    @patch.object(Optimizer, "_call_llm")
+    def test_video_optimize_injects_context_synopsis(self, mock_call):
+        mock_call.return_value = (VIDEO_LLM_JSON, 120)
+        optimizer = Optimizer()
+        req = OptimizeRequest(
+            prompt="关羽率军北伐，水淹七军，威震华夏",
+            domain=DomainType.VIDEO,
+            platform=VideoPlatformType.GENERIC_VIDEO,
+            context={"synopsis": "襄樊之战 关羽 水淹七军"},
+        )
+        result = optimizer.optimize(req)
+        assert result.optimized_prompt
+        system_prompt = mock_call.call_args[0][0]
+        assert "Fact-Fidelity" in system_prompt
+        assert "襄樊之战 关羽 水淹七军" in system_prompt
+
+    @patch.object(Optimizer, "_call_llm")
+    def test_video_optimize_unknown_context_key_ignored(self, mock_call):
+        """未知 context 键不改变行为（白名单外键被忽略），优化正常完成。"""
+        mock_call.return_value = (VIDEO_LLM_JSON, 120)
+        optimizer = Optimizer()
+        req = OptimizeRequest(
+            prompt="a cat running",
+            domain=DomainType.VIDEO,
+            platform=VideoPlatformType.GENERIC_VIDEO,
+            context={"bogus_key": "should be ignored", "synopsis": "cat story"},
+        )
+        result = optimizer.optimize(req)
+        assert result.optimized_prompt
+        system_prompt = mock_call.call_args[0][0]
+        assert "should be ignored" not in system_prompt
+        assert "cat story" in system_prompt

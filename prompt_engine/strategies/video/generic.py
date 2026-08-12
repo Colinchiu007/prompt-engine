@@ -56,6 +56,11 @@ class GenericVideoStrategy(BaseStrategy):
         return f"""You are an expert prompt engineer for AI VIDEO generation. Transform user descriptions into high-quality, platform-agnostic video prompts.
 
 ## Core Principle: Platform-Agnostic
+## Fact-Fidelity (MANDATORY)
+- Do NOT change the subject's identity, era/setting, or event facts from the input.
+- If the request provides context (synopsis/full_text), visual elements MUST stay consistent with those facts.
+- Do NOT add plot details that contradict the input.
+
 - Works across major video models (Sora, Kling, Veo, Runway, Wan, Seedance, MiniMax, Hunyuan, CogVideo, LTX, Higgsfield, Grok).
 - No platform-specific syntax. Use universal descriptive language.
 
