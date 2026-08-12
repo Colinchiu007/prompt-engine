@@ -57,7 +57,7 @@ class VideoOptimizeRequest(BaseModel):
     platform: VideoPlatformType | str = Field(default=VideoPlatformType.GENERIC_VIDEO, description="目标视频平台")
     style: Optional[str] = Field(default=None, max_length=50, description="艺术风格（可空，自动检测）")
     creative_level: int = Field(default=5, ge=1, le=10, description="创意程度 1-10")
-    max_length: int = Field(default=500, ge=50, le=2000, description="优化结果最大字符数")
+    max_length: int = Field(default=1800, ge=200, le=4000, description="优化结果最大字符数（视频提示词专业长度 150-300 词，默认 1800 字符）")
     num_candidates: int = Field(default=1, ge=1, le=5, description="候选版本数量")
     negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词")
     context: Optional[dict] = Field(default=None, description="上下文（白名单键）")

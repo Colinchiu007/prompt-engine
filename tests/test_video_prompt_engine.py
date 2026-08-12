@@ -61,6 +61,39 @@ class TestStrategies:
         assert "Fact-Fidelity" in sp
         assert "Do NOT change the subject's identity" in sp
 
+    def test_default_max_length_1800(self):
+        """视频提示词专业长度：默认 max_length=1800（非 500），支持 200-4000。"""
+        req = VideoOptimizeRequest(prompt="x")
+        assert req.max_length == 1800
+
+    def test_generic_video_detail_instruction(self):
+        """策略要求详细（150-300 词），避免短提示词。"""
+        sp = get_strategy("generic_video").build_system_prompt()
+        assert "150-300 words" in sp
+        assert "RICH, DETAILED" in sp
+
+    def test_default_max_length_1800(self):
+        """视频提示词专业长度：默认 max_length=1800（非 500），支持 200-4000。"""
+        req = VideoOptimizeRequest(prompt="x")
+        assert req.max_length == 1800
+
+    def test_generic_video_detail_instruction(self):
+        """策略要求详细（150-300 词），避免短提示词。"""
+        sp = get_strategy("generic_video").build_system_prompt()
+        assert "150-300 words" in sp
+        assert "RICH, DETAILED" in sp
+
+    def test_default_max_length_1800(self):
+        """视频提示词专业长度：默认 max_length=1800（非 500），支持 200-4000。"""
+        req = VideoOptimizeRequest(prompt="x")
+        assert req.max_length == 1800
+
+    def test_generic_video_detail_instruction(self):
+        """策略要求详细（150-300 词），避免短提示词。"""
+        sp = get_strategy("generic_video").build_system_prompt()
+        assert "150-300 words" in sp
+        assert "RICH, DETAILED" in sp
+
     def test_seedance_multimodal(self):
         sp = get_strategy("seedance").build_system_prompt()
         assert "Multimodal" in sp
