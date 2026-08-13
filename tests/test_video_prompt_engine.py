@@ -63,7 +63,7 @@ class TestStrategies:
         assert "Do NOT change the subject's identity" in sp
 
     def test_default_max_length_1800(self):
-        """视频提示词专业长度：默认 max_length=1800（非 500），支持 200-4000。"""
+        """视频提示词专业长度：默认 max_length=1800（非 500），支持 200-5000。"""
         req = VideoOptimizeRequest(prompt="x")
         assert req.max_length == 1800
 

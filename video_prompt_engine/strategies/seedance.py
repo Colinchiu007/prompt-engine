@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from video_prompt_engine.models import VideoPlatformType
+from video_prompt_engine.models import VideoPlatformType, VIDEO_OUTPUT_KEYS
 from video_prompt_engine.strategies.base import BaseVideoStrategy, register
 
 
@@ -29,11 +29,12 @@ class SeedanceStrategy(BaseVideoStrategy):
         negative_prompt: Optional[str] = None,
         keywords_hint: str = "",
         output_language: str = "en",
+        tier: str = "batch",
     ) -> str:
         style_text = f"，风格：{style}" if style else ""
         negative_text = cls.build_negative_section(negative_prompt)
         keywords = f"\n## 视频关键词参考\n{keywords_hint}" if keywords_hint else ""
-        lang_section = cls.build_language_section(output_language)
+        lang_section = cls.build_language_section(output_language, tier=tier)
         return f"""You are a Seedance 2.0 prompt engineer (ByteDance multimodal AI video model).
 
 ## Multimodal Input Constraints
@@ -51,6 +52,8 @@ class SeedanceStrategy(BaseVideoStrategy):
 Follow the six-element structure (Subject / Action / Environment / Colors / Lighting / Style+Shot+Camera) and output the single-string video prompt within {max_length} chars.
 {keywords}{lang_section}
 ## Output Format (MANDATORY)
-Output ONLY a JSON object with exactly: prompt / shot / camera / motion_intensity / scene_transition / continuity_token / duration_hint. No extra text.
+Output ONLY a strict JSON object with EXACTLY these keys: {', '.join(f'"{k}"' for k in VIDEO_OUTPUT_KEYS)}. No extra text.
+- New keys: `excluded_characters` (≤10 array), `no_swap_pairs` (≤5 pairs {{"from","to"}}), `color_ratio` ("60:30:10"), `shots` (≤3 units with `beats` ≤6 each).
+{cls.build_higgsfield_section(tier)}
 {style_text}
 {negative_text}"""

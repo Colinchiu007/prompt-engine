@@ -20,6 +20,7 @@ from typing import Optional
 from video_prompt_engine.models import (
     VideoOptimizeRequest, VideoOptimizeResult, VideoPromptMeta,
     normalize_video_platform, assert_no_sensitive_context, CONTEXT_KEYS,
+    VIDEO_OUTPUT_KEYS,
 )
 from video_prompt_engine.config import load_config
 from video_prompt_engine.strategies import get_strategy
@@ -33,10 +34,11 @@ from video_prompt_engine.knowledge.loader import load_keywords_video
 
 logger = logging.getLogger(__name__)
 
+# 与策略 Output Format 同源（VIDEO_OUTPUT_KEYS），禁止双份手写漂移（C5）
 JSON_RETRY_HINT = (
     "\n\nIMPORTANT: Your previous output was NOT a valid strict JSON object. "
-    "Output ONLY a strict JSON object with EXACTLY these keys: "
-    "prompt, shot, camera, motion_intensity, scene_transition, continuity_token, duration_hint. "
+    f"Output ONLY a strict JSON object with EXACTLY these keys: "
+    f"{', '.join(f'\"{k}\"' for k in VIDEO_OUTPUT_KEYS)}. "
     "No markdown fences, no code blocks, no extra text outside the JSON object."
 )
 
@@ -132,6 +134,7 @@ class VideoOptimizer:
                 json.dumps(request.context, sort_keys=True, ensure_ascii=False).encode("utf-8")
             ).hexdigest()[:16]
         return "|".join([
+            "HIGGSFIELD_FMT_V1",  # 版本盐：Output Format/尾行机制变化时旧缓存天然失效（C4）
             str(platform),
             lang,
             _h(request.prompt),
@@ -169,6 +172,8 @@ class VideoOptimizer:
                 self._warn_unknown_context_keys(request.context)
 
             lang = "zh" if str(getattr(request, "output_language", "en") or "en").lower().startswith("zh") else "en"
+            # tier 层级：creative_level≥7 → refined（导演工作流/尾行/5000 上限）；否则 batch（无尾行）
+            tier = "refined" if request.creative_level >= 7 else "batch"
             cache_key = self._cache_key(request, platform, lang)
 
             # 双级缓存命中（跳过 LLM）
@@ -192,6 +197,7 @@ class VideoOptimizer:
                 negative_prompt=request.negative_prompt,
                 keywords_hint=hint,
                 output_language=lang,
+                tier=tier,
             )
             system_prompt += self._build_classification_section(classification, dims)
             system_prompt += self._builder.build_context_section(request.context)
@@ -203,7 +209,7 @@ class VideoOptimizer:
             candidates: list[tuple[str, dict]] = []
             total_retried = 0
             for i in range(request.num_candidates):
-                raw, _tokens = self._provider.call(system_prompt, request.prompt, variant=i)
+                raw, _tokens = self._provider.call(system_prompt, request.prompt, variant=i, max_length=request.max_length)
                 raw = strip_reasoning_blocks(raw)
                 retried = 0
                 # JSON 结构化输出失败 → 带"只输出严格 JSON"提示重试（≤max_retries）
@@ -211,13 +217,30 @@ class VideoOptimizer:
                     retried += 1
                     total_retried += 1
                     raw, _tokens = self._provider.call(
-                        system_prompt + JSON_RETRY_HINT, request.prompt, variant=i + 100 * retried
+                        system_prompt + JSON_RETRY_HINT, request.prompt, variant=i + 100 * retried,
+                        max_length=request.max_length,
                     )
                     raw = strip_reasoning_blocks(raw)
                 if raw and strategy_cls.parse_video_json(raw) is not None:
-                    optimized, video_meta = strategy_cls.post_process_video(raw, creative_level=request.creative_level)
+                    optimized, video_meta = strategy_cls.post_process_video(raw, creative_level=request.creative_level, tier=tier)
+                    # C6 尾行生命周期：body 预算 = max_length − len(tail)，tail 永不截断
                     if len(optimized) > request.max_length:
-                        optimized = optimized[:request.max_length]
+                        tail = strategy_cls.build_tail(video_meta) if tier == "refined" else ""
+                        if tail:
+                            # 剥离已存在尾行（LLM 直出或 append，格式可能漂移：5.5s/小写/Photoreal 缺句点）→ body 截断 → 重 append 规范尾行
+                            import re
+                            body = re.sub(
+                                r"\s*Photoreal\.?\s+NON-IP\.?\s+.*?only\.?\s*$", "",
+                                optimized, flags=re.IGNORECASE | re.DOTALL,
+                            )
+                            if body == optimized and optimized.endswith(tail):
+                                body = optimized[: -len(tail)]
+                            if body.strip():
+                                optimized = body[: max(0, request.max_length - len(tail))] + tail
+                            else:
+                                optimized = optimized[:request.max_length]
+                        else:
+                            optimized = optimized[:request.max_length]
                     if not optimized.strip():
                         optimized = request.prompt
                         video_meta = {}
@@ -230,7 +253,7 @@ class VideoOptimizer:
             # 多候选择优：evaluator 评分，最优在前
             if len(candidates) > 1:
                 scored = [
-                    (evaluate(p, m, source_prompt=request.prompt, language=lang)["score"], p, m)
+                    (evaluate(p, m, source_prompt=request.prompt, language=lang, tier=tier, max_length=request.max_length)["score"], p, m)
                     for p, m in candidates
                 ]
                 scored.sort(key=lambda x: x[0], reverse=True)
@@ -240,6 +263,14 @@ class VideoOptimizer:
                 optimized, video_meta = candidates[0]
                 final_candidates = []
 
+            # W6：meta 归一遗漏导致 pydantic 校验失败 → 回退原文并标记，不整单失败
+            try:
+                meta_model = VideoPromptMeta(**video_meta) if video_meta else None
+            except Exception as e:
+                logger.warning("video meta validation failed, falling back to source: %s", e)
+                optimized = request.prompt
+                final_candidates = []
+                meta_model = None
             result = VideoOptimizeResult(
                 optimized_prompt=optimized,
                 platform=platform,
@@ -248,7 +279,7 @@ class VideoOptimizer:
                 tokens_used=0,
                 duration_ms=round((time.time() - start) * 1000, 1),
                 candidates=final_candidates,
-                video=VideoPromptMeta(**video_meta) if video_meta else None,
+                video=meta_model,
                 language=lang,
                 retried=total_retried,
                 classification=classification,

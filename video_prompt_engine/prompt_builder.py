@@ -17,6 +17,7 @@ class VideoPromptBuilder:
         negative_prompt: Optional[str] = None,
         keywords_hint: str = "",
         output_language: str = "en",
+        tier: str = "batch",
     ) -> str:
         return strategy_cls.build_system_prompt(
             style=style,
@@ -25,6 +26,7 @@ class VideoPromptBuilder:
             negative_prompt=negative_prompt,
             keywords_hint=keywords_hint,
             output_language=output_language,
+            tier=tier,
         )
 
     @staticmethod

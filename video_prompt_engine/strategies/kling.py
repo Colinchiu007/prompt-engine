@@ -8,8 +8,8 @@ class KlingStrategy(GenericVideoStrategy):
     platform = VideoPlatformType.KLING
 
     @classmethod
-    def build_system_prompt(cls, style=None, creative_level=5, max_length=1800, negative_prompt=None, keywords_hint="", output_language="en"):
-        base = super().build_system_prompt(style, creative_level, max_length, negative_prompt, keywords_hint, output_language)
+    def build_system_prompt(cls, style=None, creative_level=5, max_length=1800, negative_prompt=None, keywords_hint="", output_language="en", tier="batch"):
+        base = super().build_system_prompt(style, creative_level, max_length, negative_prompt, keywords_hint, output_language, tier=tier)
         note = """
 ## Kling Platform Notes
 - Kling emphasizes motion physics, dynamic action, and fine detail (fabric, hair, water, particles).
