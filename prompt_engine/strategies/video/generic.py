@@ -60,6 +60,8 @@ class GenericVideoStrategy(BaseStrategy):
 - Do NOT change the subject's identity, era/setting, or event facts from the input.
 - If the request provides context (synopsis/full_text), visual elements MUST stay consistent with those facts.
 - Do NOT add plot details that contradict the input.
+- **Cultural & Ethnicity Anchoring (HIGHEST PRIORITY)**: Infer the era, culture, and ethnicity from the input and state them EXPLICITLY in the prompt. Example: for ancient Chinese (Three Kingdoms / Han dynasty) stories, write "ancient Chinese (Eastern Han dynasty), East Asian Han Chinese faces, period-appropriate Hanfu and armor".
+- NEVER default to generic Western faces: prohibit blonde hair, blue eyes, deep-set Western facial features, Western armor/clothing unless the input explicitly describes a Western setting.
 
 - Works across major video models (Sora, Kling, Veo, Runway, Wan, Seedance, MiniMax, Hunyuan, CogVideo, LTX, Higgsfield, Grok).
 - No platform-specific syntax. Use universal descriptive language.
