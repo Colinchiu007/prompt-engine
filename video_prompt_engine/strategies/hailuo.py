@@ -8,8 +8,8 @@ class HailuoStrategy(GenericVideoStrategy):
     platform = VideoPlatformType.HAILUO
 
     @classmethod
-    def build_system_prompt(cls, style=None, creative_level=5, max_length=1800, negative_prompt=None, keywords_hint="", output_language="en", tier="batch"):
-        base = super().build_system_prompt(style, creative_level, max_length, negative_prompt, keywords_hint, output_language, tier=tier)
+    def build_system_prompt(cls, style=None, creative_level=5, max_length=1800, negative_prompt=None, keywords_hint="", output_language="en", tier="batch", character_count=None):
+        base = super().build_system_prompt(style, creative_level, max_length, negative_prompt, keywords_hint, output_language, tier=tier, character_count=character_count)
         note = """
 ## Hailuo Platform Notes
 - Hailuo favors rhythm, pacing, and mood; describe tempo (slow-burn / fast-cut) explicitly.

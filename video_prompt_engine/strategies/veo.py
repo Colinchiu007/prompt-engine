@@ -8,8 +8,8 @@ class VeoStrategy(GenericVideoStrategy):
     platform = VideoPlatformType.VEO
 
     @classmethod
-    def build_system_prompt(cls, style=None, creative_level=5, max_length=1800, negative_prompt=None, keywords_hint="", output_language="en", tier="batch"):
-        base = super().build_system_prompt(style, creative_level, max_length, negative_prompt, keywords_hint, output_language, tier=tier)
+    def build_system_prompt(cls, style=None, creative_level=5, max_length=1800, negative_prompt=None, keywords_hint="", output_language="en", tier="batch", character_count=None):
+        base = super().build_system_prompt(style, creative_level, max_length, negative_prompt, keywords_hint, output_language, tier=tier, character_count=character_count)
         platform_note = """
 ## Veo Platform Notes
 - Veo excels at long continuous takes, realistic physics, and natural camera language.

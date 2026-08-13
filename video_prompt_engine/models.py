@@ -118,8 +118,8 @@ class VideoPromptMeta(BaseModel):
     no_swap_pairs: list[dict] = Field(default_factory=list, max_length=5, description="禁止替换对 [{\"from\":...,\"to\":...}]（≤5）")
     color_ratio: str = Field(default="60:30:10", max_length=20, description="色彩配比（默认 60:30:10）")
     shots: list[VideoShot] = Field(default_factory=list, max_length=3, description="镜头单元（≤3，每镜头 ≤6 时间块）")
-    positive_constraints: list[str] = Field(default_factory=list, max_length=10, description="必须保留的视觉事实（≤10）")
-    final_frame: str = Field(default="", max_length=500, description="末帧描述（可空）")
+    positive_constraints: list[str] = Field(default_factory=list, max_length=10, description="正向硬约束（必须如此），STRICT 块来源")
+    final_frame: str = Field(default="", max_length=500, description="最终画面描述（终态：位置/姿势/灯光/机位/禁文字）")
 
 
 class VideoOptimizeResult(BaseModel):

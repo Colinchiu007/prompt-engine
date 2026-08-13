@@ -30,11 +30,13 @@ class SeedanceStrategy(BaseVideoStrategy):
         keywords_hint: str = "",
         output_language: str = "en",
         tier: str = "batch",
+        character_count: Optional[int] = None,
     ) -> str:
         style_text = f"，风格：{style}" if style else ""
         negative_text = cls.build_negative_section(negative_prompt)
         keywords = f"\n## 视频关键词参考\n{keywords_hint}" if keywords_hint else ""
         lang_section = cls.build_language_section(output_language, tier=tier)
+        lens_discipline = cls.build_lens_discipline_section(character_count)
         return f"""You are a Seedance 2.0 prompt engineer (ByteDance multimodal AI video model).
 
 ## Multimodal Input Constraints
@@ -50,7 +52,7 @@ class SeedanceStrategy(BaseVideoStrategy):
 
 ## Output Structure
 Follow the six-element structure (Subject / Action / Environment / Colors / Lighting / Style+Shot+Camera) and output the single-string video prompt within {max_length} chars.
-{keywords}{lang_section}
+{keywords}{lang_section}{lens_discipline}
 ## Output Format (MANDATORY)
 Output ONLY a strict JSON object with EXACTLY these keys: {', '.join(f'"{k}"' for k in VIDEO_OUTPUT_KEYS)}. No extra text.
 - New keys: `excluded_characters` (≤10 array), `no_swap_pairs` (≤5 pairs {{"from","to"}}), `color_ratio` ("60:30:10"), `shots` (≤3 units with `beats` ≤6 each).

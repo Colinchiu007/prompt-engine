@@ -18,6 +18,7 @@ class VideoPromptBuilder:
         keywords_hint: str = "",
         output_language: str = "en",
         tier: str = "batch",
+        character_count: Optional[int] = None,
     ) -> str:
         return strategy_cls.build_system_prompt(
             style=style,
@@ -27,6 +28,7 @@ class VideoPromptBuilder:
             keywords_hint=keywords_hint,
             output_language=output_language,
             tier=tier,
+            character_count=character_count,
         )
 
     @staticmethod

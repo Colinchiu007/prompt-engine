@@ -32,6 +32,7 @@ class GenericVideoStrategy(BaseVideoStrategy):
         keywords_hint: str = "",
         output_language: str = "en",
         tier: str = "batch",
+        character_count: Optional[int] = None,
     ) -> str:
         style_text = f"，风格：{style}" if style else ""
         negative_text = cls.build_negative_section(negative_prompt)
@@ -45,6 +46,7 @@ class GenericVideoStrategy(BaseVideoStrategy):
         keywords = f"\n## 视频关键词参考\n{keywords_hint}" if keywords_hint else ""
         lang_note = "Chinese 中文主体 + 英文镜头术语双语" if str(output_language or "en").lower().startswith("zh") else "English"
         lang_section = cls.build_language_section(output_language, tier=tier)
+        lens_discipline = cls.build_lens_discipline_section(character_count)
         keys_line = ", ".join(f'"{k}"' for k in VIDEO_OUTPUT_KEYS)
         # 长度口径与 evaluator tier 层级对齐：refined 500+ 词/500-5000 中文字符（随预算缩放）；batch 150-300 词（W8）
         length_instruction = (
@@ -86,7 +88,7 @@ class GenericVideoStrategy(BaseVideoStrategy):
 - {length_instruction}
 - Describe subject appearance/wardrobe/pose/expression, concrete action & motion, environment & props, color palette, lighting direction/quality, artistic style, shot scale, camera angle & motion, and cross-clip continuity.
 - Professional video prompts are long and specific: every visual element the model needs to render should be in the text. Do not truncate early.
-{keywords}{lang_section}
+{keywords}{lang_section}{lens_discipline}
 ## Output Format (MANDATORY)
 Output ONLY a strict JSON object with EXACTLY these keys: {keys_line}.
 {{
@@ -97,8 +99,8 @@ Output ONLY a strict JSON object with EXACTLY these keys: {keys_line}.
   "scene_transition": "one of {VIDEO_TRANSITIONS}",
   "continuity_token": "a short stable token describing character/scene/style for cross-scene consistency (or empty string)",
   "duration_hint": null,
-  "positive_constraints": ["must-keep visual facts that MUST be preserved (or empty array)"],
-  "final_frame": "description of the final frame (or empty string)",
+  "positive_constraints": ["array of STRICT must-happen constraints, e.g. \"camera stays at ground level\", \"all fallen bodies are distinct\" (or empty array)"],
+  "final_frame": "explicit ending state: subject position, pose, lighting state, whether the camera rests, and a no-text statement (non-empty string)",
   "excluded_characters": ["character/element that MUST NOT appear (≤10, or empty array)"],
   "no_swap_pairs": [{{"from": "must-not-appear", "to": "replacement"}}],
   "color_ratio": "60:30:10",

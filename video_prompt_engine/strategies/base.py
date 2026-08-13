@@ -219,6 +219,7 @@ class BaseVideoStrategy(ABC):
             duration_f = float(duration) if duration is not None and str(duration).strip() != "" else None
         except (TypeError, ValueError):
             duration_f = None
+        constraints = cls._coerce_constraints(data.get("positive_constraints"))
         return {
             "shot": str(data.get("shot") or "").strip(),
             "camera": str(data.get("camera") or "").strip(),
@@ -233,9 +234,39 @@ class BaseVideoStrategy(ABC):
             "no_swap_pairs": _clean_swap_pairs(data.get("no_swap_pairs"), _DIRECTOR_LIMITS["no_swap_pairs_max"]),
             "color_ratio": _clean_color_ratio(data.get("color_ratio")),
             "shots": _clean_shots(data.get("shots")),
-            "positive_constraints": _clean_str_list(data.get("positive_constraints"), _DIRECTOR_LIMITS["excluded_characters_max"]),
+            "positive_constraints": constraints,
             "final_frame": str(data.get("final_frame") or "").strip()[:500],  # 对齐 VideoPromptMeta.final_frame max_length=500
         }
+
+    @staticmethod
+    def _coerce_constraints(value: Any) -> list[str]:
+        """positive_constraints 双形态兼容：数组透传；字符串按换行/分号拆分。上限 10 条。"""
+        if isinstance(value, list):
+            items = [str(c).strip() for c in value if str(c).strip()]
+        elif isinstance(value, str):
+            import re
+            items = [c.strip() for c in re.split(r"[\n;]+", value) if c.strip()]
+        else:
+            items = []
+        return items[:10]
+
+    @classmethod
+    def build_lens_discipline_section(cls, character_count: Optional[int] = None) -> str:
+        """镜头纪律公共模板（六平台共用）：角色数锁定/单镜单运镜/三角色上限/正负向分块/最终画面/负面 plausible-only。"""
+        count_line = ""
+        if character_count is not None and character_count > 0:
+            count_line = f'- Open with "EXACT {character_count} CHARACTERS — ..." to lock the on-screen character count (N = {character_count} from provided context).\n'
+        return (
+            "\n## Lens Discipline (MANDATORY)\n"
+            + count_line
+            + "- One primary camera move per shot; add \"slow\" unless the action demands speed; never stack multiple camera moves in one clip.\n"
+            "- At most 3 recognizable characters across cuts; describe extras as generic background figures.\n"
+            "- Positive constraints (STRICT block: what MUST happen) and negative constraints (what must NOT happen) MUST be written in separate blocks.\n"
+            "- Every clip ends with an explicit FINAL FRAME: subject position, pose, lighting state, whether the camera rests, and a no-text statement.\n"
+            "## Negative Prompt Discipline (MANDATORY)\n"
+            "- List only plausible failure classes: identity/costume drift, duplicate characters, anatomy errors, reference background bleed, location/lighting shifts, unwanted text/logos/subtitles/watermarks, unwanted style.\n"
+            "- Never pile up absolute negations the model ignores; if a failure is not plausible for this shot, omit it."
+        )
 
     @classmethod
     def build_tail(cls, meta: dict[str, Any]) -> str:
