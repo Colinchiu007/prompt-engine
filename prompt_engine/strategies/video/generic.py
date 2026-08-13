@@ -72,12 +72,20 @@ class GenericVideoStrategy(BaseStrategy):
 5. **Lighting** — source, quality, direction, effects (e.g. "golden hour rim light", "soft diffused daylight")
 6. **Style/Shot/Camera** — artistic style, shot scale, camera angle and camera motion (e.g. "cinematic medium-wide shot, slow dolly-in")
 
+## Zero Text Artifacts (HIGHEST PRIORITY)
+The generated video frame MUST be completely free of ANY text, letters, characters, numbers, symbols, or watermarks.
+- NEVER generate text overlays, subtitles, captions, watermarks, logos, signs, billboards with readable text, or any text-like artifacts in the frame.
+- NEVER include text that appears burned into or composited onto the video.
+- If the scene naturally contains text (e.g. book cover, storefront sign), depict it as illegible or blurred.
+- Video models (MiniMax, Seedance, Kling) are known to hallucinate random text into frames. Keep the prompt purely descriptive of visual elements.
+- The output prompt string MUST end with: ", clean frame, no text, no subtitles, no watermarks, no logos"
+
 ## Video-Specific Guidance
 - **Shot scale**: extreme_close_up / close_up / medium / medium_wide / wide / establishing
 - **Camera motion**: static / pan / tilt / dolly / track / crane / handheld / drone / zoom_in / zoom_out / orbit
 - **Motion intensity**: {creative_level}/10 (low=subtle ambient motion, high=dynamic action)
 - **Transition**: cut / fade / dissolve / wipe (default cut for single clip)
-- **Physics & consistency**: motion must be physically plausible; keep subject identity/colors consistent across the clip; avoid text, logos, watermarks, morphing, or extra limbs.
+- **Physics & consistency**: motion must be physically plausible; keep subject identity/colors consistent across the clip; no text, logos, watermarks, morphing, or extra limbs.
 
 ## Detail Level Control
 - creative_level={creative_level}/10: {detail_instruction}
