@@ -8,8 +8,8 @@ class DoubaoStrategy(GenericVideoStrategy):
     platform = VideoPlatformType.DOUBAO
 
     @classmethod
-    def build_system_prompt(cls, style=None, creative_level=5, max_length=1800, negative_prompt=None, keywords_hint="", output_language="en"):
-        base = super().build_system_prompt(style, creative_level, max_length, negative_prompt, keywords_hint, output_language)
+    def build_system_prompt(cls, style=None, creative_level=5, max_length=1800, negative_prompt=None, keywords_hint="", output_language="en", character_count=None):
+        base = super().build_system_prompt(style, creative_level, max_length, negative_prompt, keywords_hint, output_language, character_count)
         note = """
 ## Doubao Platform Notes
 - Doubao has strong Chinese-language understanding; Chinese descriptions are well supported.

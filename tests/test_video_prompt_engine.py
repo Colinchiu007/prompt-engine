@@ -214,3 +214,100 @@ class TestIndependence:
             if re.search(r"^\s*(import|from) prompt_engine", text, re.MULTILINE):
                 offenders.append(str(f))
         assert offenders == [], f"视频引擎不得 import 图片引擎: {offenders}"
+
+
+# === video-prompt-lens-discipline 镜头纪律规则测试 ===
+
+VIDEO_LLM_JSON_LENS = (
+    '{"prompt": "a sleek black cat dashes through a neon alley, cinematic medium-wide shot, slow dolly-in, '
+    'cool blue and magenta palette, dramatic rim lighting, FINAL FRAME: the cat sits still, camera rests, no text", '
+    '"shot": "medium_wide", "camera": "dolly", "motion_intensity": 7, '
+    '"scene_transition": "cut", "continuity_token": "cat_neon_alley", "duration_hint": 5, '
+    '"positive_constraints": ["camera stays at ground level", "all fallen bodies are distinct"], '
+    '"final_frame": "cat sits still on wet asphalt, rim light holds, camera locked off, no text"}'
+)
+
+
+class TestLensDiscipline:
+    def test_meta_new_fields_defaults(self):
+        from video_prompt_engine.models import VideoPromptMeta
+        m = VideoPromptMeta()
+        assert m.positive_constraints == []
+        assert m.final_frame == ""
+
+    def test_meta_new_fields_set(self):
+        from video_prompt_engine.models import VideoPromptMeta
+        m = VideoPromptMeta(positive_constraints=["a", "b"], final_frame="end state")
+        assert m.positive_constraints == ["a", "b"]
+        assert m.final_frame == "end state"
+
+    def test_extract_video_meta_new_fields(self):
+        meta = get_strategy("generic_video").extract_video_meta(VIDEO_LLM_JSON_LENS)
+        assert meta["positive_constraints"] == ["camera stays at ground level", "all fallen bodies are distinct"]
+        assert meta["final_frame"] == "cat sits still on wet asphalt, rim light holds, camera locked off, no text"
+
+    def test_extract_video_meta_string_constraints(self):
+        """字符串形态（换行/分号拆分）双形态兼容。"""
+        raw = VIDEO_LLM_JSON_LENS.replace(
+            '"positive_constraints": ["camera stays at ground level", "all fallen bodies are distinct"]',
+            '"positive_constraints": "camera stays at ground level; all fallen bodies are distinct"',
+        )
+        meta = get_strategy("generic_video").extract_video_meta(raw)
+        assert meta["positive_constraints"] == ["camera stays at ground level", "all fallen bodies are distinct"]
+
+    def test_extract_video_meta_old_json_zero_regression(self):
+        """旧 7 字段 JSON：新字段默认值，不拒绝。"""
+        meta = get_strategy("generic_video").extract_video_meta(VIDEO_LLM_JSON)
+        assert meta["positive_constraints"] == []
+        assert meta["final_frame"] == ""
+        assert meta["shot"] == "medium_wide"
+
+    def test_extract_video_meta_constraint_cap(self):
+        raw = VIDEO_LLM_JSON_LENS.replace(
+            '"positive_constraints": ["camera stays at ground level", "all fallen bodies are distinct"]',
+            '"positive_constraints": ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9", "c10", "c11"]',
+        )
+        meta = get_strategy("generic_video").extract_video_meta(raw)
+        assert len(meta["positive_constraints"]) == 10
+
+    def test_lens_discipline_in_generic(self):
+        sp = get_strategy("generic_video").build_system_prompt()
+        assert "Lens Discipline (MANDATORY)" in sp
+        assert "One primary camera move per shot" in sp
+        assert "At most 3 recognizable characters" in sp
+        assert "FINAL FRAME" in sp
+        assert "Negative Prompt Discipline" in sp
+        assert "plausible failure classes" in sp
+
+    def test_lens_discipline_in_all_platforms(self):
+        for platform in ("seedance", "veo", "kling", "hailuo", "doubao"):
+            sp = get_strategy(platform).build_system_prompt()
+            assert "Lens Discipline (MANDATORY)" in sp, platform
+            assert "One primary camera move per shot" in sp, platform
+            # optimizer 真实链路：character_count 透传（子类覆盖签名必须同步），不抛 TypeError 且注入 EXACT N
+            sp_n = get_strategy(platform).build_system_prompt(character_count=2)
+            assert "EXACT 2 CHARACTERS" in sp_n, platform
+
+    def test_character_count_injected(self):
+        sp = get_strategy("generic_video").build_system_prompt(character_count=2)
+        assert "EXACT 2 CHARACTERS" in sp
+        sp0 = get_strategy("generic_video").build_system_prompt(character_count=None)
+        assert "EXACT 2 CHARACTERS" not in sp0
+        assert "EXACT 1 CHARACTERS" not in sp0
+    def test_seedance_keeps_existing_sections(self):
+        sp = get_strategy("seedance").build_system_prompt()
+        assert "Multimodal Input Constraints" in sp
+        assert "Fact-Fidelity" in sp
+        assert "Lens Discipline (MANDATORY)" in sp
+
+    def test_output_format_mentions_new_fields(self):
+        sp = get_strategy("generic_video").build_system_prompt()
+        assert "positive_constraints" in sp
+        assert "final_frame" in sp
+
+    def test_derive_character_count(self):
+        from video_prompt_engine.optimizer import derive_character_count
+        assert derive_character_count(None) is None
+        assert derive_character_count({"character_list": [{"name": "a"}, {"name": "b"}]}) == 2
+        assert derive_character_count({"character": {"name": "a"}}) == 1
+        assert derive_character_count({"synopsis": "x"}) is None
