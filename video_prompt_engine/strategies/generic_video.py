@@ -31,6 +31,7 @@ class GenericVideoStrategy(BaseVideoStrategy):
         negative_prompt: Optional[str] = None,
         keywords_hint: str = "",
         output_language: str = "en",
+        character_count: Optional[int] = None,
     ) -> str:
         style_text = f"，风格：{style}" if style else ""
         negative_text = cls.build_negative_section(negative_prompt)
@@ -45,6 +46,7 @@ class GenericVideoStrategy(BaseVideoStrategy):
         lang_note = "Chinese 中文主体 + 英文镜头术语双语" if str(output_language or "en").lower().startswith("zh") else "English"
         lang_section = cls.build_language_section(output_language)
 
+        lens_discipline = cls.build_lens_discipline_section(character_count)
         return f"""You are an expert prompt engineer for AI VIDEO generation. Transform user descriptions into high-quality, platform-agnostic video prompts.
 
 ## Core Principle: Platform-Agnostic
@@ -78,7 +80,7 @@ class GenericVideoStrategy(BaseVideoStrategy):
 - Write a RICH, DETAILED video prompt of 150-300 words (about 900-2000 chars) — NOT a short one-liner.
 - Describe subject appearance/wardrobe/pose/expression, concrete action & motion, environment & props, color palette, lighting direction/quality, artistic style, shot scale, camera angle & motion, and cross-clip continuity.
 - Professional video prompts are long and specific: every visual element the model needs to render should be in the text. Do not truncate early.
-{keywords}{lang_section}
+{keywords}{lang_section}{lens_discipline}
 ## Output Format (MANDATORY)
 Output ONLY a JSON object with EXACTLY these keys:
 {{
@@ -88,7 +90,9 @@ Output ONLY a JSON object with EXACTLY these keys:
   "motion_intensity": {creative_level},
   "scene_transition": "one of {VIDEO_TRANSITIONS}",
   "continuity_token": "a short stable token describing character/scene/style for cross-scene consistency (or empty string)",
-  "duration_hint": null
+  "duration_hint": null,
+  "positive_constraints": ["array of STRICT must-happen constraints, e.g. \"camera stays at ground level\", \"all fallen bodies are distinct\" (or empty array)"],
+  "final_frame": "explicit ending state: subject position, pose, lighting state, whether the camera rests, and a no-text statement (non-empty string)"
 }}
 No explanations, no markdown fences, no text outside the JSON object.
 {style_text}

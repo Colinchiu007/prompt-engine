@@ -77,6 +77,8 @@ class VideoPromptMeta(BaseModel):
     scene_transition: str = Field(default="", max_length=50)
     continuity_token: str = Field(default="", max_length=100)
     duration_hint: Optional[float] = Field(default=None)
+    positive_constraints: list[str] = Field(default_factory=list, description="正向硬约束（必须如此），STRICT 块来源")
+    final_frame: str = Field(default="", max_length=500, description="最终画面描述（终态：位置/姿势/灯光/机位/禁文字）")
 
 
 class VideoOptimizeResult(BaseModel):

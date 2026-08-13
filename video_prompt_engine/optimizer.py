@@ -41,6 +41,18 @@ JSON_RETRY_HINT = (
 )
 
 
+def derive_character_count(context: Optional[dict]) -> Optional[int]:
+    """从 context 推导画面角色数：character_list 长度优先，character 单角色兜底。"""
+    if not context or not isinstance(context, dict):
+        return None
+    cl = context.get("character_list")
+    if isinstance(cl, list) and len(cl) > 0:
+        return len(cl)
+    if context.get("character"):
+        return 1
+    return None
+
+
 def strip_reasoning_blocks(text: str) -> str:
     """剥离模型输出中的推理块（<think>...</think>），返回实际提示词内容。
 
@@ -192,6 +204,7 @@ class VideoOptimizer:
                 negative_prompt=request.negative_prompt,
                 keywords_hint=hint,
                 output_language=lang,
+                character_count=derive_character_count(request.context),
             )
             system_prompt += self._build_classification_section(classification, dims)
             system_prompt += self._builder.build_context_section(request.context)
