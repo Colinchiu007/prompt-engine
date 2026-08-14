@@ -50,14 +50,22 @@ def mock_provider(value, *, side_effect=None):
 
 
 class TestModelsBoundary:
-    def test_max_length_5000_accepted_5001_rejected(self):
-        VideoOptimizeRequest(prompt="x" * 10, max_length=5000)
+    def test_max_length_20000_accepted_20001_rejected(self):
+        # Higgsfield P0 边界上浮：精修层 500-5000 词模板（≈22871 字符）需 20000 字符预算
+        # （对齐契约层 VIDEO_ENGINE_LIMITS.videoMaxLengthMax=20000 / standalone.max）
+        VideoOptimizeRequest(prompt="x" * 10, max_length=20000)
         with pytest.raises(Exception):
-            VideoOptimizeRequest(prompt="x" * 10, max_length=5001)
+            VideoOptimizeRequest(prompt="x" * 10, max_length=20001)
 
     def test_feedback_result_4500_accepted(self):
         r = VideoFeedbackRequest(prompt_text="x" * 10, result_prompt="y" * 4500)
         assert len(r.result_prompt) == 4500
+
+    def test_feedback_result_20000_accepted_20001_rejected(self):
+        # 评审 W2：feedback 闭环上限与 max_length 边界上浮对齐（refined 长模板结果可回传）
+        VideoFeedbackRequest(prompt_text="x" * 10, result_prompt="y" * 20000)
+        with pytest.raises(Exception):
+            VideoFeedbackRequest(prompt_text="x" * 10, result_prompt="y" * 20001)
 
     def test_new_field_limits_rejected(self):
         with pytest.raises(Exception):
@@ -179,6 +187,43 @@ class TestEvaluatorTier:
         mid = " ".join(["detail"] * 450)
         r2 = evaluate(mid, {}, "", "en", tier="refined", max_length=5000)
         assert r2["checks"]["length"] is False
+
+    def test_refined_long_template_not_killed(self):
+        """DEEP 报告 P0-1：精修层 500-5,000 词（词数刻度，max_length 是字符裁剪预算不参与 refined 判据）。
+
+        语料实证精修层中位 22,871 字符 ≈ 4,500 词；此前 upper=max(500, max_length//5)=1000 词
+        把 1000+ 词模板硬扣（直接评估与先裁后评行为不一致）。"""
+        # Bug 复现：120 次重复句 ≈ 2760 词，max_length=5000 精修层 → 必须 preserved
+        long_en = " ".join(["word"] * 2760)
+        r = evaluate(long_en + " Photoreal. NON-IP. 16:9. 15s. SFX only.", {}, "", "en", tier="refined", max_length=5000)
+        assert r["checks"]["length"] is True, r["checks"]
+        # 语料中位量级：4,500+ 词仍放行
+        corpus_median = " ".join(["detail"] * 4550)
+        r2 = evaluate(corpus_median + " Photoreal. NON-IP.", {}, "", "en", tier="refined", max_length=20000)
+        assert r2["checks"]["length"] is True, r2["checks"]
+        # 超报告上界（>5000 词）仍拒绝
+        over = " ".join(["detail"] * 5200)
+        r3 = evaluate(over, {}, "", "en", tier="refined", max_length=20000)
+        assert r3["checks"]["length"] is False, r3["checks"]
+
+    def test_refined_band_exact_boundaries(self):
+        """评审 I3：精修层词数刻度精确边界 499/5000/5001。"""
+        assert evaluate(" ".join(["word"] * 499), {}, "", "en", tier="refined", max_length=5000)["checks"]["length"] is False
+        assert evaluate(" ".join(["word"] * 5000), {}, "", "en", tier="refined", max_length=20000)["checks"]["length"] is True
+        assert evaluate(" ".join(["word"] * 5001), {}, "", "en", tier="refined", max_length=20000)["checks"]["length"] is False
+
+    def test_refined_small_budget_lower_bound_adaptive(self):
+        """评审 C1 回归：refined + 小预算（1800 字符 ≈360 词）先裁后评不误杀——下界随预算自适应。"""
+        r = evaluate(" ".join(["word"] * 360), {}, "", "en", tier="refined", max_length=1800)
+        assert r["checks"]["length"] is True, r["checks"]
+        # 150 词仍不足（自适应下界 min(500, max(150, 300))=300）
+        r2 = evaluate(" ".join(["word"] * 150), {}, "", "en", tier="refined", max_length=1800)
+        assert r2["checks"]["length"] is False, r2["checks"]
+
+    def test_batch_upper_capped_at_833_even_with_20000_budget(self):
+        """评审 W3 回归：batch 上界封顶 833，le=20000 不静默扩到 3333。"""
+        assert evaluate(" ".join(["word"] * 3000), {}, "", "en", tier="batch", max_length=20000)["checks"]["length"] is False
+        assert evaluate(" ".join(["word"] * 800), {}, "", "en", tier="batch", max_length=20000)["checks"]["length"] is True
 
     def test_auto_detect_via_shots_and_marker(self):
         # 无 explicit（None）→ auto-detect 兜底
@@ -357,12 +402,12 @@ class TestReviewFixes:
         # 大预算 batch（5000）→ 上界 833，500 词通过（消除 401+ 死区）
         r2 = evaluate("word " * 500, {}, "", "en", tier="batch", max_length=5000)
         assert r2["checks"]["length"] is True
-        # refined 上界 1000（max_length//5=1000），900 词通过（W2 修后不再卡 833）
+        # refined 判据为 DEEP P0-1 词数刻度 500-5000 词：900/1100 词均通过
+        # （旧 W4 上界 max_length//5=1000 已由词数刻度取代，防长模板误杀）
         r3 = evaluate("word " * 900, {}, "", "en", tier="refined", max_length=5000)
         assert r3["checks"]["length"] is True
-        # refined 1100 词超上界
         r4 = evaluate("word " * 1100, {}, "", "en", tier="refined", max_length=5000)
-        assert r4["checks"]["length"] is False
+        assert r4["checks"]["length"] is True
         # refined + 小预算（1800）不坍缩：upper=max(500, 360)=500，恰 500 词通过
         r5 = evaluate("word " * 500, {}, "", "en", tier="refined", max_length=1800)
         assert r5["checks"]["length"] is True

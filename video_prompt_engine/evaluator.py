@@ -65,7 +65,7 @@ def evaluate(
 
     tier 层级（Higgsfield P0）：
     - batch：en 100-400 词 / zh 120-2000 字符
-    - refined：en min(500, max(150, max_length//6)) ~ max(500, max_length//5) 词（下界随预算缩放防坍缩）/ zh 500 字符至 max_length（≤5000）
+    - refined：en 下界自适应（≤min(500, budget//6)）~ 5000 词（DEEP P0-1 词数刻度；max_length 是字符裁剪预算不参与上界判据）/ zh 500 字符至 max_length
     violations：缺席角色 -10 / swap 被替换 -10 / refined 缺尾行 -10 / 缺 Audio 块 -5。
     """
     checks = {}
@@ -81,13 +81,16 @@ def evaluate(
             length_ok = 120 <= len(str(prompt)) <= 2000
     else:
         if tier == "refined":
-            # 下界随预算缩放：小预算（如 1800 字符 ≈300 词）下 500 词不可达，min(500, max(150, budget//6)) 防区间坍缩
+            # DEEP P0-1：精修层 500-5,000 词（词数刻度）。max_length 为字符裁剪预算（optimizer 先裁后评），
+            # 不参与 refined 上界判据——此前 upper=max(500, budget//5)=1000 词把 1000+ 词模板硬扣。
+            # 下界保持自适应（评审 C1）：小预算（如 1800 字符 ≈360 词）下固定 500 词会误杀裁后结果，
+            # min(500, max(150, budget//6)) 防区间坍缩（与旧 W4 下界语义一致）
             lower = min(500, max(150, (max_length or 5000) // 6))
-            upper = max(500, (max_length or 5000) // 5)
-            length_ok = lower <= words <= upper
+            length_ok = lower <= words <= 5000
         else:
             # W4：batch 上界与 max_length 联动（默认 1800 → 400 零回归；大预算下消除 401+ 词死区）
-            upper = max(400, (max_length or 1800) // 6)
+            # W3 封顶 833（=5000//6）：le 上浮到 20000 后不随预算静默扩到 3333（batch 定位短小精炼，150-300 词）
+            upper = min(max(400, (max_length or 1800) // 6), 833)
             length_ok = 100 <= words <= upper
     checks["length"] = length_ok
     checks["words"] = words

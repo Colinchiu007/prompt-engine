@@ -1,3 +1,10 @@
+## [未发布] 修复：精修层长度判据改为词数刻度 + max_length 边界上浮（higgsfield-p0 边界修订，2026-08-14）
+
+- **evaluator 精修层判据（DEEP 报告 P0-1）**：refined 层长度由「max_length 字符预算联动上界（5000 字符 → 1000 词）」改为词数刻度 **500–5,000 词**；max_length 是输出裁剪预算（optimizer 先裁后评），不参与 refined 判据——此前 1000+ 词导演分镜单被硬扣，且直接评估与先裁后评行为不一致（裁后 ≤833 词 PASS / 直接评 2760 词 FAIL）；下界保持自适应（评审 C1，小预算先裁后评不误杀）
+- **max_length 边界上浮**：`VideoOptimizeRequest.max_length` 上限 5000 → **20000 字符**（对齐 Multi-Publish 契约层 `videoMaxLengthMax=20000`），容纳精修层真实形态（语料中位 22,871 字符 ≈ 4,500 词）；批量层默认 1800 不变
+- **评审修复**：max_tokens 默认 cap 16384（防 400）；feedback result_prompt 上限同步 20000；batch 上界封顶 833（le 上浮不静默扩到 3333）；refined 策略指令消除词数/预算矛盾
+- **测试**：models 边界（20000 accepted / 20001 rejected）、精修层长模板不误杀（2760 词/4,500+ 词 True、>5,000 词 False）、精确边界 499/5000/5001、小预算自适应下界、batch 20000 封顶、feedback 20000；全量 598 passed + 5 playwright errors + 1 预存在环境失败（rag_cases）
+
 # Changelog
 
 本项目更新日志。

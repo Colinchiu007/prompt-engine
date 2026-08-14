@@ -76,7 +76,7 @@ class VideoOptimizeRequest(BaseModel):
     platform: VideoPlatformType | str = Field(default=VideoPlatformType.GENERIC_VIDEO, description="目标视频平台")
     style: Optional[str] = Field(default=None, max_length=50, description="艺术风格（可空，自动检测）")
     creative_level: int = Field(default=5, ge=1, le=10, description="创意程度 1-10")
-    max_length: int = Field(default=1800, ge=200, le=5000, description="优化结果最大字符数（批量层默认 1800 字符；精修层 creative_level≥7 上限 5000，契约层按此门控上浮）")
+    max_length: int = Field(default=1800, ge=200, le=20000, description="优化结果最大字符数（批量层默认 1800 字符；精修层 creative_level≥7 上限 20000，对齐契约层 videoMaxLengthMax——500-5000 词导演分镜单 ≈22871 字符）")
     num_candidates: int = Field(default=1, ge=1, le=5, description="候选版本数量")
     negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词")
     context: Optional[dict] = Field(default=None, description="上下文（白名单键）")
@@ -173,7 +173,7 @@ class VideoFeedbackRequest(BaseModel):
     """视频提示词反馈（好/坏反馈 → 种子库沉淀或质量分降级）。"""
 
     prompt_text: str = Field(..., min_length=1, max_length=2000, description="源提示词（用户输入原文）")
-    result_prompt: str = Field(..., min_length=1, max_length=5000, description="引擎输出的优化提示词（refined 层上限 5000）")
+    result_prompt: str = Field(..., min_length=1, max_length=20000, description="引擎输出的优化提示词（refined 层上限 20000，对齐 max_length 边界上浮）")
     good: bool = Field(default=True, description="true=好评（结果沉淀入种子库，质量分 9）；false=坏评（源提示词质量分降级）")
     source: str = Field(default="user-feedback", max_length=100, description="反馈来源标注")
 
