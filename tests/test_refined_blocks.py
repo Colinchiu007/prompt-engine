@@ -124,6 +124,41 @@ class TestC6TrailerStrip:
     def test_no_trailer_unchanged(self):
         assert strip_rendered_trailer("hero walks only.", self.TAIL) == "hero walks only."
 
+    def test_mid_literal_without_tail_form_keeps_final_frame(self):
+        # 评审 C1：末位是块字面量而非尾行形态 → 不得剥光 FINAL FRAME 等后续块
+        text = (
+            "SCENE NOTE: The end. Photoreal NON-IP aesthetic with deep blacks.\n\n"
+            "FINAL FRAME: Roko draped forward, eyes closed."
+        )
+        stripped = strip_rendered_trailer(text, self.TAIL)
+        assert "FINAL FRAME: Roko draped forward" in stripped
+        assert "Photoreal NON-IP aesthetic" in stripped
+
+    def test_trailer_still_stripped_when_mid_literal_exists(self):
+        # 评审 C1：中段字面量 + 末位真实尾行 → 只剥尾行，其余块保留
+        text = (
+            "SCENE NOTE: The end. Photoreal NON-IP aesthetic with deep blacks.\n\n"
+            "FINAL FRAME: Roko draped.\n\n" + self.TAIL
+        )
+        stripped = strip_rendered_trailer(text, self.TAIL)
+        assert stripped.endswith("Roko draped.")
+        assert "Photoreal NON-IP aesthetic" in stripped
+
+    def test_append_trailer_mid_literal_does_not_suppress_real_tail(self):
+        # 评审 C1：blocks 中段含 "Photoreal NON-IP aesthetic" 字面量时，真实尾行仍须追加
+        body = "SCENE NOTE: The end. Photoreal NON-IP aesthetic with deep blacks."
+        rendered = BaseVideoStrategy.append_trailer(
+            body, {"aspect": "16:9", "duration_hint": 15, "audio": "SFX"}, tier=REFINED
+        )
+        assert "Photoreal NON-IP aesthetic" in rendered
+        assert rendered.endswith("Photoreal. NON-IP. 16:9. 15s. SFX only.")
+
+    def test_append_trailer_last_line_non_ip_is_idempotent(self):
+        # 评审 C1：末行已是真实尾行 → 不重复追加
+        body = "hero walks. " + self.TAIL
+        rendered = BaseVideoStrategy.append_trailer(body, {"aspect": "16:9", "duration_hint": 15, "audio": "SFX"}, tier=REFINED)
+        assert rendered.count("NON-IP") == 1
+
 
 class TestBlockCoverage:
     def test_refined_covered(self):

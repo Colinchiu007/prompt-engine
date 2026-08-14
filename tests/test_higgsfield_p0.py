@@ -442,10 +442,14 @@ class TestReviewFixes:
         assert "NON-IP" not in rendered
 
     def test_t7_lowercase_non_ip_idempotent_and_batch_leak(self):
-        # 小写 non-ip 也幂等（T7：不双写）
+        # 小写 non-ip 以尾行形态结束也幂等（T7：不双写）
         meta = {"aspect": "16:9", "audio": "sfx", "duration_hint": 8.0}
-        out = BaseVideoStrategy.append_trailer("body with non-ip marker", meta, "refined")
-        assert out == "body with non-ip marker"
+        tail_line = "body ends with Photoreal. non-ip. 16:9. 8s. sfx only."
+        out = BaseVideoStrategy.append_trailer(tail_line, meta, "refined")
+        assert out == tail_line
+        # 评审 C1 新口径：正文中段字面量（非尾行形态）不幂等 → 真实尾行仍追加（旧断言固化了错误行为）
+        out1 = BaseVideoStrategy.append_trailer("body with non-ip marker", meta, "refined")
+        assert out1 == "body with non-ip marker Photoreal. NON-IP. 16:9. 8s. sfx only."
         # batch 层即使 meta 有尾行字段也不追加（尾行不泄漏到 batch）
         out2 = BaseVideoStrategy.append_trailer("body", meta, "batch")
         assert out2 == "body"
