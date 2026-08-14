@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from video_prompt_engine.models import VideoPlatformType
+from video_prompt_engine.models import VideoPlatformType, VIDEO_OUTPUT_KEYS
 from video_prompt_engine.strategies.base import BaseVideoStrategy, register
 
 VIDEO_SHOT_TYPES = ("extreme_close_up", "close_up", "medium", "medium_wide", "wide", "establishing")
@@ -31,6 +31,7 @@ class GenericVideoStrategy(BaseVideoStrategy):
         negative_prompt: Optional[str] = None,
         keywords_hint: str = "",
         output_language: str = "en",
+        tier: str = "batch",
         character_count: Optional[int] = None,
     ) -> str:
         style_text = f"，风格：{style}" if style else ""
@@ -44,9 +45,16 @@ class GenericVideoStrategy(BaseVideoStrategy):
 
         keywords = f"\n## 视频关键词参考\n{keywords_hint}" if keywords_hint else ""
         lang_note = "Chinese 中文主体 + 英文镜头术语双语" if str(output_language or "en").lower().startswith("zh") else "English"
-        lang_section = cls.build_language_section(output_language)
-
+        lang_section = cls.build_language_section(output_language, tier=tier)
         lens_discipline = cls.build_lens_discipline_section(character_count)
+        keys_line = ", ".join(f'"{k}"' for k in VIDEO_OUTPUT_KEYS)
+        # 长度口径与 evaluator tier 层级对齐：refined 500+ 词/500-5000 中文字符（随预算缩放）；batch 150-300 词（W8）
+        length_instruction = (
+            f"Write a RICH, DETAILED video prompt of 500+ English words (500-5000 Chinese chars) — fill the {max_length} char budget as far as possible (scale length to the budget), covering ALL shots. NOT a short one-liner."
+            if tier == "refined"
+            else "Write a RICH, DETAILED video prompt of 150-300 words (about 900-2000 chars) — NOT a short one-liner."
+        )
+
         return f"""You are an expert prompt engineer for AI VIDEO generation. Transform user descriptions into high-quality, platform-agnostic video prompts.
 
 ## Core Principle: Platform-Agnostic
@@ -77,12 +85,12 @@ class GenericVideoStrategy(BaseVideoStrategy):
 - creative_level={creative_level}/10: {detail_instruction}
 
 ## Length & Detail (MANDATORY)
-- Write a RICH, DETAILED video prompt of 150-300 words (about 900-2000 chars) — NOT a short one-liner.
+- {length_instruction}
 - Describe subject appearance/wardrobe/pose/expression, concrete action & motion, environment & props, color palette, lighting direction/quality, artistic style, shot scale, camera angle & motion, and cross-clip continuity.
 - Professional video prompts are long and specific: every visual element the model needs to render should be in the text. Do not truncate early.
 {keywords}{lang_section}{lens_discipline}
 ## Output Format (MANDATORY)
-Output ONLY a JSON object with EXACTLY these keys:
+Output ONLY a strict JSON object with EXACTLY these keys: {keys_line}.
 {{
   "prompt": "the rendered single-string video prompt ({lang_note}, flowing prose, within {max_length} chars)",
   "shot": "one of {VIDEO_SHOT_TYPES}",
@@ -92,8 +100,13 @@ Output ONLY a JSON object with EXACTLY these keys:
   "continuity_token": "a short stable token describing character/scene/style for cross-scene consistency (or empty string)",
   "duration_hint": null,
   "positive_constraints": ["array of STRICT must-happen constraints, e.g. \"camera stays at ground level\", \"all fallen bodies are distinct\" (or empty array)"],
-  "final_frame": "explicit ending state: subject position, pose, lighting state, whether the camera rests, and a no-text statement (non-empty string)"
+  "final_frame": "explicit ending state: subject position, pose, lighting state, whether the camera rests, and a no-text statement (non-empty string)",
+  "excluded_characters": ["character/element that MUST NOT appear (≤10, or empty array)"],
+  "no_swap_pairs": [{{"from": "must-not-appear", "to": "replacement"}}],
+  "color_ratio": "60:30:10",
+  "shots": [{{"shot": "shot_01", "camera": "camera motion", "duration": 5, "beats": [{{"time": "0:00-0:04", "action": "...", "camera": "..."}}]}}]
 }}
 No explanations, no markdown fences, no text outside the JSON object.
+{cls.build_higgsfield_section(tier)}
 {style_text}
 {negative_text}"""

@@ -64,7 +64,7 @@
   "output_language": "zh"
 }
 ```
-校验：prompt 非空 ≤2000；platform 别名归一/未知回退；creative_level 1-10；max_length 200-4000（默认 1800）；num_candidates 1-5；negative_prompt ≤500；context 白名单 + 敏感键拦截；output_language pattern zh/en（非法 422）。
+校验：prompt 非空 ≤2000；platform 别名归一/未知回退；creative_level 1-10；max_length 200-5000（默认 1800）；num_candidates 1-5；negative_prompt ≤500；context 白名单 + 敏感键拦截；output_language pattern zh/en（非法 422）。
 
 ### 3.2 响应
 ```json

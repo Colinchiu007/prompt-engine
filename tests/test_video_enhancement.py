@@ -107,7 +107,7 @@ class TestJsonRetry:
         o = make_optimizer()
         calls = {"n": 0}
 
-        def side_effect(system_prompt, user_prompt, variant=0):
+        def side_effect(system_prompt, user_prompt, variant=0, max_length=None):
             calls["n"] += 1
             if calls["n"] == 1:
                 return "I think the prompt should be: a cat. (not JSON)", 100
@@ -173,7 +173,7 @@ class TestClassification:
         o = make_optimizer()
         captured = {}
 
-        def side_effect(system_prompt, user_prompt, variant=0):
+        def side_effect(system_prompt, user_prompt, variant=0, max_length=None):
             captured["sp"] = system_prompt
             return VIDEO_LLM_JSON, 100
 
@@ -186,7 +186,7 @@ class TestMultiCandidate:
         o = make_optimizer()
         cand_short = '{"prompt": "cat", "shot": "", "camera": "", "motion_intensity": 1, "scene_transition": "", "continuity_token": "", "duration_hint": null}'
 
-        def side_effect(system_prompt, user_prompt, variant=0):
+        def side_effect(system_prompt, user_prompt, variant=0, max_length=None):
             return (VIDEO_LLM_JSON if variant == 0 else cand_short), 100
 
         o._provider = mock_provider(None, side_effect=side_effect)
@@ -262,7 +262,7 @@ class TestChineseOutput:
         o = make_optimizer()
         captured = {}
 
-        def side_effect(system_prompt, user_prompt, variant=0):
+        def side_effect(system_prompt, user_prompt, variant=0, max_length=None):
             captured["sp"] = system_prompt
             return VIDEO_LLM_JSON, 100
 

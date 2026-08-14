@@ -89,7 +89,7 @@
 - 注入：`## 输入题材/镜头意图检测（仅供参考，不得改变事实）` + 题材/镜头意图/建议维度；**不改变事实**（Fact-Fidelity 优先）。
 
 ### 3.7 评估与反馈
-- `evaluator.py`：score = 长度(20) + 六要素(30) + shot(20) + camera(15) + motion(15) + 保真(20)，0-100；zh 长度按字符（120-4000），en 按词（100-400）。
+- `evaluator.py`：score = 长度(20) + 六要素(30) + shot(20) + camera(15) + motion(15) + 保真(20)，0-100；zh 长度按字符（batch 120-2000 / refined 500-5000），en 按词（batch 100-400 / refined 500-max(500, max_length//5)）。
 - 多候选择优：`select_best` 返回最高分候选；`candidates` 按分降序。
 - `feedback.py`：`POST /v1/video/feedback`，prompt_text/result_prompt 空值 422；好评 → 结果提示词入反馈种子文件（quality_score=9，id 时间戳防撞）；坏评 → 匹配源提示词质量分 -1（最低 1）。**落盘路径为可写数据目录**（默认 `video_prompt_cache/feedback_seed.json`，`VIDEO_FEEDBACK_PATH` 覆盖），避免写入 wheel 包内只读的 `knowledge/seed_video_prompts.json`；进程内锁 + 原子写（临时文件 + replace）防并发丢失更新。
 
@@ -113,7 +113,7 @@
 | platform | 视频平台枚举/别名 | 未知 → 回退 generic_video（不 422） |
 | style | ≤50 | 越界 422 |
 | creative_level | 1-10 | 越界 422 |
-| max_length | 200-4000（默认 1800） | 越界 422 |
+| max_length | 200-5000（默认 1800） | 越界 422 |
 | num_candidates | 1-5 | 越界 422 |
 | negative_prompt | ≤500 | 越界 422 |
 | context | 白名单键（synopsis/character/setting/character_list/full_text/narrative_intent/scene_type） | 未知键忽略 + warning；敏感键（api_key/token/secret/password/authorization）递归拦截 → 抛错 |

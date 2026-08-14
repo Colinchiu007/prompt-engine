@@ -1,0 +1,4 @@
+openapi: 3.1.0
+info:
+  title: higgsfield-engine-p0
+  description: Higgsfield P0 引擎侧落地（8020）
