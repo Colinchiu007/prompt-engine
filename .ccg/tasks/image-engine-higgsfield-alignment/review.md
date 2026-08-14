@@ -24,3 +24,11 @@
 - 新测试 35/35 通过（tests/test_image_higgsfield_alignment.py）
 - 相关模块回归 73/73（optimizer/evaluator/api_endpoints/compare_api）
 - 全量 688 passed / 3 skipped / 1 deselected（rag_cases 既有环境失败，stash 验证与本次无关）/ 5 web E2E errors（需本地 server，环境类）
+
+
+## CI 修复补充（2026-08-14，PR #45 首轮 CI 失败）
+
+- 失败项：test (3.11) → tests/test_ab.py::TestABCandidates::test_optimize_multiple_candidates
+- 根因：旧断言按「调用顺序」期望 candidates[0..2] == Version A/B/C；新择优实现按 evaluate_quality 分数降序排列（design 风险 R2 标注的预期收益），Version C 分数最高排首位。
+- 修复：断言改为「择优不变量」——主输出 == candidates[0] + 分数降序（post_process 关键词注入带随机性，固定顺序断言不成立）；tokens_used 断言保留。
+- 结论：生产代码无缺陷，属测试套件与预期行为对齐。
