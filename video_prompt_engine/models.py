@@ -176,6 +176,7 @@ class VideoFeedbackRequest(BaseModel):
     result_prompt: str = Field(..., min_length=1, max_length=20000, description="引擎输出的优化提示词（refined 层上限 20000，对齐 max_length 边界上浮）")
     good: bool = Field(default=True, description="true=好评（结果沉淀入种子库，质量分 9）；false=坏评（源提示词质量分降级）")
     source: str = Field(default="user-feedback", max_length=100, description="反馈来源标注")
+    failure_patterns: list[str] = Field(default_factory=list, max_length=10, description="坏评失败模式标签（P1-3：对齐 failure_patterns.json 规则库 pattern 键，用于失败模式闭环统计）")
 
 
 class VideoClassifyRequest(BaseModel):

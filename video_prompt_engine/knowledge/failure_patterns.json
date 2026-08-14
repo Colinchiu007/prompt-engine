@@ -1,0 +1,150 @@
+[
+  {
+    "pattern": "exposure_break",
+    "name": "曝光违反 FAIL CHECK",
+    "category": "exposure",
+    "check": "若面部细节完全可见 / 出现正面补光 / 暖色侵入锁定冷色场景 → 曝光判错（if-then 可判定）",
+    "severity": -10,
+    "tags": [
+      "lighting",
+      "exposure",
+      "fail_check"
+    ],
+    "evidence": "Scene_15-16：'If any face is visible with full detail, if any frontal fill appears, if any warm color enters — the exposure is WRONG'"
+  },
+  {
+    "pattern": "silhouette_break",
+    "name": "剪影/轮廓光违反",
+    "category": "exposure",
+    "check": "若角色面部/躯干可见细节、出现键补光、正面读数 → 剪影判错",
+    "severity": -10,
+    "tags": [
+      "lighting",
+      "silhouette",
+      "fail_check"
+    ],
+    "evidence": "Scene_15-16：'characters MUST read as DARK SILHOUETTES with ONLY a thin cool-blue RIM/CONTOUR light'"
+  },
+  {
+    "pattern": "dead_center_composition",
+    "name": "死中心构图",
+    "category": "composition",
+    "check": "主体置于画面正中心 → 违反 rule-of-thirds / 不对称构图铁律",
+    "severity": -5,
+    "tags": [
+      "composition",
+      "rule_of_thirds"
+    ],
+    "evidence": "Scene_15-16：'UNIVERSAL COMPOSITION RULE — rule-of-thirds, off-center, asymmetric. NEVER dead-center'"
+  },
+  {
+    "pattern": "warm_light_leak",
+    "name": "暖色光泄漏（夜景锁定）",
+    "category": "lighting",
+    "check": "锁定冷色/近黑场景时出现橙色、琥珀、黄调 → 光源锁违规",
+    "severity": -5,
+    "tags": [
+      "lighting",
+      "color_grade"
+    ],
+    "evidence": "Scene_15-16：'ZERO orange/amber/yellow tones'（UNIVERSAL LIGHTING SOURCE LOCK）"
+  },
+  {
+    "pattern": "style_contamination",
+    "name": "风格污染（3D/CGI 混入实拍）",
+    "category": "style",
+    "check": "实拍质感场景出现 3D 渲染、游戏引擎、CGI 光泽、游戏过场审美 → 判错",
+    "severity": -5,
+    "tags": [
+      "style",
+      "realism"
+    ],
+    "evidence": "Scene_15-16：'NOT 3D render, NOT game engine, NOT CGI gloss, NOT game-cutscene aesthetic'"
+  },
+  {
+    "pattern": "face_skin_detail_fail",
+    "name": "皮肤/面部细节失败（高频 44%）",
+    "category": "character",
+    "check": "特写/近景缺失皮肤细节（毛孔/伤疤/血迹/纹理附着）→ 高频失败区",
+    "severity": -5,
+    "tags": [
+      "skin",
+      "detail",
+      "high_frequency"
+    ],
+    "evidence": "DEEP 报告禁令聚类：皮肤细节 44% 为最高频失败区"
+  },
+  {
+    "pattern": "gaze_camera_fail",
+    "name": "视线/镜头感失败（高频 60%）",
+    "category": "character",
+    "check": "表演缺视线方向、无镜头感（注视/回避/微表情）→ 高频失败区",
+    "severity": -5,
+    "tags": [
+      "acting",
+      "gaze",
+      "high_frequency"
+    ],
+    "evidence": "DEEP 报告禁令聚类：视线/镜头感 60% 为最高频失败区"
+  },
+  {
+    "pattern": "absent_character_appears",
+    "name": "缺席角色出现",
+    "category": "reference",
+    "check": "声明缺席的角色出现在画面中 → POSITIVE LOCKS 排除违规",
+    "severity": -10,
+    "tags": [
+      "positive_locks",
+      "exclusion"
+    ],
+    "evidence": "Scene_15-16：'IS NOT IN THIS SHOT... Do NOT generate inside the frame'（对应 evaluator excluded_present）"
+  },
+  {
+    "pattern": "character_swap",
+    "name": "角色互换（防替换违规）",
+    "category": "reference",
+    "check": "主角被替换为缺席角色 / 双人 A↔B 互换 → 防替换锁违规",
+    "severity": -10,
+    "tags": [
+      "positive_locks",
+      "swap"
+    ],
+    "evidence": "Scene_15-16：'Do NOT swap A for B... The hero approaching is ALWAYS A, NEVER B'（对应 evaluator swap_source_present）"
+  },
+  {
+    "pattern": "timeline_missing",
+    "name": "时间轴缺失（多切提示词）",
+    "category": "structure",
+    "check": "多切/连续动作提示词缺少 [SHOT N]/[HARD CUT at Xs]/[0.0–Xs] 时间锚点 → 结构不完整",
+    "severity": -5,
+    "tags": [
+      "timeline",
+      "structure"
+    ],
+    "evidence": "DEEP 报告 3.4 时间轴三体系（切段/硬切点/秒级动作并存）"
+  },
+  {
+    "pattern": "audio_block_missing",
+    "name": "无 Audio 块",
+    "category": "structure",
+    "check": "generate_audio 开启（90% 语料）但输出缺音频描述块 → 元数据缺失",
+    "severity": -5,
+    "tags": [
+      "audio",
+      "metadata"
+    ],
+    "evidence": "DEEP 报告平台画像：generate_audio True 90%"
+  },
+  {
+    "pattern": "timing_break",
+    "name": "时长/节奏违反",
+    "category": "structure",
+    "check": "beats 时间锚点与 duration 冲突（如 10s 场景塞 6 段超预算动作）→ 时间轴预算错",
+    "severity": -5,
+    "tags": [
+      "timing",
+      "duration"
+    ],
+    "evidence": "Scene_15-16：10 秒连续分 6 段逐秒 ACTION TIMELINE"
+  }
+]

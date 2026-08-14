@@ -87,7 +87,10 @@ def video_feedback(request: VideoFeedbackRequest):
             p = Path(__file__).parent.parent.parent / p
         seed_path = Path(os.environ.get("VIDEO_FEEDBACK_PATH", str(p / "feedback_seed.json")))
         store = VideoFeedbackStore(seed_path)
-        return store.submit(request.prompt_text, request.result_prompt, request.good, request.source)
+        return store.submit(
+            request.prompt_text, request.result_prompt, request.good, request.source,
+            failure_patterns=request.failure_patterns,
+        )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:

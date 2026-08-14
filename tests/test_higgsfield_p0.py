@@ -668,3 +668,63 @@ class TestDirectorStyle:
         sp = o._provider.call.call_args.args[0]
         assert "导演风格引用：手持霓虹" in sp
         assert "handheld neon-soaked frames" in sp
+
+class TestFailurePatternLoop:
+    """P1-3 失败模式闭环（DEEP 报告 3.1/五-12）：规则库 + feedback 采集统计。"""
+
+    @staticmethod
+    def _rules():
+        from pathlib import Path as _P
+        from video_prompt_engine.knowledge.loader import load_failure_patterns
+        return load_failure_patterns(_P(__file__).resolve().parent.parent / "video_prompt_engine" / "knowledge" / "failure_patterns.json")
+
+    def test_rule_library_loaded(self):
+        rules = self._rules()
+        assert len(rules) >= 10
+        for r in rules:
+            for key in ("pattern", "name", "category", "check", "severity", "tags", "evidence"):
+                assert key in r, f"rule {r.get('pattern')} missing {key}"
+            assert r["severity"] < 0
+        # 高频失败区（禁令聚类实证）必须入库
+        names = {r["pattern"] for r in rules}
+        assert "exposure_break" in names and "gaze_camera_fail" in names and "face_skin_detail_fail" in names
+
+    def test_submit_bad_records_failure_events(self, tmp_path):
+        from video_prompt_engine.feedback import VideoFeedbackStore
+        store = VideoFeedbackStore(tmp_path / "seed.json")
+        r = store.submit("cat in alley", "result prompt x", good=False, failure_patterns=["exposure_break", "dead_center_composition"])
+        assert r["failure_events"] == {"exposure_break": 1, "dead_center_composition": 1}
+        stats = store.failure_stats()
+        assert stats["exposure_break"]["count"] == 1
+        assert stats["exposure_break"]["recent_prompt"] == "cat in alley"
+        # 再次提交同 pattern → 累计
+        store.submit("cat in alley", "result prompt y", good=False, failure_patterns=["exposure_break"])
+        assert store.failure_stats()["exposure_break"]["count"] == 2
+
+    def test_submit_unknown_pattern_tolerated_and_truncated(self, tmp_path):
+        from video_prompt_engine.feedback import VideoFeedbackStore
+        store = VideoFeedbackStore(tmp_path / "seed.json")
+        long_pat = "x" * 80
+        r = store.submit("p", "r", good=False, failure_patterns=["mystery_pattern", long_pat, ""])
+        assert "mystery_pattern" in r["failure_events"]
+        assert "x" * 50 in store.failure_stats()  # 截断到 50
+        assert ("x" * 80) not in store.failure_stats()
+
+    def test_submit_without_patterns_no_stats_file(self, tmp_path):
+        from video_prompt_engine.feedback import VideoFeedbackStore
+        store = VideoFeedbackStore(tmp_path / "seed.json")
+        r = store.submit("p", "r", good=True)
+        assert r["failure_events"] == {}
+        assert not (tmp_path / "failure_stats.json").exists()
+
+    def test_good_feedback_ignores_patterns(self, tmp_path):
+        from video_prompt_engine.feedback import VideoFeedbackStore
+        store = VideoFeedbackStore(tmp_path / "seed.json")
+        r = store.submit("p", "r", good=True, failure_patterns=["exposure_break"])
+        assert r["failure_events"] == {}
+        assert store.failure_stats() == {}
+
+    def test_request_model_limits_failure_patterns(self):
+        VideoFeedbackRequest(prompt_text="p", result_prompt="r", good=False, failure_patterns=["a"] * 10)
+        with pytest.raises(Exception):
+            VideoFeedbackRequest(prompt_text="p", result_prompt="r", good=False, failure_patterns=["a"] * 11)

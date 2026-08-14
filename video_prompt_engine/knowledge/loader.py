@@ -62,3 +62,11 @@ def resolve_director_style(style_text: str, styles: list[dict]) -> dict | None:
         if any(n and n.lower() in low for n in names):
             return entry
     return None
+
+def load_failure_patterns(path: Path) -> list[dict]:
+    """加载失败模式规则库：[{pattern, name, category, check, severity, tags, evidence}]。
+
+    P1-3 失败模式闭环：FAIL CHECK 判据 + 语料禁令聚类沉淀为可机器化规则，
+    供 evaluator 扩展扣分项与反馈采集标签映射。
+    """
+    return json.loads(path.read_text(encoding="utf-8"))
