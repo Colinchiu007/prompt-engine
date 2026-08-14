@@ -1,0 +1,12 @@
+{
+  "id": "docs-engine-capabilities",
+  "title": "提示词优化引擎技术亮点/功能/用户价值文档（存 01-docs + 推送 GitHub）",
+  "status": "completed",
+  "complexity": "S",
+  "risk": "low",
+  "domain": "docs",
+  "currentPhase": "completed",
+  "nextAction": "PR merged",
+  "createdAt": "2026-08-14T18:30:00Z",
+  "branch": "codex/docs-engine-capabilities"
+}
