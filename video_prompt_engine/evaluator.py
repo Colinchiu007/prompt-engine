@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 import re
+from difflib import SequenceMatcher
+
+# Round3 Batch C：lock-gated 规则资产缓存（refined_blocks.json，缺失/损坏回退空表 → 规则不启用零误报）
+_GATED_RULES_CACHE: dict = {}
 
 
 def count_words(text: str) -> int:
@@ -70,6 +74,180 @@ def _parse_time_span(value: str) -> list[float] | None:
     return [start, end]
 
 
+# Round3 Batch B：承接保真检查词表
+# 停用词（功能词）与高频泛词（镜头/环境/画面无关词）分列——泛词残留会稀释命中率，
+# 角色/姿势实体被丢仍 ≥60% 假阴性（评审 Warning-3）。
+_CONTINUITY_STOPWORDS = frozenset({
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "and", "or", "but", "of", "in", "on", "at", "to", "for", "with", "by",
+    "from", "as", "his", "her", "its", "their", "they", "he", "she", "it",
+    "we", "you", "i", "that", "this", "these", "those", "there", "here",
+    "not", "no", "all", "each", "both", "into", "onto", "over", "under",
+    "between", "toward", "towards", "around", "across", "against", "during",
+    "through", "before", "after", "above", "below", "out", "up", "down",
+    "off", "away", "near", "far", "also", "very", "then", "than", "when",
+    "while", "which", "who", "whom", "what", "where", "how", "why",
+    "has", "have", "had", "will", "would", "shall", "should", "can", "could",
+    "may", "might", "must", "do", "does", "did", "just", "only", "even",
+    "still", "yet", "now", "once", "much", "many", "more", "most", "some",
+    "any", "such", "same", "other", "another", "one", "two", "three",
+    "first", "second", "third", "last", "next", "back",
+})
+_CONTINUITY_GENERIC = frozenset({
+    "camera", "frame", "frames", "screen", "shot", "shots", "scene", "view",
+    "angle", "lens", "cut", "cuts", "fade", "focus", "center", "middle",
+    "edge", "light", "lighting", "shadow", "shadowing", "background",
+    "foreground", "atmosphere", "tone", "palette", "texture", "surface",
+    "space", "position", "positioned", "motion", "movement", "style", "look",
+    "detail", "details", "slow", "fast", "left", "right", "top", "bottom",
+    "front", "rear", "side", "area", "region", "part", "full", "half",
+    "wide", "low", "high", "dark", "bright", "soft", "hard", "cold", "warm",
+})
+# 中文位置/姿势关键词表（白名单判定用；显式词表而非 2-gram——评审 Critical-1）
+_CONTINUITY_ZH_POSTURE = (
+    "站起", "站立", "坐下", "躺着", "跪着", "趴着", "倒下", "低头", "抬头",
+    "转身", "面向", "背对", "闭眼", "睁眼", "流血", "握着", "举起", "抱住",
+    "靠着", "昏迷", "死亡", "地上", "雪地", "门口", "角落", "中央", "前景",
+    "背景", "远处", "墙边", "窗边", "边缘", "水面", "台阶", "床边", "树下",
+)
+
+# 否定感知（评审 Critical-3）：forbidden 命中前查否定前缀，禁令形态不计命中
+_NEGATION_RE = re.compile(
+    r"(?i)(?:no|not|without|never|avoid)\s+(?:\S+\s+)*$"
+    r"|(?:no|not|without|never|avoid|无|不|禁止|切勿)\s*$"
+)
+
+
+def _negated(text: str, token: str) -> bool:
+    """token 前 12 字符窗口内存在否定词 → True（如 "No 3D render" / "not overexposed" / "no waxy"）。"""
+    text_low = str(text or "").lower()
+    token_low = token.lower()
+    start = 0
+    while True:
+        idx = text_low.find(token_low, start)
+        if idx < 0:
+            return False
+        prefix = text_low[max(0, idx - 12):idx]
+        if _NEGATION_RE.search(prefix):
+            return True
+        start = idx + 1
+
+
+def _extract_continuity_tokens(text: str) -> list[str]:
+    """英文实体 token 提取：≥2 字符字母数字（连字符/撇号保留），去停用词与高频泛词，去重保序。"""
+    tokens = re.findall(r"[A-Za-z][A-Za-z0-9'\-]{1,}", str(text or ""))
+    seen: set[str] = set()
+    result: list[str] = []
+    for t in tokens:
+        low = t.lower()
+        if low in _CONTINUITY_STOPWORDS or low in _CONTINUITY_GENERIC:
+            continue
+        if low not in seen:
+            seen.add(low)
+            result.append(low)
+    return result
+
+
+def _check_continuity(prompt: str, prev_final_frame: str, character_list: list) -> tuple[bool, dict]:
+    """跨镜承接保真（Round3 Batch B，评审修订版）。
+
+    英文：实体 token 命中率 ≥40%，且角色白名单提供时所有角色名必中（硬判据）。
+    中文：弃 2-gram——显式白名单（角色名 + 终态中出现的姿势/位置词）命中 ≥60%；
+          无白名单时整句重合度（SequenceMatcher）≥0.5。
+    返回 (通过?, checks)。无 prev_final_frame 时通过且 ratio=None（零回归）。
+    """
+    if not prev_final_frame:
+        return True, {"continuity_hits": 0, "continuity_total": 0, "continuity_ratio": None, "continuity_method": None}
+    body = _strip_reference_markers(prompt)
+    names = [str(n).strip() for n in (character_list or []) if str(n or "").strip()]
+    is_zh = bool(re.search(r"[\u4e00-\u9fff]", str(prev_final_frame)))
+    if is_zh:
+        keywords = [w for w in _CONTINUITY_ZH_POSTURE if w in prev_final_frame]
+        whitelist = names + keywords
+        if whitelist:
+            hits = []
+            for w in whitelist:
+                if len(w) >= 2:
+                    if _contains_word(body, w):
+                        hits.append(w)
+                elif w in body:
+                    hits.append(w)
+            ratio = len(hits) / len(whitelist)
+            ok = ratio >= 0.6
+            return ok, {
+                "continuity_hits": len(hits), "continuity_total": len(whitelist),
+                "continuity_ratio": round(ratio, 3), "continuity_method": "whitelist",
+            }
+        ratio = SequenceMatcher(None, prev_final_frame, body).ratio()
+        ok = ratio >= 0.5
+        return ok, {
+            "continuity_hits": round(ratio, 3), "continuity_total": 1,
+            "continuity_ratio": round(ratio, 3), "continuity_method": "ratio",
+        }
+    tokens = _extract_continuity_tokens(prev_final_frame)
+    hits = [t for t in tokens if _contains_word(body, t)]
+    ratio = len(hits) / len(tokens) if tokens else 1.0
+    checks = {
+        "continuity_hits": len(hits), "continuity_total": len(tokens),
+        "continuity_ratio": round(ratio, 3), "continuity_method": "wordlist",
+    }
+    ok = ratio >= 0.4
+    if names:
+        missing = [n for n in names if not _contains_word(body, n)]
+        if missing:
+            ok = False
+            checks["continuity_missing"] = missing
+    return ok, checks
+
+
+def _gated_rules() -> dict:
+    """加载 refined_blocks.json lock_triggers/enabled_rules（缓存；缺失/损坏回退空表 → 规则不启用）。"""
+    if not _GATED_RULES_CACHE:
+        try:
+            from pathlib import Path
+            import json
+            p = Path(__file__).resolve().parent / "knowledge" / "refined_blocks.json"
+            if p.exists():
+                data = json.loads(p.read_text(encoding="utf-8"))
+                _GATED_RULES_CACHE["triggers"] = data.get("lock_triggers") or {}
+                _GATED_RULES_CACHE["enabled"] = set(data.get("enabled_rules") or [])
+            else:
+                _GATED_RULES_CACHE["triggers"] = {}
+                _GATED_RULES_CACHE["enabled"] = set()
+        except Exception:
+            _GATED_RULES_CACHE["triggers"] = {}
+            _GATED_RULES_CACHE["enabled"] = set()
+    return _GATED_RULES_CACHE
+
+
+def _apply_gated_rules(prompt: str, tier: str, violations: dict, checks: dict) -> None:
+    """lock-gated 启发式（Round3 Batch C）：refined 专属；enabled_rules 控制启用；
+    仅声明 lock 词时检测 forbidden（否定感知），命中 -5 advisory。"""
+    if tier != "refined":
+        checks["gated_hits"] = []
+        return
+    rules = _gated_rules()
+    triggers = rules.get("triggers") or {}
+    enabled = rules.get("enabled") or set()
+    body = _strip_reference_markers(prompt)
+    hits: list[str] = []
+    for name, rule in triggers.items():
+        if name not in enabled:
+            continue
+        locks = rule.get("locks") or []
+        forbidden = rule.get("forbidden") or []
+        if not locks or not forbidden:
+            continue
+        if not any(_contains_word(body, l) for l in locks):
+            continue
+        for f in forbidden:
+            if _contains_word(body, f) and not _negated(body, f):
+                violations[name] = -5
+                hits.append(name)
+                break
+    checks["gated_hits"] = hits
+
+
 def detect_tier(prompt: str, video: dict | None, explicit_tier: str | None = None) -> str:
     """tier 判定：explicit（optimizer 按 creative_level≥7 传入 refined，否则 batch）优先；无 explicit 时 auto-detect 兜底。
 
@@ -90,13 +268,17 @@ def evaluate(
     language: str = "en",
     tier: str | None = None,
     max_length: int | None = None,
+    prev_final_frame: str | None = None,
+    character_list: list | None = None,
 ) -> dict:
     """返回 {score: 0-100, checks: {...}, tier, violations}。
 
     tier 层级（Higgsfield P0）：
     - batch：en 100-400 词 / zh 120-2000 字符
     - refined：en 下界自适应（≤min(500, budget//6)）~ 5000 词（DEEP P0-1 词数刻度；max_length 是字符裁剪预算不参与上界判据）/ zh 500 字符至 max_length
-    violations：缺席角色 -10 / swap 被替换 -10 / refined 缺尾行 -10 / 缺 Audio 块 -5。
+    violations：缺席角色 -10 / swap 被替换 -10 / refined 缺尾行 -10 / 缺 Audio 块 -5 /
+    continuity_break -5（跨镜承接，评审修订版实体级算法）/ block_coverage -5（refined 块覆盖，自渲染口径）/
+    lock-gated 规则 -5（否定感知，默认 3 条启用）。
     """
     checks = {}
     tier = detect_tier(prompt, video, explicit_tier=tier)
@@ -215,6 +397,38 @@ def evaluate(
     else:
         checks["timeline_hits"] = None
         checks["timing_diff"] = None
+
+    # 7) Round3 Batch B — 跨镜承接保真（实体级；引用标记剥离后判定；无 prev_final_frame 跳过零回归）
+    if prev_final_frame:
+        continuity_ok, continuity_checks = _check_continuity(prompt, prev_final_frame, character_list or [])
+        checks.update(continuity_checks)
+        if not continuity_ok:
+            violations["continuity_break"] = -5
+    else:
+        checks.update({
+            "continuity_hits": 0, "continuity_total": 0,
+            "continuity_ratio": None, "continuity_method": None,
+        })
+
+    # 8) Round3 Batch C — 块覆盖度（refined 专属，引擎自渲染口径）
+    # 分母 = meta.blocks 非空块数，分子 = 渲染串中命中块标记数（统一正则，行首标题+冒号）；
+    # 与语料分族统计解耦（评审 Critical-2：语料众数 8/12 卡阈值必误报）。
+    blocks = (video or {}).get("blocks")
+    if tier == "refined" and isinstance(blocks, dict):
+        non_empty = [k for k, v in blocks.items() if isinstance(v, str) and v.strip()]
+        if non_empty:
+            hits = sum(1 for k in non_empty if re.search(r"(?m)^" + re.escape(k) + r"\s*:", str(prompt)))
+            ratio = hits / len(non_empty)
+            checks["block_coverage"] = {"hit": hits, "total": len(non_empty), "ratio": round(ratio, 3)}
+            if ratio < 0.8:
+                violations["block_coverage"] = -5
+        else:
+            checks["block_coverage"] = None
+    else:
+        checks["block_coverage"] = None
+
+    # 9) Round3 Batch C — lock-gated 启发式（否定感知；enabled_rules 默认 3 条；batch 不启用）
+    _apply_gated_rules(prompt, tier, violations, checks)
     checks["violations"] = violations
 
     # 2) 六要素（英文关键词）
@@ -267,11 +481,16 @@ def select_best(
     language: str = "en",
     tier: str | None = None,
     max_length: int | None = None,
+    prev_final_frame: str | None = None,
+    character_list: list | None = None,
 ) -> tuple[str, dict, float]:
     """多候选择优：返回 (prompt, video_meta, score)，分数最高者优先。"""
     best: tuple[str, dict, float] | None = None
     for prompt, meta in candidates:
-        info = evaluate(prompt, meta, source_prompt=source_prompt, language=language, tier=tier, max_length=max_length)
+        info = evaluate(
+            prompt, meta, source_prompt=source_prompt, language=language, tier=tier,
+            max_length=max_length, prev_final_frame=prev_final_frame, character_list=character_list,
+        )
         score = float(info["score"])
         if best is None or score > best[2]:
             best = (prompt, meta, score)
