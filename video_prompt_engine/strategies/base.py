@@ -398,9 +398,14 @@ class BaseVideoStrategy(ABC):
         text = str(rendered or "").rstrip()
         if tier != "refined" or not text:
             return text
-        # 幂等：body 已含 NON-IP 标记（LLM 直出或契约层已 append）；词边界整名匹配 + 大小写不敏感，防双写
+        # 幂等（评审 C1）：仅当文本「以尾行形态结束」（LLM 直出尾行或契约层已 append）时不重复；
+        # 与 strip_rendered_trailer 同口径——中段字面量（如 "Photoreal NON-IP aesthetic"）
+        # 即使位于末行也不算已含尾行，真实尾行照常追加
         import re
-        if re.search(r"(?<![A-Za-z0-9])non-ip", text, flags=re.IGNORECASE):
+        if re.search(
+            r"Photoreal\.?\s+NON-IP\.?\s+.*?(?:only\.|Audio:.*|No music\.)\s*$",
+            text, flags=re.IGNORECASE | re.DOTALL,
+        ):
             return text
         return f"{text} {cls.build_tail(meta)}"
 

@@ -48,17 +48,23 @@ JSON_RETRY_HINT = (
 
 
 def strip_rendered_trailer(optimized: str, tail: str) -> str:
-    """C6 尾行剥离（可测单元）：从「最后一个」Photoreal NON-IP 起剥离到串尾。
+    """C6 尾行剥离（可测单元）：从「最后一个以尾行形态存在」的 Photoreal NON-IP 起剥离到串尾。
 
     兼容旧形态 `{audio} only.` 与 Round3 Audio 段形态（Audio: ... / No music. 结尾）；
-    取末位匹配修复评审 Warning-5——blocks 渲染串中段若含 "Photoreal NON-IP aesthetic"
-    等字面量，从首处剥会连 FINAL FRAME 等块一起误删。
+    末位匹配必须「以尾行形态继续」（评审 C1）——blocks 中段字面量（如
+    "Photoreal NON-IP aesthetic with deep blacks"）即使位于末位也不算尾行，FINAL FRAME
+    等后续块不误删（评审 Warning-5 口径延续）。
     无尾行形态时回退 endswith(tail) 精确剥离；两者都不中 → 原样返回（调用方自行截断）。
     """
     import re
+    _TAIL_FORM_RE = re.compile(
+        r"Photoreal\.?\s+NON-IP\.?\s+.*?(?:only\.|Audio:.*|No music\.)\s*$",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
     matches = list(re.finditer(r"Photoreal\.?\s+NON-IP\.?", optimized, flags=re.IGNORECASE))
-    if matches:
-        return optimized[: matches[-1].start()].rstrip()
+    for m in reversed(matches):
+        if _TAIL_FORM_RE.match(optimized[m.start():]):
+            return optimized[: m.start()].rstrip()
     if tail and optimized.endswith(tail):
         return optimized[: -len(tail)].rstrip()
     return optimized
