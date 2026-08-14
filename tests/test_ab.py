@@ -29,7 +29,7 @@ class TestABCandidates:
 
     @patch.object(Optimizer, "_call_llm")
     def test_optimize_multiple_candidates(self, mock_call):
-        """多候选时返回 candidates 数组"""
+        """多候选时返回 candidates 数组，且按质量分降序择优（图片域 Higgsfield 对齐）"""
         mock_call.side_effect = [
             ("Version A: A detailed cat", 100),
             ("Version B: A creative cat", 120),
@@ -44,9 +44,19 @@ class TestABCandidates:
         result = optimizer.optimize(req)
         assert isinstance(result, OptimizeResult)
         assert len(result.candidates) == 3
-        assert "Version A" in result.candidates[0]
-        assert "Version B" in result.candidates[1]
-        assert "Version C" in result.candidates[2]
+        # 择优语义：最高分候选既是主输出也在数组首位（post_process 关键词注入带随机性，
+        # 不能断言固定顺序，改为断言“评分降序 + 主输出==首位”不变量）
+        assert result.optimized_prompt == result.candidates[0]
+        from prompt_engine.evaluator import evaluate_quality
+
+        scores = [
+            evaluate_quality(
+                c, {}, source_prompt=req.prompt, language="en",
+                tier="batch", max_length=req.max_length,
+            )["score"]
+            for c in result.candidates
+        ]
+        assert scores == sorted(scores, reverse=True)
         assert result.tokens_used == 330
 
     @patch.object(Optimizer, "_call_llm")

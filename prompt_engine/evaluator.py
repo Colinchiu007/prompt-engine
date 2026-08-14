@@ -159,3 +159,176 @@ def evaluate(
         overall_improvement=overall,
         platform=platform,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 确定性启发式评分（Higgsfield 对齐 — spec: image-prompt-quality）
+# 语义与 video_prompt_engine/evaluator.py（origin/main）对齐；命名 evaluate_quality
+# 避免与上方 LLM 对比评估 evaluate() 冲突。未来可收敛共享内核（单独 change）。
+# ─────────────────────────────────────────────────────────────────────────────
+
+# 六要素词典（与视频引擎同款；图片静态构图同样适用）
+_ELEMENT_KEYWORDS = {
+    "subject": ("character", "subject", "hero", "woman", "man", "general", "people", "person",
+                "warrior", "soldier", "horse", "cat", "dog", "人", "将军", "女子", "士兵", "战士", "主角"),
+    "action": ("running", "walking", "riding", "fighting", "motion", "moving", "move", "runs",
+               "rushing", "chasing", "flying", "dancing", "walk", "飞", "奔", "战", "走", "跑", "追", "舞", "骑"),
+    "environment": ("environment", "scene", "background", "landscape", "city", "室", "城", "原野", "景"),
+    "lighting": ("light", "lighting", "sunlight", "golden hour", "光"),
+    "color": ("color", "palette", "hue", "色"),
+    "style": ("style", "cinematic", "epic", "风格"),
+}
+
+
+def count_words(text: str) -> int:
+    """词数统计（与视频引擎语义一致）。"""
+    return len(str(text or "").split())
+
+
+def _contains_word(text: str, token: str) -> bool:
+    """整名/词边界匹配：空 token 与单字符拒绝（中文"关"会误击"关键"）；英文按字母数字边界。"""
+    token = str(token or "").strip()
+    if not token or len(token) < 2:
+        return False
+    return (
+        re.search(
+            r"(?<![A-Za-z0-9])" + re.escape(token) + r"(?![A-Za-z0-9])",
+            str(text or ""),
+            flags=re.IGNORECASE,
+        )
+        is not None
+    )
+
+
+def _strip_reference_markers(text: str) -> str:
+    """剥离引用协议标记区段（[ABSENT] <name> / <<<...>>>），避免合规标记自罚分。
+
+    仅剥离标记 token 本身（+紧跟一个名字 token），标记后的同句真实出现仍会命中。
+    """
+    stripped = str(text or "")
+    stripped = re.sub(r"<<<.*?>>>", "", stripped, flags=re.DOTALL)
+    stripped = re.sub(r"<<<\s*\S+", "", stripped)
+    stripped = re.sub(r"\[ABSENT\]\s*\S+", "", stripped, flags=re.IGNORECASE)
+    return stripped
+
+
+def detect_tier(prompt: str, meta: dict | None = None, explicit_tier: str | None = None) -> str:
+    """tier 判定：explicit（optimizer 按 creative_level≥7 传入 refined/batch）优先；
+    无 explicit 时 auto 兜底——图片域无 shots/NON-IP/FINAL FRAME 概念，恒判 batch。"""
+    if explicit_tier in ("refined", "batch"):
+        return explicit_tier
+    return "batch"
+
+
+def evaluate_quality(
+    prompt: str,
+    meta: dict | None = None,
+    source_prompt: str = "",
+    language: str = "en",
+    tier: str | None = None,
+    max_length: int | None = None,
+) -> dict:
+    """确定性启发式评分（无 LLM 调用）：返回 {score: 0-100, checks, tier, violations}。
+
+    图片领域适配（design D2/D3）：
+    - tier 长度波段：batch en 30-`min(max(300, max_length//6), 500)` 词 / zh 60-`min(max(1000, max_length), 2000)` 字符；
+      refined en `min(500, max(60, max_length//5))`-`min(max(500, max_length//2), 2000)` 词 / zh 300-`max_length` 字符。
+    - violations 图片子集：excluded_present -10、swap_source_present -10；无 trailer/audio 概念。
+    - 评分权重：长度 20 + 六要素 30 + 保真 20（无镜头字段，/0.7 归一），叠加违规扣分，下限 0。
+    """
+    checks: dict = {}
+    meta = meta or {}
+    tier = detect_tier(prompt, meta, explicit_tier=tier)
+    checks["tier"] = tier
+
+    # 1) 层级长度波段
+    words = count_words(prompt)
+    max_len = max_length or 500
+    if language == "zh":
+        if tier == "refined":
+            length_ok = 300 <= len(str(prompt)) <= max_len
+        else:
+            length_ok = 60 <= len(str(prompt)) <= min(max(1000, max_len), 2000)
+    else:
+        if tier == "refined":
+            lower = min(500, max(60, max_len // 5))
+            upper = min(max(500, max_len // 2), 2000)
+            length_ok = lower <= words <= upper
+        else:
+            upper = min(max(300, max_len // 6), 500)
+            length_ok = 30 <= words <= upper
+    checks["length"] = length_ok
+    checks["words"] = words
+
+    # 2) violations（图片子集；[ABSENT]/<<<>>> 标记先剥离防自罚分）
+    text = str(prompt)
+    body_text = _strip_reference_markers(text)
+    violations: dict[str, int] = {}
+    excluded = meta.get("excluded_characters") or []
+    if excluded:
+        hit = [e for e in excluded if _contains_word(body_text, e)]
+        if hit:
+            violations["excluded_present"] = -10
+            checks["excluded_hits"] = hit
+    pairs = meta.get("no_swap_pairs") or []
+    if pairs:
+        hit = []
+        for p in pairs:
+            if isinstance(p, dict):
+                from_name = p.get("from")
+            elif isinstance(p, (list, tuple)) and len(p) == 2:
+                from_name = p[0]
+            else:
+                continue
+            if _contains_word(body_text, from_name):
+                hit.append(p)
+        if hit:
+            violations["swap_source_present"] = -10
+            checks["swap_hits"] = hit
+    checks["violations"] = violations
+
+    # 3) 六要素
+    lower = str(prompt).lower()
+    elements = {k: any(w in lower for w in v) for k, v in _ELEMENT_KEYWORDS.items()}
+    checks["elements"] = elements
+    checks["elements_score"] = sum(elements.values()) / len(elements)
+
+    # 4) 源保真（source 实体命中）
+    fidelity = 1.0
+    if source_prompt:
+        zh_chars = re.findall(r"[\u4e00-\u9fff]{2,}", source_prompt)
+        if zh_chars:
+            hit = sum(1 for c in zh_chars[:8] if c in str(prompt))
+            fidelity = max(0.0, hit / min(8, len(zh_chars)))
+    checks["fidelity"] = fidelity
+
+    score = (checks["length"] * 20 + checks["elements_score"] * 30 + fidelity * 20) / 0.7
+    score += sum(violations.values())
+    return {
+        "score": round(max(0, min(100, score)), 1),
+        "checks": checks,
+        "tier": tier,
+        "violations": violations,
+    }
+
+
+def select_best(
+    candidates: list[tuple[str, dict]],
+    source_prompt: str = "",
+    language: str = "en",
+    tier: str | None = None,
+    max_length: int | None = None,
+) -> tuple[str, dict, float]:
+    """多候选择优：返回 (prompt, meta, score)，分数最高者优先（签名与视频引擎一致）。"""
+    best: tuple[str, dict, float] | None = None
+    for prompt, meta in candidates:
+        info = evaluate_quality(
+            prompt, meta, source_prompt=source_prompt, language=language,
+            tier=tier, max_length=max_length,
+        )
+        score = float(info["score"])
+        if best is None or score > best[2]:
+            best = (prompt, meta, score)
+    if best is None:
+        return "", {}, 0.0
+    return best
