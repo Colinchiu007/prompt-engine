@@ -1,5 +1,5 @@
 """数据模型 — Pydantic 类型定义"""
-from typing import Optional
+from typing import Any, Optional
 from enum import Enum
 from pydantic import BaseModel, Field
 
@@ -174,6 +174,8 @@ class OptimizeRequest(BaseModel):
         description="如果 style=None 且此项为 True，自动从 prompt 检测风格类别"
     )
     context: Optional[dict] = Field(default=None, description="PROJECT-012 注入的上下文：synopsis, character, setting, character_list。用于角色一致性")
+    excluded_characters: Optional[Any] = Field(default=None, description="禁止出现角色/元素（图片引擎 Higgsfield 对齐；rest 层收敛，兼容字符串/数组，≤20 项）")
+    no_swap_pairs: Optional[list] = Field(default=None, description="禁止替换对二元组数组 [[from, to], ...]（rest 层校验，≤10 对）")
 
 
 class BatchOptimizeRequest(BaseModel):
@@ -335,3 +337,5 @@ CATEGORY_DESCRIPTIONS: dict["StyleCategory", str] = {
     StyleCategory.EMOJIS: "Emoji 风格、表情符号、Unicode 符号",
     StyleCategory.MISCELLANEOUS: "杂项、其他、特殊渲染效果",
 }
+
+

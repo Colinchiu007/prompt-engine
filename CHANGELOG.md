@@ -1,3 +1,13 @@
+## [未发布] 功能：图片引擎 Higgsfield 对齐（多候选择优/违规扣分/tier 层级，image-engine-higgsfield-alignment，2026-08-14）
+
+- **确定性启发式评分（evaluator）**：`prompt_engine/evaluator.py` 新增 `evaluate_quality`（命名规避既有 LLM 对比评估 `evaluate` 冲突；签名与视频引擎对齐 prompt/meta/source_prompt/language/tier/max_length）+ `detect_tier`/`select_best`/`_contains_word`/`_strip_reference_markers`/`count_words`；六要素命中 + 层级长度 + 源保真 + 违规扣分，0-100 确定性输出，无 LLM 调用
+- **违规扣分（图片子集）**：`excluded_present -10` / `swap_source_present -10`；`[ABSENT]`/`<<<>>>` 引用协议标记先剥离防自罚分（同句真实出现仍命中）；词边界/整名匹配（中文"关"不误击"关键"）；图片领域无 trailer/audio 概念不适用
+- **tier 层级长度波段（图片适配）**：batch en 30-`min(max(300, max_length//6), 500)` 词 / zh 60-`min(max(1000, max_length), 2000)` 字符；refined en `min(500, max(60, max_length//5))`-`min(max(500, max_length//2), 2000)` 词（小预算下界自适应、上界联动 max_length 并封顶）/ zh 300-`max_length` 字符；`creative_level>=7 → refined`；长度仅作评分口径，不截断改写
+- **双向约束字段契约**：`OptimizeRequest` 新增 `excluded_characters`/`no_swap_pairs`（可选，缺省零行为变化）；rest 层 `_normalize_optimize_request` 收敛——excluded 兼容字符串（`[\n;,]+` 分割）与数组、去重、≤20 项；no_swap 仅二元组、≤10 对；非法形态丢弃 + warning 不抛错；optimize/batch/disturb 三入口接入
+- **多候选择优接入**：图片域 `num_candidates>1` 时按 `evaluate_quality` 评分降序，最高分为 `optimized_prompt`、`candidates` 降序；单候选路径与视频 legacy 路径零变化；缓存 key 已含 num_candidates，择优不破坏缓存语义
+- **设计偏差记录**：refined en 上界由 design 初稿 `max_length//4` 调整为 `max_length//2`（spec 场景"800 词 @ max_length=2000 合规"所需，数值属 design 可微调项）；`evaluate` 命名冲突按实施规避为 `evaluate_quality`
+- **测试**：新增 `tests/test_image_higgsfield_alignment.py` 35 项（tier/长度波段/违规/标记剥离/词边界/select_best 确定性/optimizer 集成/rest 收敛/compare 回归/视频 legacy）；全量 688 passed（3 skipped，1 个既有环境性失败 rag_cases + 5 个 web E2E 需本地 server，与基线一致）
+
 ## [未发布] 功能：Higgsfield DEEP P2 落地（语料 few-shot 资产化 + 抽卡成本模型 + 向量检索 O(n²) 修复，2026-08-14）
 
 - **语料资产化（P2.9）**：`knowledge/seed_higgsfield_prompts.json` 258 条《Hell Grind》公开语料种子（590 条原始 → 按 prompt_text 去重，同 prompt 多 job 参数变体不重复入库；精修 106/批量 100/变体 29/资产 23，seedance 234 + 其他视频模型 24）；`scripts/build_higgsfield_seeds.py` 幂等重建（确定性排序 + 去重），loader 合并加载（`load_seed_video_prompts` extra_path 参数），关键词兜底与向量检索双路径共用

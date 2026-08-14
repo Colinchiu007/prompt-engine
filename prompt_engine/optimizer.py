@@ -1,5 +1,6 @@
 """Optimizer — 核心编排器（支持 RAG few-shot 注入）"""
 import logging
+import re
 import time
 from pathlib import Path
 from typing import Optional
@@ -234,15 +235,53 @@ class Optimizer:
 
             elapsed = (time.time() - start_time) * 1000
 
+            # 4.5 图片域多候选择优（Higgsfield 对齐 — spec: image-prompt-quality）：
+            # 确定性启发式评分降序，最高分为主输出；单候选/视频 legacy 路径不接入（行为不变）。
+            # 缓存 key 已含 num_candidates，择优不破坏缓存语义。
+            if not is_video and num > 1:
+                from prompt_engine.evaluator import evaluate_quality
+                tier = "refined" if request.creative_level >= 7 else "batch"
+                language = "zh" if re.search(r"[\u4e00-\u9fff]", request.prompt) else "en"
+                raw_excluded = request.excluded_characters
+                if raw_excluded is None:
+                    raw_excluded = []
+                elif isinstance(raw_excluded, str):
+                    raw_excluded = [raw_excluded]
+                else:
+                    raw_excluded = list(raw_excluded)
+                meta = {
+                    "excluded_characters": raw_excluded,
+                    "no_swap_pairs": list(request.no_swap_pairs or []),
+                }
+                scored = sorted(
+                    (
+                        (
+                            evaluate_quality(
+                                p, meta, source_prompt=request.prompt,
+                                language=language, tier=tier, max_length=request.max_length,
+                            )["score"],
+                            p,
+                        )
+                        for p in candidates
+                    ),
+                    key=lambda x: x[0],
+                    reverse=True,
+                )
+                optimized_prompt = scored[0][1]
+                ordered_candidates = [p for _, p in scored]
+            else:
+                optimized_prompt = candidates[0]
+                ordered_candidates = candidates
+
             # 存入双级缓存以便下次命中
             result = OptimizeResult(
-                optimized_prompt=candidates[0],
+                optimized_prompt=optimized_prompt,
                 platform=request.platform,
                 style=effective_style if effective_style != request.style else request.style,
                 model_used=self._provider.model_name,
                 tokens_used=total_tokens,
                 duration_ms=round(elapsed, 1),
-                candidates=candidates if num > 1 else [],
+                candidates=ordered_candidates if num > 1 else [],
                 detected_categories=detected_result,
                 video=VideoPromptResult(**video_meta) if is_video and video_meta else None,
             )
@@ -487,3 +526,4 @@ class Optimizer:
     def _do_optimize_sync(self, request: OptimizeRequest) -> OptimizeResult:
         """同步执行优化（供 _call_llm_with_timeout 调用）"""
         return self.optimize(request)
+

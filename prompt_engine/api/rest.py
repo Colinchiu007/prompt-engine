@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import logging
 import os
+import re
 from functools import lru_cache
 from pathlib import Path
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
@@ -30,6 +31,59 @@ app = FastAPI(
 
 
 
+# ── Higgsfield 对齐：双向约束字段收敛（spec: image-prompt-quality） ──
+# 对齐视频契约收敛规则：excluded_characters 兼容字符串（按 [\n;,]+ 分割）与数组；
+# no_swap_pairs 仅收二元组；非法形态丢弃 + warning（不抛错）；超限截断。
+# 仅在 rest 边界收敛——直接构造 OptimizeRequest 的调用方自行保证形态。
+
+_EXCLUDED_MAX = 20
+_NO_SWAP_PAIRS_MAX = 10
+
+
+def _normalize_optimize_request(request: OptimizeRequest) -> OptimizeRequest:
+    """归一 excluded_characters / no_swap_pairs 为引擎内部形态（list[str] / list[list[str]]）。"""
+    raw_ex = request.excluded_characters
+    excluded: list[str] = []
+    if raw_ex is not None:
+        if isinstance(raw_ex, str):
+            parts = [p for p in re.split(r"[\n;,]+", raw_ex) if p.strip()]
+        elif isinstance(raw_ex, (list, tuple)):
+            parts = [p for p in raw_ex if isinstance(p, str) and p.strip()]
+        else:
+            parts = []
+            logger.warning("excluded_characters 非法形态（%s）已丢弃", type(raw_ex).__name__)
+        seen: set[str] = set()
+        for p in parts:
+            s = str(p).strip()
+            if s and s not in seen:
+                seen.add(s)
+                excluded.append(s)
+        if len(excluded) > _EXCLUDED_MAX:
+            logger.warning("excluded_characters 超上限 %d，截断", _EXCLUDED_MAX)
+            excluded = excluded[:_EXCLUDED_MAX]
+    request.excluded_characters = excluded
+
+    raw_pairs = request.no_swap_pairs
+    pairs: list[list[str]] = []
+    if raw_pairs is not None:
+        if not isinstance(raw_pairs, (list, tuple)):
+            logger.warning("no_swap_pairs 非法形态（%s）已丢弃", type(raw_pairs).__name__)
+        else:
+            for pair in raw_pairs:
+                if (
+                    isinstance(pair, (list, tuple)) and len(pair) == 2
+                    and all(isinstance(x, str) and x.strip() for x in pair)
+                ):
+                    pairs.append([str(pair[0]).strip(), str(pair[1]).strip()])
+                else:
+                    logger.warning("no_swap_pairs 非法对已丢弃: %r", pair)
+        if len(pairs) > _NO_SWAP_PAIRS_MAX:
+            logger.warning("no_swap_pairs 超上限 %d，截断", _NO_SWAP_PAIRS_MAX)
+            pairs = pairs[:_NO_SWAP_PAIRS_MAX]
+    request.no_swap_pairs = pairs
+    return request
+
+
 @lru_cache
 def get_optimizer():
     """线程安全的单例 — lru_cache 保证只构造一次"""
@@ -42,6 +96,7 @@ async def optimize(request: OptimizeRequest):
     """优化单条提示词"""
     from prompt_engine.rest_validation import _validate_prompt
     _validate_prompt(request.prompt)
+    request = _normalize_optimize_request(request)
     try:
         optimizer = get_optimizer()
         # to_thread：optimize 内部包含 LLM 网络调用，直接同步执行会阻塞事件循环，
@@ -92,7 +147,7 @@ async def batch_optimize(request: BatchOptimizeRequest):
         async with semaphore:
             return await asyncio.to_thread(optimizer.optimize, req)
 
-    results = await asyncio.gather(*[run_one(r) for r in request.requests])
+    results = await asyncio.gather(*[run_one(_normalize_optimize_request(r)) for r in request.requests])
     return results
 
 
@@ -151,6 +206,7 @@ async def rewrite(request: RewriteRequest):
 @app.post("/v1/disturb-optimize", response_model=OptimizeResult)
 async def disturb_optimize(request: OptimizeRequest):
     """扰动增强优化：对 prompt 做扰动后多次优化取最佳（灵感: Infinity BSC）"""
+    request = _normalize_optimize_request(request)
     try:
         optimizer = get_optimizer()
         result = await asyncio.to_thread(optimizer.disturb_and_optimize, request)
