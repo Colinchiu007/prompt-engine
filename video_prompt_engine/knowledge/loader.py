@@ -5,6 +5,8 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from prompt_engine_core.knowledge import load_keywords, load_seed_entries
+
 
 @dataclass
 class VideoPromptEntry:
@@ -21,27 +23,23 @@ class VideoPromptEntry:
 
 
 def load_seed_video_prompts(path: Path) -> list[VideoPromptEntry]:
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    entries = []
-    for i, item in enumerate(raw):
-        entries.append(VideoPromptEntry(
-            id=item.get("id", f"vseed-{i:04d}"),
-            title=item.get("title", ""),
-            description=item.get("description", ""),
-            prompt_text=item.get("prompt_text", item.get("prompt", "")),
-            language=item.get("language", "en"),
-            platform=item.get("platform", "generic_video"),
-            style=item.get("style", ""),
-            categories=item.get("categories", []),
-            quality_score=item.get("quality_score", 5),
-            source=item.get("source", ""),
-        ))
-    return entries
+    """加载视频种子（复用共享内核解析骨架，保持 VideoPromptEntry 领域模型）。
+
+    平台字段缺失时回退 generic_video（历史行为）；显式写入的 platform 原样保留。
+    """
+    return [
+        VideoPromptEntry(
+            id=e.id, title=e.title, description=e.description, prompt_text=e.prompt_text,
+            language=e.language, platform=e.platform, style=e.style,
+            categories=e.categories, quality_score=e.quality_score, source=e.source,
+        )
+        for e in load_seed_entries(path, fallback_prefix="vseed", default_platform="generic_video")
+    ]
 
 
 def load_keywords_video(path: Path) -> dict[str, list[dict]]:
-    """加载视频关键词词典：{dimension: [{zh, en}, ...]}。"""
-    return json.loads(path.read_text(encoding="utf-8"))
+    """加载视频关键词词典：{dimension: [{zh, en}, ...]}（复用共享内核骨架）。"""
+    return load_keywords(path)
 
 
 def load_director_styles(path: Path) -> list[dict]:

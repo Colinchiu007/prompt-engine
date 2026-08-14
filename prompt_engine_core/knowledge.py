@@ -28,14 +28,16 @@ class SeedEntry:
     source: str = ""
 
     @classmethod
-    def from_dict(cls, item: dict, fallback_prefix: str = "seed", idx: int = 0) -> "SeedEntry":
+    def from_dict(
+        cls, item: dict, fallback_prefix: str = "seed", idx: int = 0, default_platform: str = "generic",
+    ) -> "SeedEntry":
         return cls(
             id=item.get("id", f"{fallback_prefix}-{idx:04d}"),
             title=item.get("title", ""),
             description=item.get("description", ""),
             prompt_text=item.get("prompt_text", item.get("prompt", "")),
             language=item.get("language", "en"),
-            platform=item.get("platform", "generic"),
+            platform=item.get("platform", default_platform),
             style=item.get("style", ""),
             categories=item.get("categories", []),
             quality_score=item.get("quality_score", 5),
@@ -43,10 +45,20 @@ class SeedEntry:
         )
 
 
-def load_seed_entries(path: str | Path, fallback_prefix: str = "seed") -> list[SeedEntry]:
-    """加载种子 JSON（兼容 prompt_text 或 prompt 字段）。"""
+def load_seed_entries(
+    path: str | Path, fallback_prefix: str = "seed", default_platform: str = "generic",
+) -> list[SeedEntry]:
+    """加载种子 JSON（兼容 prompt_text 或 prompt 字段）。
+
+    default_platform 仅作为「字段缺失」时的回退值；显式写入的 platform 原样保留。
+    """
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    return [SeedEntry.from_dict(item, fallback_prefix=fallback_prefix, idx=i) for i, item in enumerate(raw)]
+    return [
+        SeedEntry.from_dict(
+            item, fallback_prefix=fallback_prefix, idx=i, default_platform=default_platform,
+        )
+        for i, item in enumerate(raw)
+    ]
 
 
 def load_keywords(path: str | Path) -> dict[str, list[dict]]:

@@ -1,3 +1,11 @@
+## [未发布] 重构：图片/视频提示词引擎共享内核迁移（engine-shared-core Phase 2-4，2026-08-14）
+
+- **共享内核 Phase 2（视频引擎迁移 core）**：`video_prompt_engine/llm/base.py` 改为继承 `prompt_engine_core.llm.BaseLLMProvider`（带回 W1 默认 16384 max_tokens cap，防长模板 max_tokens=40000 被上游 400 拒绝）；`strategies/base.py` 注册器换用 `prompt_engine_core.registry.StrategyRegistry`（register/get_strategy/list_strategies 行为一致），`_clamp_int`/`_clean_str_list` 复用 core.text；`feedback.py` 种子/失败统计写入复用 core.atomic 原子写；`knowledge/loader.py` 种子与关键词解析委托 core.knowledge 骨架；`knowledge/vector_store.py` 直接复用 core TF-IDF 实现（模块路径保留，调用方零改动）；`optimizer.py` `<think>` 剥离改从 core.text 导入
+- **共享内核 Phase 3（图片引擎能力对齐）**：`prompt_engine/feedback.py` 落盘改 core.atomic 原子写（tmp + os.replace，替换原直接覆盖写）；`prompt_engine/optimizer.py` `<think>` 剥离改从 core.text 导入（api/compare.py 导入路径兼容）；`prompt_engine/strategies/base.py` 注册器换用 core.registry（保留 domain 过滤与 `_strategies` 兼容别名）；LLM 超时/重试经核查已具备（openai_compat/deepseek/minimax/xfyun SDK max_retries=3 + timeout，gemini timeout=60），无需改动
+- **契约条款**：openspec「代码零耦合」更新为「不得 import 对方领域层，允许依赖 prompt_engine_core」；`test_no_import_prompt_engine` 正则加词边界允许 core 依赖
+- **评审修复（Claude 单模型，antigravity 地区不可用降级）**：core llm 默认 cap 无条件生效（去掉 if 守卫，防 W1 死代码回归）；图片引擎 list_strategies 按注册序返回（与旧行为一致，core.registry 新增 items()）；core 种子加载 default_platform 参数化（显式 platform 原样保留，仅缺失时回退 generic_video）；vector_store 默认平台参数化；compare.py 直连 core.text；注册器键小写归一（既有注册名全小写，生产调用方已归一，无行为影响）
+- **测试**：新增 `tests/test_prompt_engine_core.py` 11 项锚定（16384 cap 默认/配置覆盖/小预算不封顶、注册器大小写归一/插入序/字母序、种子默认平台缺失回退/显式保留/prompt 键兼容）；全量 628 passed（3 skipped），仅 test_web_e2e 5 项需本地起 web 服务（环境类）；净删重复代码约 200 行
+
 ## [未发布] 功能：Higgsfield DEEP 报告 P1 落地（导演风格/失败模式/角色描述符，2026-08-14）
 
 - **P1-6 导演风格词典**：`knowledge/director_styles.json` 17 位导演/摄影指导（Lubezki/Deakins/Vinterberg/Villeneuve/Nolan/Wes Anderson/Ridley Scott/Kubrick/Malick/王家卫/黑泽明/张艺谋/Hoytema/Fraser/Kamiński/杜可风/Cuarón），每条目含英文名+中文名+别名+一句话风格+look；`style` 字段命中导演名（别名大小写不敏感子串）时注入「导演风格引用」+ system prompt `## Director Style Reference` 块（对应 DEEP 报告 3.5/五-6）

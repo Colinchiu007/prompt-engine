@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from prompt_engine.models import FeedbackEntry, FeedbackStats
+from prompt_engine_core.atomic import atomic_write_json
 
 
 class FeedbackStore:
@@ -30,8 +31,8 @@ class FeedbackStore:
 
     def _save(self):
         data = [e.model_dump() for e in self._entries]
-        with open(self._path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        # 原子写：临时文件 + os.replace（复用共享内核工具），避免并发/半写状态
+        atomic_write_json(self._path, data)
 
     def submit(self, entry: FeedbackEntry) -> FeedbackEntry:
         """提交一条反馈。自动生成 ID 和时间戳。"""
