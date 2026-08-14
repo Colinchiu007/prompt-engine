@@ -70,3 +70,24 @@ def load_failure_patterns(path: Path) -> list[dict]:
     供 evaluator 扩展扣分项与反馈采集标签映射。
     """
     return json.loads(path.read_text(encoding="utf-8"))
+
+def load_character_descriptors(path: Path) -> list[dict]:
+    """加载角色描述符资产库（P1-4 Assets 卡模式）：[{
+        id, name, name_zh, aliases, descriptor, views, negative, variants, evidence
+    }]。"""
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def resolve_character_descriptor(name_text: str, cards: list[dict]) -> dict | None:
+    """在角色名文本中匹配资产库卡片（英文/中文名 + 别名，大小写不敏感子串）。
+
+    命中返回卡片；未命中返回 None（自定义角色不受影响）。
+    """
+    if not name_text:
+        return None
+    low = name_text.lower()
+    for card in cards:
+        names = [card["name"], card["name_zh"]] + card.get("aliases", [])
+        if any(n and n.lower() in low for n in names):
+            return card
+    return None

@@ -728,3 +728,67 @@ class TestFailurePatternLoop:
         VideoFeedbackRequest(prompt_text="p", result_prompt="r", good=False, failure_patterns=["a"] * 10)
         with pytest.raises(Exception):
             VideoFeedbackRequest(prompt_text="p", result_prompt="r", good=False, failure_patterns=["a"] * 11)
+
+class TestCharacterDescriptorLibrary:
+    """P1-4 角色描述符资产库（DEEP 报告 五-10）：Assets 卡加载 + context 注入描述符/引用声明。"""
+
+    @staticmethod
+    def _cards():
+        from pathlib import Path as _P
+        from video_prompt_engine.knowledge.loader import load_character_descriptors
+        return load_character_descriptors(_P(__file__).resolve().parent.parent / "video_prompt_engine" / "knowledge" / "character_descriptors.json")
+
+    def test_cards_loaded_with_full_fields(self):
+        cards = self._cards()
+        assert len(cards) >= 5
+        for c in cards:
+            for key in ("id", "name", "name_zh", "descriptor", "views", "negative", "variants"):
+                assert key in c, f"card {c.get('id')} missing {key}"
+            assert len(c["views"]) >= 3  # 正/背/3-4 视图
+            assert c["variants"], "variants must be non-empty"
+
+    def test_resolve_english_zh_alias(self):
+        from video_prompt_engine.knowledge.loader import resolve_character_descriptor
+        cards = self._cards()
+        assert resolve_character_descriptor("the combat robot", cards)["id"] == "cd_combat_robot"
+        assert resolve_character_descriptor("女侠", cards)["id"] == "cd_wuxia_heroine"
+        assert resolve_character_descriptor("Neon Detective", cards)["id"] == "cd_neon_detective"
+        assert resolve_character_descriptor("", cards) is None
+        assert resolve_character_descriptor("custom hero Zorg", cards) is None
+
+    def test_context_injects_descriptor_and_reference_declaration(self):
+        from video_prompt_engine.prompt_builder import VideoPromptBuilder
+        ctx = {"character": {"name": "Combat Robot"}, "character_list": [{"name": "女侠"}, {"name": "custom sidekick"}]}
+        section = VideoPromptBuilder.build_context_section(ctx)
+        assert "Character Reference Library" in section
+        assert "resolves EXACTLY to" in section
+        assert "Views locked: front view + back view + 3/4 fighting stance view" in section
+        assert "per <name> reference" in section  # 引用声明
+        # 自定义角色（未命中）不注入描述符块
+        assert "custom sidekick" not in section or "custom sidekick" not in section.split("Character Reference Library")[-1]
+
+    def test_context_without_cards_no_library_block(self):
+        from video_prompt_engine.prompt_builder import VideoPromptBuilder
+        ctx = {"character": {"name": "custom hero Zorg"}, "synopsis": "a story"}
+        section = VideoPromptBuilder.build_context_section(ctx)
+        assert "Character Reference Library" not in section
+        assert "custom hero Zorg" in section
+
+    def test_optimize_full_flow_injects_descriptor(self):
+        import json
+        raw = json.dumps({
+            "prompt": "a combat robot marches through the rain, cinematic medium shot, slow dolly, cool palette, sfx",
+            "shot": "medium", "camera": "dolly", "motion_intensity": 6,
+            "scene_transition": "cut", "continuity_token": "robot_rain", "duration_hint": 5,
+        })
+        o = make_optimizer()
+        o._provider = mock_provider(raw)
+        r = o.optimize(VideoOptimizeRequest(
+            prompt="combat robot in the rain",
+            context={"character": {"name": "Combat Robot"}},
+            creative_level=8, max_length=5000,
+        ))
+        assert r.video is not None
+        sp = o._provider.call.call_args.args[0]
+        assert "resolves EXACTLY to" in sp
+        assert "hydraulic pistons" in sp  # 描述符注入 system prompt
