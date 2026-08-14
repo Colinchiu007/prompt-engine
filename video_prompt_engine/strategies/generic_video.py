@@ -48,9 +48,11 @@ class GenericVideoStrategy(BaseVideoStrategy):
         lang_section = cls.build_language_section(output_language, tier=tier)
         lens_discipline = cls.build_lens_discipline_section(character_count)
         keys_line = ", ".join(f'"{k}"' for k in VIDEO_OUTPUT_KEYS)
-        # 长度口径与 evaluator tier 层级对齐：refined 500+ 词/500-5000 中文字符（随预算缩放）；batch 150-300 词（W8）
+        # 长度口径与 evaluator tier 层级对齐（DEEP P0-1）：refined 500-5000 词（zh 500 字符-预算上限）；
+        # max_length 是字符预算上限不是目标长度——小预算（如 1800）下 LLM 写不满 500 词属正常，
+        # evaluator 下界随预算自适应（评审 C1/W4），不再要求「fill the budget」与词数下限同时成立
         length_instruction = (
-            f"Write a RICH, DETAILED video prompt of 500+ English words (500-5000 Chinese chars) — fill the {max_length} char budget as far as possible (scale length to the budget), covering ALL shots. NOT a short one-liner."
+            f"Write a RICH, DETAILED video prompt of 500-5000 English words (Chinese: 500 chars up to the {max_length} char budget), staying within the {max_length} char budget — scale length to the budget, covering ALL shots. NOT a short one-liner."
             if tier == "refined"
             else "Write a RICH, DETAILED video prompt of 150-300 words (about 900-2000 chars) — NOT a short one-liner."
         )
