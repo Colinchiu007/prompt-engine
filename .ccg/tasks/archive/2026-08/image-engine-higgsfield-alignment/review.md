@@ -32,3 +32,8 @@
 - 根因：旧断言按「调用顺序」期望 candidates[0..2] == Version A/B/C；新择优实现按 evaluate_quality 分数降序排列（design 风险 R2 标注的预期收益），Version C 分数最高排首位。
 - 修复：断言改为「择优不变量」——主输出 == candidates[0] + 分数降序（post_process 关键词注入带随机性，固定顺序断言不成立）；tokens_used 断言保留。
 - 结论：生产代码无缺陷，属测试套件与预期行为对齐。
+
+
+## 2026-08-14 追加：PR #45 CI 修复与合并
+- 修复 commit 470a676：`tests/test_ab.py` 断言改为择优不变量（主输出 == candidates[0] + 分数降序）；根因为新择优实现按 evaluate_quality 分数排序，旧断言按调用顺序期待。生产代码无缺陷。
+- PR #45 已合并（squash，2026-08-14T12:15:41Z）；openspec change 已归档。
