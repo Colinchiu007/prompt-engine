@@ -4,7 +4,7 @@
 定义独立视频提示词优化引擎的能力：与图片提示词引擎完全分离的独立服务/知识库/策略/模型；视频专属关键词库（复用 7 个开源仓库）；结构化视频提示词输出与事实保真；批量契约与 fail-closed 校验。
 ## Requirements
 ### Requirement: 独立引擎与图片引擎分离
-视频提示词优化引擎 SHALL 作为独立 Python 包（`video_prompt_engine/`）与独立 REST 服务（端口 8020）运行，不得 import 图片引擎 `prompt_engine` 的 models/strategies/knowledge/cache/config；图片引擎行为零回归。
+视频提示词优化引擎 SHALL 作为独立 Python 包（`video_prompt_engine/`）与独立 REST 服务（端口 8020）运行，不得 import 图片引擎 `prompt_engine` 的 models/strategies/knowledge/cache/config 领域层；允许依赖领域无关共享内核 `prompt_engine_core`（llm 超时重试/atomic 原子写/registry 注册器/config 解析/text 工具/api 骨架/knowledge 骨架/vector_store）；图片引擎行为零回归。
 
 #### Scenario: 独立服务端口
 - **WHEN** 启动视频引擎服务
@@ -16,10 +16,14 @@
 
 #### Scenario: 代码零耦合
 - **WHEN** 检查视频引擎源码
-- **THEN** 不存在 `import prompt_engine` 引用
+- **THEN** 不存在 `import prompt_engine` 引用；仅允许 `prompt_engine_core` 共享内核依赖
+
+#### Scenario: 共享内核行为等价
+- **WHEN** 视频引擎迁移 core 机械件（llm/registry/atomic/knowledge）
+- **THEN** 优化行为与迁移前一致（输出字段/缓存 key/fail closed 语义），引擎测试全量通过
 
 ### Requirement: 视频平台策略注册表
-视频引擎 SHALL 提供策略注册机制（@register + get_strategy），首期覆盖 generic_video（六要素 + Fact-Fidelity）、seedance（@引用/多模态约束）等视频平台；未知平台回退 generic_video；策略输出结构化视频字段（shot/camera/motion_intensity/scene_transition/continuity_token/duration_hint）。
+视频引擎 SHALL 提供策略注册机制（@register + get_strategy，复用 `prompt_engine_core.registry`），首期覆盖 generic_video（六要素 + Fact-Fidelity）、seedance（@引用/多模态约束）等视频平台；未知平台回退 generic_video；策略输出结构化视频字段（shot/camera/motion_intensity/scene_transition/continuity_token/duration_hint）。
 
 #### Scenario: 结构化输出
 - **WHEN** 优化视频提示词成功
@@ -57,6 +61,10 @@
 #### Scenario: context 白名单
 - **WHEN** 请求携带 context
 - **THEN** 白名单键注入 system prompt，未知键忽略并 warning，敏感键拒绝/剥离
+
+#### Scenario: 敏感键拦截
+- **WHEN** context 含 api_key/secret/password 等敏感键
+- **THEN** 400/422 拒绝，不随请求外发
 
 #### Scenario: 中文历史事实保真
 - **WHEN** 优化描述中文历史事件的视频提示词
@@ -122,3 +130,19 @@ Multi-Publish videogen SHALL 支持配置切换至独立视频引擎（8020）�
 #### Scenario: 回退兼容
 - **WHEN** 独立引擎不可用
 - **THEN** 回退 8013 domain=video 分支并记录 warning
+
+
+### Requirement: 图片引擎能力对齐（共享内核回灌）
+图片引擎 SHALL 复用 `prompt_engine_core` 的原子写与 LLM 超时重试机械件，回灌视频引擎已验证的改进（原子写 tmp+os.replace、进程锁、动态 max_tokens、<think> 剥离），领域层（models/strategies/classifier/evaluator/cache key）保持图片语义不变。
+
+#### Scenario: 原子写回灌
+- **WHEN** 图片引擎 feedback 写入种子
+- **THEN** 使用临时文件 + os.replace 原子替换，进程锁保护，与视频引擎语义一致
+
+#### Scenario: 超时重试回灌
+- **WHEN** 图片引擎 LLM 调用超时或瞬时失败
+- **THEN** 应用与视频引擎一致的超时/重试/动态 max_tokens 策略，图片 provider 语义（deepseek/xfyun/gemini/minimax）不变
+
+#### Scenario: 零回归
+- **WHEN** 图片引擎迁移 core 后运行全量测试
+- **THEN** 全部既有测试通过，无行为变更

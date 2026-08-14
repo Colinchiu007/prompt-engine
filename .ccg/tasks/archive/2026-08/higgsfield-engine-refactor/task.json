@@ -1,12 +1,12 @@
 {
   "id": "higgsfield-engine-refactor",
   "title": "图片/视频提示词引擎共享内核迁移（Higgsfield DEEP 收尾 Phase 2-4）",
-  "status": "in_progress",
+  "status": "completed",
   "complexity": "L",
   "risk": "high",
   "domain": "backend",
-  "currentPhase": "implementation",
-  "nextAction": "Phase 2/3 迁移完成（617 passed），提交 PR 等待 CI/合并后归档",
+  "currentPhase": "completed",
+  "nextAction": "PR #40 已合并（11c858b），CI 全绿；openspec change 已归档，本任务归档完成",
   "createdAt": "2026-08-14T10:00:00Z",
   "branch": "main",
   "openspecChange": "2026-08-14-engine-shared-core"
