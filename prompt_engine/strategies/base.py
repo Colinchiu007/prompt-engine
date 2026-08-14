@@ -1,27 +1,29 @@
-"""平台策略基类 + 注册表"""
+"""平台策略基类 + 注册表（复用共享内核注册器）"""
 from abc import ABC, abstractmethod
 from prompt_engine.models import PlatformType, StyleType
+from prompt_engine_core.registry import StrategyRegistry
 
-# 策略注册表
-_strategies: dict[str, type["BaseStrategy"]] = {}
+# 策略注册表（共享内核泛型注册器；_strategies 为兼容别名，供既有测试直读内部存储）
+_registry: StrategyRegistry[type["BaseStrategy"]] = StrategyRegistry()
+_strategies = _registry._registry
 
 
 def register(platform: str):
     """装饰器：注册平台策略"""
-    def decorator(cls):
-        _strategies[platform] = cls
-        return cls
-    return decorator
+    return _registry.register(platform)
 
 
 def get_strategy(platform: str) -> type["BaseStrategy"] | None:
     """获取已注册的策略类"""
-    return _strategies.get(platform)
+    return _registry.get(platform)
 
 
 def list_strategies(domain: str | None = None) -> list[str]:
-    """列出已注册的平台；缺省按图片领域过滤（保持历史行为），domain='video' 列出视频平台"""
-    return [name for name, cls in _strategies.items() if getattr(cls, "domain", "image") == (domain or "image")]
+    """列出已注册的平台；缺省按图片领域过滤（保持历史行为），domain='video' 列出视频平台。
+
+    按注册（插入）顺序返回，与旧实现 _strategies.items() 一致（core items() 保序）。
+    """
+    return [name for name, cls in _registry.items() if getattr(cls, "domain", "image") == (domain or "image")]
 
 
 class BaseStrategy(ABC):

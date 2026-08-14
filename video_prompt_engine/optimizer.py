@@ -22,6 +22,7 @@ from video_prompt_engine.models import (
     normalize_video_platform, assert_no_sensitive_context, CONTEXT_KEYS,
     VIDEO_OUTPUT_KEYS,
 )
+from prompt_engine_core.text import strip_reasoning_blocks
 from video_prompt_engine.config import load_config
 from video_prompt_engine.strategies import get_strategy
 from video_prompt_engine.llm import BaseVideoLLMProvider
@@ -56,24 +57,6 @@ def derive_character_count(context: Optional[dict]) -> Optional[int]:
     if context.get("character"):
         return 1
     return None
-
-
-def strip_reasoning_blocks(text: str) -> str:
-    """剥离模型输出中的推理块（<think>...</think>），返回实际提示词内容。
-
-    带推理能力的模型（如 MiniMax-M2.7）可能把思考过程写进返回内容：
-    - 完整推理块 <think>...</think>：移除后保留 </think> 之后的内容；
-    - 无闭合标签的 <think> 前缀：视为没有实际内容，返回空串（由调用方回退原文）。
-    """
-    if not text:
-        return text
-    import re
-    stripped = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
-    lower = stripped.lower()
-    think_idx = lower.find("<think>")
-    if think_idx >= 0:
-        stripped = stripped[:think_idx]
-    return stripped.strip()
 
 
 class VideoOptimizer:

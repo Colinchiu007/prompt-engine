@@ -23,10 +23,15 @@ def _tokenize(text: str) -> list[str]:
 class PromptVectorStore:
     """Prompt 检索库 — 手写 TF-IDF 语义检索，零下载、零第三方依赖。"""
 
-    def __init__(self, persist_dir: str | Path, data_file: str = "index.json"):
+    def __init__(
+        self, persist_dir: str | Path, data_file: str = "index.json", default_platform: str = "generic_video",
+    ):
+        """default_platform：add_prompts 时条目缺 platform 的回退值（视频引擎历史语义；
+        图片引擎如后续迁移需显式传图片默认平台）。"""
         self._dir = Path(persist_dir)
         self._dir.mkdir(parents=True, exist_ok=True)
         self._index_path = self._dir / data_file
+        self._default_platform = default_platform
         self._docs: list[dict[str, Any]] = []
         self._load()
 
@@ -56,7 +61,7 @@ class PromptVectorStore:
                 "description": getattr(e, "description", ""),
                 "document": getattr(e, "prompt_text", ""),
                 "language": getattr(e, "language", "en"),
-                "platform": getattr(e, "platform", "generic_video"),
+                "platform": getattr(e, "platform", None) or self._default_platform,
                 "style": getattr(e, "style", ""),
                 "categories": list(getattr(e, "categories", [])),
                 "quality_score": getattr(e, "quality_score", 5),

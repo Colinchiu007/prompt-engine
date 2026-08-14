@@ -28,5 +28,9 @@ class StrategyRegistry(Generic[T]):
     def list(self) -> list[str]:
         return sorted(self._registry.keys())
 
+    def items(self) -> list[tuple[str, T]]:
+        """按注册（插入）顺序返回 (key, value) 列表。"""
+        return list(self._registry.items())
+
     def __contains__(self, platform: str) -> bool:
         return str(platform or "").lower() in self._registry

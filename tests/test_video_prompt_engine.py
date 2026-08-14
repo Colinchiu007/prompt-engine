@@ -205,13 +205,18 @@ class TestApi:
 
 class TestIndependence:
     def test_no_import_prompt_engine(self):
-        """独立断言：视频引擎源码不得引用图片 prompt_engine。"""
+        """独立断言：视频引擎源码不得引用图片引擎领域层 prompt_engine。
+
+        允许依赖领域无关共享内核 prompt_engine_core（openspec engine-shared-core
+        「领域层代码零耦合」条款：不得 import 对方领域层，允许依赖 prompt_engine_core）。
+        负向前瞻 (?!_) 保证 prompt_engine_core 等共享内核模块不命中。
+        """
         root = Path(__file__).parent.parent / "video_prompt_engine"
         offenders = []
         for f in root.rglob("*.py"):
             text = f.read_text(encoding="utf-8")
             import re
-            if re.search(r"^\s*(import|from) prompt_engine", text, re.MULTILINE):
+            if re.search(r"^\s*(import|from) prompt_engine(?!_)", text, re.MULTILINE):
                 offenders.append(str(f))
         assert offenders == [], f"视频引擎不得 import 图片引擎: {offenders}"
 

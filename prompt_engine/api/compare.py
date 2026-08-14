@@ -32,7 +32,7 @@ from prompt_engine.api.minimax_client import (
     MinimaxImageError,
     generate_minimax_images,
 )
-from prompt_engine.optimizer import strip_reasoning_blocks
+from prompt_engine_core.text import strip_reasoning_blocks
 
 router = APIRouter(tags=["compare"])
 

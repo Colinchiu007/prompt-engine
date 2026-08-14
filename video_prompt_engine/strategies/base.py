@@ -11,6 +11,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
+from prompt_engine_core.registry import StrategyRegistry
+from prompt_engine_core.text import clamp_int, clean_str_list
 from video_prompt_engine.models import VideoPlatformType, VIDEO_DIRECTOR_LIMITS
 
 _DIRECTOR_LIMITS = VIDEO_DIRECTOR_LIMITS
@@ -18,31 +20,20 @@ _DIRECTOR_LIMITS = VIDEO_DIRECTOR_LIMITS
 # 镜头字段 camera/shot 长度对齐模型层（VideoBeat/VideoShot max_length=50），与契约 VIDEO_ENGINE_LIMITS 无对应上限
 _CAMERA_MAX = 50
 
-_REGISTRY: dict[str, type["BaseVideoStrategy"]] = {}
+_REGISTRY: StrategyRegistry[type["BaseVideoStrategy"]] = StrategyRegistry()
 
 
 def register(platform: str):
-    """策略注册装饰器。"""
-    def decorator(cls):
-        _REGISTRY[platform] = cls
-        return cls
-    return decorator
+    """策略注册装饰器（复用共享内核注册器）。"""
+    return _REGISTRY.register(platform)
 
 
 def get_strategy(platform: str) -> type["BaseVideoStrategy"] | None:
-    return _REGISTRY.get(str(platform or "").lower())
+    return _REGISTRY.get(platform)
 
 
 def list_strategies() -> list[str]:
-    return sorted(_REGISTRY.keys())
-
-
-def _clamp_int(value: Any, lo: int = 1, hi: int = 10, default: int = 5) -> int:
-    try:
-        n = int(value)
-    except (TypeError, ValueError):
-        return default
-    return max(lo, min(hi, n))
+    return _REGISTRY.list()
 
 
 def _clean_aspect(value: Any) -> str:
@@ -58,13 +49,6 @@ def _clean_audio(value: Any) -> str:
     """音频提示归一：strip 截断 50，空回退默认 SFX（对齐契约 appendVideoTrailer）。"""
     cleaned = str(value or "").strip()[:50]
     return cleaned or "SFX"
-
-
-def _clean_str_list(value: Any, limit: int) -> list[str]:
-    """字符串列表清洗：仅保留 strip 后非空项，截断到 limit。"""
-    if not isinstance(value, list):
-        return []
-    return [str(v).strip() for v in value if str(v or "").strip()][:limit]
 
 
 def _clean_swap_pairs(value: Any, limit: int) -> list[dict]:
@@ -223,14 +207,14 @@ class BaseVideoStrategy(ABC):
         return {
             "shot": str(data.get("shot") or "").strip(),
             "camera": str(data.get("camera") or "").strip(),
-            "motion_intensity": _clamp_int(data.get("motion_intensity")),
+            "motion_intensity": clamp_int(data.get("motion_intensity"), 1, 10, 5),
             "scene_transition": str(data.get("scene_transition") or "").strip(),
             "continuity_token": str(data.get("continuity_token") or "").strip(),
             "duration_hint": duration_f,
             # --- Higgsfield 导演维度：全字段钳制/裁剪/清洗，非法值回退默认（C3）---
             "aspect": _clean_aspect(data.get("aspect")),
             "audio": _clean_audio(data.get("audio")),
-            "excluded_characters": _clean_str_list(data.get("excluded_characters"), _DIRECTOR_LIMITS["excluded_characters_max"]),
+            "excluded_characters": clean_str_list(data.get("excluded_characters"), _DIRECTOR_LIMITS["excluded_characters_max"]),
             "no_swap_pairs": _clean_swap_pairs(data.get("no_swap_pairs"), _DIRECTOR_LIMITS["no_swap_pairs_max"]),
             "color_ratio": _clean_color_ratio(data.get("color_ratio")),
             "shots": _clean_shots(data.get("shots")),

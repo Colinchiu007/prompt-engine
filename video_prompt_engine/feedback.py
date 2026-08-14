@@ -7,10 +7,11 @@
 from __future__ import annotations
 
 import json
-import os
 import threading
 import time
 from pathlib import Path
+
+from prompt_engine_core.atomic import atomic_write_json
 
 
 class VideoFeedbackStore:
@@ -28,18 +29,8 @@ class VideoFeedbackStore:
             return []
 
     def _save(self, seeds: list[dict]):
-        # 原子写：临时文件 + 替换，避免并发/半写状态（Windows 语义与图片引擎一致）
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self._path.with_suffix(self._path.suffix + ".tmp")
-        tmp.write_text(json.dumps(seeds, ensure_ascii=False, indent=2), encoding="utf-8")
-        try:
-            os.replace(tmp, self._path)
-        finally:
-            if tmp.exists():
-                try:
-                    tmp.unlink()
-                except OSError:
-                    pass
+        # 原子写：临时文件 + 替换（复用共享内核工具），避免并发/半写状态
+        atomic_write_json(self._path, seeds)
 
     def _load_stats(self) -> dict[str, dict]:
         if not self._stats_path.exists():
@@ -50,17 +41,7 @@ class VideoFeedbackStore:
             return {}
 
     def _save_stats(self, stats: dict[str, dict]):
-        self._stats_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self._stats_path.with_suffix(self._stats_path.suffix + ".tmp")
-        tmp.write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
-        try:
-            os.replace(tmp, self._stats_path)
-        finally:
-            if tmp.exists():
-                try:
-                    tmp.unlink()
-                except OSError:
-                    pass
+        atomic_write_json(self._stats_path, stats)
 
     def submit(self, prompt_text: str, result_prompt: str, good: bool, source: str = "user-feedback",
                failure_patterns: list[str] | None = None) -> dict:
