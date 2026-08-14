@@ -6,17 +6,22 @@ from video_prompt_engine.knowledge.loader import load_seed_video_prompts
 from video_prompt_engine.knowledge.vector_store import PromptVectorStore
 
 
-def build_knowledge_base(config_path: str | None = None, seed_path: str | None = None) -> int:
+def build_knowledge_base(
+    config_path: str | None = None, seed_path: str | None = None, extra_seed_path: str | None = None,
+) -> int:
     cfg = load_config(config_path)
     kb_cfg = cfg.get("knowledge", {})
     if not seed_path:
         seed_path = str(Path(__file__).parent / "seed_video_prompts.json")
+    if extra_seed_path is None:
+        extra_seed_path = str(Path(__file__).parent / "seed_higgsfield_prompts.json")
     persist = kb_cfg.get("persist_dir", "video_prompts_db")
     persist_dir = Path(persist)
     if not persist_dir.is_absolute():
         persist_dir = Path(__file__).parent.parent.parent / persist_dir
 
-    prompts = load_seed_video_prompts(Path(seed_path))
+    extra = Path(extra_seed_path)
+    prompts = load_seed_video_prompts(Path(seed_path), extra if extra.exists() else None)
     store = PromptVectorStore(persist_dir)
     store.clear()
     store.add_prompts(prompts)

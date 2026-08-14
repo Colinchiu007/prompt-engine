@@ -21,6 +21,9 @@ class VideoRAGRetriever:
     def _seed_path(self) -> Path:
         return Path(__file__).parent / "knowledge" / "seed_video_prompts.json"
 
+    def _seed_extra_path(self) -> Path:
+        return Path(__file__).parent / "knowledge" / "seed_higgsfield_prompts.json"
+
     def _init_knowledge(self):
         kb_cfg = self._config.get("knowledge", {})
         if not kb_cfg.get("enabled", True):
@@ -28,7 +31,7 @@ class VideoRAGRetriever:
         # 加载种子（关键词兜底用；向量库不存在时也保留种子兜底能力）
         try:
             from video_prompt_engine.knowledge.loader import load_seed_video_prompts
-            seeds = load_seed_video_prompts(self._seed_path())
+            seeds = load_seed_video_prompts(self._seed_path(), self._seed_extra_path())
             self._seed_entries = [
                 {
                     "id": s.id, "title": s.title, "description": s.description,
@@ -50,8 +53,23 @@ class VideoRAGRetriever:
             logger.info("video knowledge base not built yet; run build_knowledge_base()")
             return
         try:
+            from prompt_engine_core.vector_store import INDEX_VERSION
             from video_prompt_engine.knowledge.vector_store import PromptVectorStore
             self._vector_store = PromptVectorStore(persist_dir)
+            # W4：陈旧索引检测——升级后旧 index.json（缺 higgsfield 语料/旧格式）会导致
+            # 向量路径检索不到新语料，而关键词兜底（种子全量加载）路径正常，两路径不对称。
+            if self._seed_entries and self._vector_store.count < len(self._seed_entries):
+                logger.warning(
+                    "video knowledge base is stale: vector=%d vs seeds=%d; "
+                    "run build_knowledge_base() to include higgsfield corpus",
+                    self._vector_store.count, len(self._seed_entries),
+                )
+            elif self._vector_store.schema_version < INDEX_VERSION:
+                logger.warning(
+                    "video knowledge base index.json schema v%d is outdated (current v%d); "
+                    "run build_knowledge_base() to rebuild",
+                    self._vector_store.schema_version, INDEX_VERSION,
+                )
         except Exception:
             pass
 
@@ -97,14 +115,44 @@ class VideoRAGRetriever:
         scored.sort(key=lambda x: x[0], reverse=True)
         return [dict(e, score=round(s / max(1, len(zh_chunks) + len(en_words)), 2)) for s, e in scored[:top_k]]
 
-    def _format_section(self, items: list[dict]) -> str:
+    def _format_section(self, items: list[dict], budget: int = 6000, per_item_cap: int = 5000) -> str:
+        """few-shot 注入段：预算内选择 + 超长条目截断注入（P2.9 语料资产化）。
+
+        - 预算：整段（段头+标题+代码块+提示词）总字符不超过 budget，防精修层 20KB 语料撑爆上下文
+        - 截断：正文按 min(per_item_cap, 剩余预算) 截取头部并标注 [truncated]，不整条丢弃；
+          预算小于单条上限时正文以预算为第二重截断下限，保证至少注入一条（W1）
+        - 前缀去重：250 字符前缀相同的近重复变体只注入首条（语料冗余压缩）
+        - 条数：仅由 budget 约束，不设固定上限（W2；历史实现曾硬编码 3 条）
+        """
         if not items:
             return ""
         section = "\n\n## 高质量视频参考示例（请参考这些 prompt 的风格和结构）:\n"
+        used = len(section)
+        seen_prefixes: set[str] = set()
+        shown = 0
         for i, item in enumerate(items, 1):
+            doc = str(item.get("document") or "")
+            if not doc:
+                continue
+            prefix = doc[:250]
+            if prefix in seen_prefixes:
+                continue
+            seen_prefixes.add(prefix)
             title = item.get("title") or f"示例 {i}"
-            section += f"\n### 参考 {i}: {title}\n```\n{item['document']}\n```\n"
-        return section
+            cap = min(per_item_cap, max(0, budget - used))
+            if cap <= 0:
+                break
+            capped = doc[:cap]
+            truncated = "…[truncated]" if len(doc) > cap else ""
+            block = f"{capped}{truncated}"
+            block_full = f"\n### 参考 {i}: {title}\n```\n{block}\n```\n"
+            if used + len(block_full) > budget and shown > 0:
+                break
+            # 首条在极小预算下也注入（标题/围栏开销可能略超预算），避免整段空注入
+            section += block_full
+            used += len(block_full)
+            shown += 1
+        return section if shown else ""
 
     def retrieve_few_shot(self, request: VideoOptimizeRequest, platform: str | None = None) -> str:
         query = f"{request.style + ' ' if request.style else ''}{request.prompt}"

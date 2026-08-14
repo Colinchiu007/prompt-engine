@@ -1,0 +1,12 @@
+{
+  "id": "higgsfield-p2-corpus-cost-model",
+  "title": "Higgsfield DEEP P2 落地：语料 few-shot 资产化 + 抽卡成本模型 + shots[] 契约层核对",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "video-prompt-engine",
+  "currentPhase": "review",
+  "nextAction": "Claude 评审 0 Critical（W1-W5 全修复 + 26 项测试 654 全绿），推 PR",
+  "createdAt": "2026-08-14T12:00:00Z",
+  "branch": "codex/higgsfield-p2"
+}

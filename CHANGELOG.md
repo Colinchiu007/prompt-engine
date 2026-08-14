@@ -1,3 +1,12 @@
+## [未发布] 功能：Higgsfield DEEP P2 落地（语料 few-shot 资产化 + 抽卡成本模型 + 向量检索 O(n²) 修复，2026-08-14）
+
+- **语料资产化（P2.9）**：`knowledge/seed_higgsfield_prompts.json` 258 条《Hell Grind》公开语料种子（590 条原始 → 按 prompt_text 去重，同 prompt 多 job 参数变体不重复入库；精修 106/批量 100/变体 29/资产 23，seedance 234 + 其他视频模型 24）；`scripts/build_higgsfield_seeds.py` 幂等重建（确定性排序 + 去重），loader 合并加载（`load_seed_video_prompts` extra_path 参数），关键词兜底与向量检索双路径共用
+- **向量检索 O(n²) → 预计算索引**：`prompt_engine_core/vector_store.py` 预计算 df/词项计数/范数（140→730 条后检索从 ~119s/查询 降到 warm 17ms）；300 次随机查询 fuzz（含 platform 过滤/top_k 随机）新旧算法结果逐位一致
+- **few-shot 注入预算硬化**：`_format_section` 预算即第二重截断下限（预算 < 单条上限也保证至少注入一条，W1）、取消 3 条硬上限改由 budget 唯一约束（W2）、预算计数含标题/围栏（docstring 与实现一致）
+- **抽卡成本模型（P2.10）**：`docs/HELLGRIND-NUM-CANDIDATES-COST-MODEL.md` 63:1 淘汰率 → batch 3-5 候选 / refined 1-2 候选的分层漏斗参数化
+- **评审修复（Claude 单模型，antigravity 地区不可用降级）**：search zip 迭代消除并发写 IndexError（W3）；index.json 版本化 `{"version":2,"docs":[...]}` + 历史裸列表兼容 + 陈旧索引启动告警（向量 < 种子条数或 schema 旧时提示重跑 build_knowledge_base，W4）；`_tfidf`/`_cosine` 标注 legacy；冷启动主动建索引（1.5s 移到进程启动）
+- **测试**：+26 项（语料结构/tier/平台白名单/确定性重建、预算截断/极小预算兜底/条数上限回归、版本化读写/旧格式兼容/陈旧告警、O(n²) 修复等价性与重建）；全量 654 passed（3 skipped）
+
 ## [未发布] 重构：图片/视频提示词引擎共享内核迁移（engine-shared-core Phase 2-4，2026-08-14）
 
 - **共享内核 Phase 2（视频引擎迁移 core）**：`video_prompt_engine/llm/base.py` 改为继承 `prompt_engine_core.llm.BaseLLMProvider`（带回 W1 默认 16384 max_tokens cap，防长模板 max_tokens=40000 被上游 400 拒绝）；`strategies/base.py` 注册器换用 `prompt_engine_core.registry.StrategyRegistry`（register/get_strategy/list_strategies 行为一致），`_clamp_int`/`_clean_str_list` 复用 core.text；`feedback.py` 种子/失败统计写入复用 core.atomic 原子写；`knowledge/loader.py` 种子与关键词解析委托 core.knowledge 骨架；`knowledge/vector_store.py` 直接复用 core TF-IDF 实现（模块路径保留，调用方零改动）；`optimizer.py` `<think>` 剥离改从 core.text 导入

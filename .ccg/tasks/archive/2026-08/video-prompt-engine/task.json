@@ -1,12 +1,12 @@
 {
   "id": "video-prompt-engine",
   "title": "独立视频提示词优化引擎 video_prompt_engine（与图片引擎完全分离）+ 视频关键词库（7 仓库复用）",
-  "status": "in_progress",
+  "status": "completed",
   "complexity": "L",
   "risk": "medium",
   "domain": "video-prompt-engine",
-  "currentPhase": "planning",
-  "nextAction": "写设计文档（PRD/ARCH/实现分析）+ openspec proposal/design/specs/tasks",
+  "currentPhase": "completed",
+  "nextAction": "已完成：独立引擎 8020 全量落地（PR 合并），归档补录",
   "createdAt": "2026-08-12T16:00:00Z",
   "branch": "codex/video-prompt-engine",
   "openspecChange": "video-prompt-engine"

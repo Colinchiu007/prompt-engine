@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 from prompt_engine_core.knowledge import load_keywords, load_seed_entries
@@ -22,19 +23,36 @@ class VideoPromptEntry:
     source: str = ""
 
 
-def load_seed_video_prompts(path: Path) -> list[VideoPromptEntry]:
+def _seed_to_entry(e) -> VideoPromptEntry:
+    return VideoPromptEntry(
+        id=e.id, title=e.title, description=e.description, prompt_text=e.prompt_text,
+        language=e.language, platform=e.platform, style=e.style,
+        categories=list(e.categories), quality_score=e.quality_score, source=e.source,
+    )
+
+
+@lru_cache(maxsize=4)
+def _load_seed_entries_cached(path: str, extra_path: str | None) -> tuple[VideoPromptEntry, ...]:
+    """缓存版种子加载（主文件 + 可选 higgsfield 语料文件合并）。
+
+    语料文件 ~3MB（去重后 258 条），多个 VideoOptimizer 实例共享一次解析结果；
+    extra_path 缺失时静默跳过（旧 checkout 兼容）。
+    """
+    entries = [_seed_to_entry(e) for e in load_seed_entries(path, fallback_prefix="vseed", default_platform="generic_video")]
+    if extra_path:
+        extra = Path(extra_path)
+        if extra.exists():
+            entries += [_seed_to_entry(e) for e in load_seed_entries(extra, fallback_prefix="hg", default_platform="generic_video")]
+    return tuple(entries)
+
+
+def load_seed_video_prompts(path: Path, extra_path: Path | None = None) -> list[VideoPromptEntry]:
     """加载视频种子（复用共享内核解析骨架，保持 VideoPromptEntry 领域模型）。
 
     平台字段缺失时回退 generic_video（历史行为）；显式写入的 platform 原样保留。
+    extra_path（如 seed_higgsfield_prompts.json）存在时合并加载（P2.9 语料资产化）。
     """
-    return [
-        VideoPromptEntry(
-            id=e.id, title=e.title, description=e.description, prompt_text=e.prompt_text,
-            language=e.language, platform=e.platform, style=e.style,
-            categories=e.categories, quality_score=e.quality_score, source=e.source,
-        )
-        for e in load_seed_entries(path, fallback_prefix="vseed", default_platform="generic_video")
-    ]
+    return list(_load_seed_entries_cached(str(path), str(extra_path) if extra_path is not None else None))
 
 
 def load_keywords_video(path: Path) -> dict[str, list[dict]]:
