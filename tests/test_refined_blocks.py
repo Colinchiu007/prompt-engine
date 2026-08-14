@@ -158,6 +158,25 @@ class TestC6TrailerStrip:
         body = "hero walks. " + self.TAIL
         rendered = BaseVideoStrategy.append_trailer(body, {"aspect": "16:9", "duration_hint": 15, "audio": "SFX"}, tier=REFINED)
         assert rendered.count("NON-IP") == 1
+    def test_mid_literal_no_music_ending_still_appends_tail(self):
+        # 评审 C1-1：中段字面量 + 末行 No music. 结尾（跨块）→ 仍须追加真实尾行、FINAL FRAME 保留
+        text = (
+            "SCENE NOTE: The end. Photoreal NON-IP aesthetic with deep blacks.\n\n"
+            "FINAL FRAME: Roko draped. No music."
+        )
+        rendered = BaseVideoStrategy.append_trailer(text, {"aspect": "16:9", "duration_hint": 15, "audio": "SFX"}, tier=REFINED)
+        assert "FINAL FRAME: Roko draped. No music." in rendered
+        assert rendered.endswith("Photoreal. NON-IP. 16:9. 15s. SFX only.")
+        stripped = strip_rendered_trailer(text, self.TAIL)
+        assert "FINAL FRAME: Roko draped. No music." in stripped
+
+    def test_strip_bare_non_ip_fragment(self):
+        # 评审 C1-2：残缺裸尾行（Photoreal. NON-IP. 收尾）→ 剥离防双尾行残留
+        assert strip_rendered_trailer("hero walks. Photoreal. NON-IP.", self.TAIL) == "hero walks."
+        assert strip_rendered_trailer("hero walks. photoreal. non-ip.", self.TAIL) == "hero walks."
+        # 中段字面量后接描述性正文（非 NON-IP 收尾）→ 保留
+        body = "SCENE NOTE: The end. Photoreal NON-IP aesthetic with deep blacks."
+        assert strip_rendered_trailer(body, self.TAIL) == body
 
 
 class TestBlockCoverage:

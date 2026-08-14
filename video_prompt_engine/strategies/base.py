@@ -398,13 +398,15 @@ class BaseVideoStrategy(ABC):
         text = str(rendered or "").rstrip()
         if tier != "refined" or not text:
             return text
-        # 幂等（评审 C1）：仅当文本「以尾行形态结束」（LLM 直出尾行或契约层已 append）时不重复；
+        # 幂等（评审 C1/C1-1）：仅当「最后一段」（\n\n 块分隔之后）以尾行形态结束时不重复；
         # 与 strip_rendered_trailer 同口径——中段字面量（如 "Photoreal NON-IP aesthetic"）
-        # 即使位于末行也不算已含尾行，真实尾行照常追加
+        # 即使位于末行也不算已含尾行；限定最后一段防止 DOTALL 跨块吸收到偶然的
+        # only./Audio:/No music. 结尾（评审 C1-1 复现洞）
         import re
+        last_block = re.split(r"\n\s*\n", text)[-1]
         if re.search(
             r"Photoreal\.?\s+NON-IP\.?\s+.*?(?:only\.|Audio:.*|No music\.)\s*$",
-            text, flags=re.IGNORECASE | re.DOTALL,
+            last_block, flags=re.IGNORECASE | re.DOTALL,
         ):
             return text
         return f"{text} {cls.build_tail(meta)}"

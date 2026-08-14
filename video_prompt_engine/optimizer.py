@@ -48,12 +48,13 @@ JSON_RETRY_HINT = (
 
 
 def strip_rendered_trailer(optimized: str, tail: str) -> str:
-    """C6 尾行剥离（可测单元）：从「最后一个以尾行形态存在」的 Photoreal NON-IP 起剥离到串尾。
+    """C6 尾行剥离（可测单元）：从「最后一段内以尾行形态存在」的 Photoreal NON-IP 起剥离到串尾。
 
     兼容旧形态 `{audio} only.` 与 Round3 Audio 段形态（Audio: ... / No music. 结尾）；
-    末位匹配必须「以尾行形态继续」（评审 C1）——blocks 中段字面量（如
-    "Photoreal NON-IP aesthetic with deep blacks"）即使位于末位也不算尾行，FINAL FRAME
-    等后续块不误删（评审 Warning-5 口径延续）。
+    尾行形态判定限定在最后一段（\n\n 块分隔之后，评审 C1-1）——正文中段字面量（如
+    "Photoreal NON-IP aesthetic with deep blacks"）即使后接 only./Audio:/No music. 结尾
+    也不跨块吸收，FINAL FRAME 等后续块不误删（评审 Warning-5 口径延续）。
+    残缺裸尾行（以 NON-IP. 收尾的短残片，评审 C1-2）同样剥离，防 append 后双尾行残留。
     无尾行形态时回退 endswith(tail) 精确剥离；两者都不中 → 原样返回（调用方自行截断）。
     """
     import re
@@ -61,10 +62,19 @@ def strip_rendered_trailer(optimized: str, tail: str) -> str:
         r"Photoreal\.?\s+NON-IP\.?\s+.*?(?:only\.|Audio:.*|No music\.)\s*$",
         flags=re.IGNORECASE | re.DOTALL,
     )
-    matches = list(re.finditer(r"Photoreal\.?\s+NON-IP\.?", optimized, flags=re.IGNORECASE))
-    for m in reversed(matches):
-        if _TAIL_FORM_RE.match(optimized[m.start():]):
-            return optimized[: m.start()].rstrip()
+    blocks = re.split(r"\n\s*\n", optimized)
+    last_block = blocks[-1]
+    m = re.search(r"Photoreal\.?\s+NON-IP\.?", last_block, flags=re.IGNORECASE)
+    if m and _TAIL_FORM_RE.match(last_block[m.start():]):
+        body = optimized[: len(optimized) - len(last_block) + m.start()].rstrip()
+        return re.sub(r"\n\s*$", "", body)
+    if m:
+        # 评审 C1-2：残缺裸尾行（Photoreal...NON-IP 后无 only./Audio/No music 且以句点收尾、
+        # 单行残片）→ 剥离防双尾行；中段字面量（后接描述性正文）不以 NON-IP. 结尾 → 保留
+        suffix = last_block[m.start():]
+        if "\n" not in suffix and re.search(r"non-ip\.\s*$", suffix, flags=re.IGNORECASE):
+            body = optimized[: len(optimized) - len(last_block) + m.start()].rstrip()
+            return re.sub(r"\n\s*$", "", body)
     if tail and optimized.endswith(tail):
         return optimized[: -len(tail)].rstrip()
     return optimized
