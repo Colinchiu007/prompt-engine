@@ -1,0 +1,173 @@
+[
+  {
+    "name_en": "Emmanuel Lubezki",
+    "name_zh": "艾曼努尔·卢贝兹基",
+    "aliases": [
+      "lubezki",
+      "chivo"
+    ],
+    "style_desc": "手持长镜头 + 自然光连续运动，一镜到底的空间沉浸感",
+    "look": "long handheld takes, natural available light, seamless camera movement, immersive continuous space"
+  },
+  {
+    "name_en": "Roger Deakins",
+    "name_zh": "罗杰·狄金斯",
+    "aliases": [
+      "deakins"
+    ],
+    "style_desc": "光影对比大师：高反差布光 + 精准构图，明暗叙事",
+    "look": "high-contrast chiaroscuro lighting, meticulous composition, silhouettes and light beams, neutral palette"
+  },
+  {
+    "name_en": "Thomas Vinterberg",
+    "name_zh": "托马斯·温特伯格",
+    "aliases": [
+      "vinterberg"
+    ],
+    "style_desc": "Dogme 95 手持纪实：肩扛摄影机 + 自然光 + 即兴感",
+    "look": "handheld documentary realism, available light, spontaneous framing, no artificial effects"
+  },
+  {
+    "name_en": "Denis Villeneuve",
+    "name_zh": "丹尼斯·维伦纽瓦",
+    "aliases": [
+      "villeneuve",
+      "denis villeneuve"
+    ],
+    "style_desc": "宏大极简构图 + 低饱和色调，史诗感的沉默张力",
+    "look": "vast minimal compositions, desaturated color grade, geometric symmetry, slow wide shots, oppressive atmosphere"
+  },
+  {
+    "name_en": "Christopher Nolan",
+    "name_zh": "克里斯托弗·诺兰",
+    "aliases": [
+      "nolan",
+      "christopher nolan"
+    ],
+    "style_desc": "IMAX 实拍质感 + 时间非线性的空间叙事",
+    "look": "IMAX-scale practical photography, intricate spatial storytelling, cold steel palette, gravity-defying set pieces"
+  },
+  {
+    "name_en": "Wes Anderson",
+    "name_zh": "韦斯·安德森",
+    "aliases": [
+      "wes anderson",
+      "anderson"
+    ],
+    "style_desc": "对称构图 + 粉彩色板 + 平面舞台感，童话般的秩序",
+    "look": "perfectly symmetrical compositions, pastel color palette, flat theatrical staging, whip pans, centered subjects"
+  },
+  {
+    "name_en": "Ridley Scott",
+    "name_zh": "雷德利·斯科特",
+    "aliases": [
+      "ridley scott"
+    ],
+    "style_desc": "赛博朋克视觉奠基：烟雾体积光 + 工业废墟",
+    "look": "volumetric smoke and god rays, industrial decay, neon-tinged darkness, atmospheric haze"
+  },
+  {
+    "name_en": "Stanley Kubrick",
+    "name_zh": "斯坦利·库布里克",
+    "aliases": [
+      "kubrick",
+      "stanley kubrick"
+    ],
+    "style_desc": "单点透视对称 + 冷峻理性，完美几何秩序",
+    "look": "one-point perspective symmetry, clinical cold palette, perfectly balanced geometry, slow deliberate dolly shots"
+  },
+  {
+    "name_en": "Terrence Malick",
+    "name_zh": "泰伦斯·马力克",
+    "aliases": [
+      "malick",
+      "terrence malick"
+    ],
+    "style_desc": "诗意自然光：金色时刻 + 漂浮镜头，冥想式叙事",
+    "look": "golden hour natural light, floating camera, lyrical nature imagery, meditative pacing, soft focus"
+  },
+  {
+    "name_en": "Wong Kar-wai",
+    "name_zh": "王家卫",
+    "aliases": [
+      "wong kar-wai",
+      "王家卫",
+      "kar wai"
+    ],
+    "style_desc": "手持霓虹 + 慢快门拖影 + 高饱和胶片色，都市孤独感",
+    "look": "handheld neon-soaked frames, slow-shutter motion blur, saturated film stock colors, rain-soaked city nights"
+  },
+  {
+    "name_en": "Akira Kurosawa",
+    "name_zh": "黑泽明",
+    "aliases": [
+      "kurosawa",
+      "akira kurosawa",
+      "黑泽明"
+    ],
+    "style_desc": "动态构图 + 天气元素（雨/风/烟）强化戏剧张力",
+    "look": "dynamic diagonal compositions, weather as drama (rain, wind, dust), telephoto compression, swordplay energy"
+  },
+  {
+    "name_en": "Zhang Yimou",
+    "name_zh": "张艺谋",
+    "aliases": [
+      "zhang yimou",
+      "张艺谋",
+      "yimou"
+    ],
+    "style_desc": "高饱和色彩 + 对称阵列 + 东方仪式感",
+    "look": "vivid saturated colors, symmetrical formations, choreographed masses, silk and lantern textures, ceremonial rhythm"
+  },
+  {
+    "name_en": "Hoyte van Hoytema",
+    "name_zh": "霍伊特·范·霍特玛",
+    "aliases": [
+      "hoytema",
+      "van hoytema"
+    ],
+    "style_desc": "胶片颗粒 + IMAX 巨幅画面，亲近而宏大的触感",
+    "look": "organic film grain, IMAX-scale intimate close-ups, tactile textures, naturalistic skin tones, stark landscapes"
+  },
+  {
+    "name_en": "Greig Fraser",
+    "name_zh": "格雷格·弗雷泽",
+    "aliases": [
+      "greig fraser",
+      "fraser"
+    ],
+    "style_desc": "实景光影 + 沙尘颗粒，粗粝的真实感",
+    "look": "practical location lighting, dust and haze particles, gritty realism, warm sun against cold shade"
+  },
+  {
+    "name_en": "Janusz Kamiński",
+    "name_zh": "雅努什·卡明斯基",
+    "aliases": [
+      "kaminski",
+      "janusz kaminski"
+    ],
+    "style_desc": "逆光轮廓 + 烟雾弥漫，梦境般的柔焦高光",
+    "look": "backlit silhouettes, hazy smoke-filled air, dreamlike soft highlights, blown-out windows, muted war palette"
+  },
+  {
+    "name_en": "Christopher Doyle",
+    "name_zh": "杜可风",
+    "aliases": [
+      "christopher doyle",
+      "doyle",
+      "杜可风"
+    ],
+    "style_desc": "手持晃动 + 高饱和霓虹 + 广角变形，情绪化摄影",
+    "look": "shaky handheld, saturated neon, wide-angle distortion, off-kilter framing, emotional improvisation"
+  },
+  {
+    "name_en": "Alfonso Cuarón",
+    "name_zh": "阿方索·卡隆",
+    "aliases": [
+      "cuaron",
+      "alfonso cuaron"
+    ],
+    "style_desc": "一镜到底长镜头 + 空间纵深调度，流体般运动",
+    "look": "unbroken long takes, deep-space blocking, fluid camera choreography, naturalistic lighting shifts"
+  }
+]

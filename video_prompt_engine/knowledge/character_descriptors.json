@@ -1,0 +1,115 @@
+[
+  {
+    "id": "cd_combat_robot",
+    "name": "Combat Training Robot",
+    "name_zh": "战斗训练机器人",
+    "aliases": ["combat robot", "training robot", "战斗机器人"],
+    "descriptor": "full body, exoskeleton made of weapon metal, hydraulic pistons, carbon fiber cables resembling artificial muscles, sharp angular armor plates, skull-like robotic head with a single glowing red sensor eye, aggressive predatory silhouette, long powerful arms with mechanical claw hands, narrow athletic torso, visible articular mechanisms, tactical minimalistic design, military equipment of the near future, physically functional and plausible",
+    "views": ["front view", "back view", "3/4 fighting stance view"],
+    "negative": "no second eye socket, no human skull anatomy, no glossy CGI finish, no soft toy aesthetic, no cartoon proportions",
+    "variants": [
+      {"name": "dirty ivory-gray exoskeleton", "descriptor": "dirty ivory-gray exoskeleton with battle wear, scuffed plates"},
+      {"name": "white exoskeleton", "descriptor": "clean white exoskeleton, unweathered, pristine armor"}
+    ],
+    "evidence": "Assets 34c88b2f 卡 0/1/12/25/40（战斗训练机器人角色设计卡）"
+  },
+  {
+    "id": "cd_survivor",
+    "name": "Survivor",
+    "name_zh": "幸存者",
+    "aliases": ["survivor", "the survivor", "幸存者"],
+    "descriptor": "gaunt exhausted adult, weathered layered clothing with grime and dust, visible fatigue in posture, unkempt hair, dirt-streaked face, alert wary eyes, practical worn gear, slow deliberate movement",
+    "views": ["front view", "back view", "3/4 profile view"],
+    "negative": "no clean pristine outfit, no glamour lighting, no heroic poses, no perfect skin",
+    "variants": [
+      {"name": "post-apocalyptic survivor", "descriptor": "post-apocalyptic scavenger with improvised armor patches and a cloth mask"},
+      {"name": "war refugee survivor", "descriptor": "war-weary refugee with dust-coated coat and makeshift carrying bag"}
+    ],
+    "evidence": "通用原型（Higgsfield 纪实/低照度语料风格）"
+  },
+  {
+    "id": "cd_neon_detective",
+    "name": "Neon Detective",
+    "name_zh": "霓虹侦探",
+    "aliases": ["detective", "neon detective", "侦探"],
+    "descriptor": "world-weary detective in a rain-soaked trench coat, collar half-up, fedora casting deep shadow over the eyes, cigarette glow accent, slow-shutter neon reflections on wet fabric, city-night palette of magenta and cyan",
+    "views": ["front view", "back view", "3/4 profile view"],
+    "negative": "no bright daylight, no flat frontal lighting, no clean modern suit, no warm cozy interior",
+    "variants": [
+      {"name": "noir detective", "descriptor": "black-and-white noir detective, hard shadows, venetian blind stripes"},
+      {"name": "cyberpunk detective", "descriptor": "cyberpunk detective with augmented-eye implant glow and techwear trench"}
+    ],
+    "evidence": "王家卫/杜可风手持霓虹风格（director_styles 联动）"
+  },
+  {
+    "id": "cd_cyber_soldier",
+    "name": "Cybernetic Soldier",
+    "name_zh": "义体战士",
+    "aliases": ["cyber soldier", "cyborg soldier", "cybernetic soldier", "义体战士"],
+    "descriptor": "soldier with visible cybernetic limb implants, matte-black tactical armor, exposed servo joints and cabling at the elbows and neck, scarred face, short-cropped hair, compact rifle held low, grounded combat stance",
+    "views": ["front view", "back view", "3/4 action stance view"],
+    "negative": "no clean sci-fi gloss, no neon costume armor, no exaggerated prosthetics, no superhero physique",
+    "variants": [
+      {"name": "heavy infantry", "descriptor": "heavy infantry with powered exoskeleton frame and helmet-mounted optics"},
+      {"name": "stealth operative", "descriptor": "stealth operative in dark cloth-and-plate hybrid gear with suppressed sidearm"}
+    ],
+    "evidence": "通用军事原型（近未来写实方向）"
+  }
+,
+  {
+    "id": "cd_wuxia_heroine",
+    "name": "Wuxia Heroine",
+    "name_zh": "武侠女侠",
+    "aliases": ["wuxia heroine", "swordswoman", "女侠", "剑客"],
+    "descriptor": "swift swordswoman in layered flowing robes, long sleeves and trailing sash, hair bound with a simple cord, calm focused eyes, blade at rest with hand on the hilt, poised stance with weight shifted, silk and lantern textures, ceremonial rhythm",
+    "views": ["front view", "back view", "3/4 sword stance view"],
+    "negative": "no fantasy armor, no glowing magic effects, no modern clothing, no wire-work floatiness",
+    "variants": [
+      {"name": "classic wuxia", "descriptor": "classic wuxia in muted earth-tone robes with jade accent"},
+      {"name": "colorful opera", "descriptor": "high-saturation opera-inspired costume with symmetrical embroidered patterns"}
+    ],
+    "evidence": "张艺谋高饱和色彩/对称阵列风格（director_styles 联动）"
+  },
+  {
+    "id": "cd_old_man",
+    "name": "Elderly Villager",
+    "name_zh": "老人",
+    "aliases": ["old man", "elder", "elderly", "老人", "老者"],
+    "descriptor": "elderly figure with deeply lined weathered face, white thinning hair, sun-darkened skin, simple worn traditional clothing, slow measured gestures, quiet dignified presence, hands with visible veins and calluses",
+    "views": ["front view", "back view", "3/4 profile view"],
+    "negative": "no exaggerated wrinkles, no costume-shop aging makeup look, no frail comedic portrayal",
+    "variants": [
+      {"name": "rural elder", "descriptor": "rural elder in a padded jacket and cloth cap, holding a cane"},
+      {"name": "monk elder", "descriptor": "monk elder in grey robes with prayer beads, composed stillness"}
+    ],
+    "evidence": "通用人物原型（纪实/文戏方向）"
+  },
+  {
+    "id": "cd_masked_marauder",
+    "name": "Masked Marauder",
+    "name_zh": "蒙面掠夺者",
+    "aliases": ["marauder", "masked marauder", "掠夺者"],
+    "descriptor": "hulking masked figure in patched leather and canvas, hood up, lower face wrapped in dark cloth, heavy boots, improvised weapons strapped across the back, menacing deliberate gait, dust and haze clinging to the silhouette",
+    "views": ["front view", "back view", "3/4 menacing approach view"],
+    "negative": "no clear face reveal, no comedic bandit look, no shiny costume armor, no friendly expression",
+    "variants": [
+      {"name": "wasteland marauder", "descriptor": "wasteland marauder with skull-painted mask and scrap-metal shoulder pad"},
+      {"name": "forest raider", "descriptor": "forest raider in earth-tone furs with bone-totem pendant"}
+    ],
+    "evidence": "通用反派原型（氛围/压迫方向）"
+  },
+  {
+    "id": "cd_child",
+    "name": "Child Protagonist",
+    "name_zh": "儿童主角",
+    "aliases": ["child", "kid", "boy", "girl", "孩子", "小孩"],
+    "descriptor": "small child protagonist, oversized worn clothing, tousled hair, curious wide eyes, scraped knees and dusty shoes, natural unposed movement, soft diffused light, vulnerable but determined presence",
+    "views": ["front view", "back view", "3/4 profile view"],
+    "negative": "no doll-like features, no studio gloss, no adult styling, no overly cute exaggeration",
+    "variants": [
+      {"name": "street kid", "descriptor": "street kid in patched jacket with a worn backpack"},
+      {"name": "rural child", "descriptor": "rural child in simple cotton clothes, barefoot or straw sandals"}
+    ],
+    "evidence": "通用人物原型（情感/文戏方向）"
+  }
+]

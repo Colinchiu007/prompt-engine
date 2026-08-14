@@ -598,3 +598,197 @@ class TestReviewFixes:
         sp_zh = get_strategy("generic_video").build_system_prompt(
             creative_level=8, max_length=5000, output_language="zh", tier="refined")
         assert "500-5000 Chinese chars" in sp_zh
+
+class TestDirectorStyle:
+    """P1-6 导演风格词典（DEEP 报告）：解析 + generic_video 注入。"""
+
+    @staticmethod
+    def _styles():
+        from pathlib import Path as _P
+        from video_prompt_engine.knowledge.loader import load_director_styles
+        return load_director_styles(_P(__file__).resolve().parent.parent / "video_prompt_engine" / "knowledge" / "director_styles.json")
+
+    def test_resolve_english_name_case_insensitive(self):
+        from video_prompt_engine.knowledge.loader import resolve_director_style
+        styles = self._styles()
+        hit = resolve_director_style("Lubezki 风格", styles)
+        assert hit is not None and hit["name_en"] == "Emmanuel Lubezki"
+        hit2 = resolve_director_style("in lubezki style", styles)
+        assert hit2 is not None and hit2["name_en"] == "Emmanuel Lubezki"
+
+    def test_resolve_alias(self):
+        from video_prompt_engine.knowledge.loader import resolve_director_style
+        styles = self._styles()
+        assert resolve_director_style("chivo look", styles)["name_en"] == "Emmanuel Lubezki"
+
+    def test_resolve_chinese_name(self):
+        from video_prompt_engine.knowledge.loader import resolve_director_style
+        styles = self._styles()
+        assert resolve_director_style("王家卫风格", styles)["name_en"] == "Wong Kar-wai"
+        assert resolve_director_style("黑泽明的雨戏", styles)["name_en"] == "Akira Kurosawa"
+
+    def test_resolve_miss_returns_none(self):
+        from video_prompt_engine.knowledge.loader import resolve_director_style
+        styles = self._styles()
+        assert resolve_director_style("cyberpunk noir", styles) is None
+        assert resolve_director_style("", styles) is None
+        assert resolve_director_style(None, styles) is None
+        # 短名不误命中：子串必须完整出现（单字不匹配）
+        assert resolve_director_style("王", styles) is None
+
+    def test_system_prompt_injects_director_look(self):
+        sp = get_strategy("generic_video").build_system_prompt(
+            style="Lubezki 风格", creative_level=8, max_length=5000, tier="refined"
+        )
+        assert "导演风格引用：手持长镜头" in sp
+        assert "long handheld takes" in sp  # look 注入 system prompt
+
+    def test_system_prompt_miss_keeps_style_without_look(self):
+        sp = get_strategy("generic_video").build_system_prompt(
+            style="cyberpunk noir", creative_level=5, max_length=1800, tier="batch"
+        )
+        assert "风格：cyberpunk noir" in sp
+        assert "long handheld takes" not in sp
+
+    def test_optimize_full_flow_passes_director_look_to_llm(self):
+        import json
+        raw = json.dumps({
+            "prompt": "a sleek black cat dashes through a neon alley, cinematic medium-wide shot, "
+                      "slow dolly-in, cool blue and magenta palette, dramatic rim lighting, sfx of distant traffic",
+            "shot": "medium_wide", "camera": "dolly", "motion_intensity": 7,
+            "scene_transition": "cut", "continuity_token": "cat_neon_alley", "duration_hint": 5,
+        })
+        o = make_optimizer()
+        o._provider = mock_provider(raw)
+        r = o.optimize(VideoOptimizeRequest(
+            prompt="black cat in neon alley", style="王家卫风格",
+            creative_level=8, max_length=5000,
+        ))
+        assert r.video is not None
+        sp = o._provider.call.call_args.args[0]
+        assert "导演风格引用：手持霓虹" in sp
+        assert "handheld neon-soaked frames" in sp
+
+class TestFailurePatternLoop:
+    """P1-3 失败模式闭环（DEEP 报告 3.1/五-12）：规则库 + feedback 采集统计。"""
+
+    @staticmethod
+    def _rules():
+        from pathlib import Path as _P
+        from video_prompt_engine.knowledge.loader import load_failure_patterns
+        return load_failure_patterns(_P(__file__).resolve().parent.parent / "video_prompt_engine" / "knowledge" / "failure_patterns.json")
+
+    def test_rule_library_loaded(self):
+        rules = self._rules()
+        assert len(rules) >= 10
+        for r in rules:
+            for key in ("pattern", "name", "category", "check", "severity", "tags", "evidence"):
+                assert key in r, f"rule {r.get('pattern')} missing {key}"
+            assert r["severity"] < 0
+        # 高频失败区（禁令聚类实证）必须入库
+        names = {r["pattern"] for r in rules}
+        assert "exposure_break" in names and "gaze_camera_fail" in names and "face_skin_detail_fail" in names
+
+    def test_submit_bad_records_failure_events(self, tmp_path):
+        from video_prompt_engine.feedback import VideoFeedbackStore
+        store = VideoFeedbackStore(tmp_path / "seed.json")
+        r = store.submit("cat in alley", "result prompt x", good=False, failure_patterns=["exposure_break", "dead_center_composition"])
+        assert r["failure_events"] == {"exposure_break": 1, "dead_center_composition": 1}
+        stats = store.failure_stats()
+        assert stats["exposure_break"]["count"] == 1
+        assert stats["exposure_break"]["recent_prompt"] == "cat in alley"
+        # 再次提交同 pattern → 累计
+        store.submit("cat in alley", "result prompt y", good=False, failure_patterns=["exposure_break"])
+        assert store.failure_stats()["exposure_break"]["count"] == 2
+
+    def test_submit_unknown_pattern_tolerated_and_truncated(self, tmp_path):
+        from video_prompt_engine.feedback import VideoFeedbackStore
+        store = VideoFeedbackStore(tmp_path / "seed.json")
+        long_pat = "x" * 80
+        r = store.submit("p", "r", good=False, failure_patterns=["mystery_pattern", long_pat, ""])
+        assert "mystery_pattern" in r["failure_events"]
+        assert "x" * 50 in store.failure_stats()  # 截断到 50
+        assert ("x" * 80) not in store.failure_stats()
+
+    def test_submit_without_patterns_no_stats_file(self, tmp_path):
+        from video_prompt_engine.feedback import VideoFeedbackStore
+        store = VideoFeedbackStore(tmp_path / "seed.json")
+        r = store.submit("p", "r", good=True)
+        assert r["failure_events"] == {}
+        assert not (tmp_path / "failure_stats.json").exists()
+
+    def test_good_feedback_ignores_patterns(self, tmp_path):
+        from video_prompt_engine.feedback import VideoFeedbackStore
+        store = VideoFeedbackStore(tmp_path / "seed.json")
+        r = store.submit("p", "r", good=True, failure_patterns=["exposure_break"])
+        assert r["failure_events"] == {}
+        assert store.failure_stats() == {}
+
+    def test_request_model_limits_failure_patterns(self):
+        VideoFeedbackRequest(prompt_text="p", result_prompt="r", good=False, failure_patterns=["a"] * 10)
+        with pytest.raises(Exception):
+            VideoFeedbackRequest(prompt_text="p", result_prompt="r", good=False, failure_patterns=["a"] * 11)
+
+class TestCharacterDescriptorLibrary:
+    """P1-4 角色描述符资产库（DEEP 报告 五-10）：Assets 卡加载 + context 注入描述符/引用声明。"""
+
+    @staticmethod
+    def _cards():
+        from pathlib import Path as _P
+        from video_prompt_engine.knowledge.loader import load_character_descriptors
+        return load_character_descriptors(_P(__file__).resolve().parent.parent / "video_prompt_engine" / "knowledge" / "character_descriptors.json")
+
+    def test_cards_loaded_with_full_fields(self):
+        cards = self._cards()
+        assert len(cards) >= 5
+        for c in cards:
+            for key in ("id", "name", "name_zh", "descriptor", "views", "negative", "variants"):
+                assert key in c, f"card {c.get('id')} missing {key}"
+            assert len(c["views"]) >= 3  # 正/背/3-4 视图
+            assert c["variants"], "variants must be non-empty"
+
+    def test_resolve_english_zh_alias(self):
+        from video_prompt_engine.knowledge.loader import resolve_character_descriptor
+        cards = self._cards()
+        assert resolve_character_descriptor("the combat robot", cards)["id"] == "cd_combat_robot"
+        assert resolve_character_descriptor("女侠", cards)["id"] == "cd_wuxia_heroine"
+        assert resolve_character_descriptor("Neon Detective", cards)["id"] == "cd_neon_detective"
+        assert resolve_character_descriptor("", cards) is None
+        assert resolve_character_descriptor("custom hero Zorg", cards) is None
+
+    def test_context_injects_descriptor_and_reference_declaration(self):
+        from video_prompt_engine.prompt_builder import VideoPromptBuilder
+        ctx = {"character": {"name": "Combat Robot"}, "character_list": [{"name": "女侠"}, {"name": "custom sidekick"}]}
+        section = VideoPromptBuilder.build_context_section(ctx)
+        assert "Character Reference Library" in section
+        assert "resolves EXACTLY to" in section
+        assert "Views locked: front view + back view + 3/4 fighting stance view" in section
+        assert "per <name> reference" in section  # 引用声明
+        # 自定义角色（未命中）不注入描述符块
+        assert "custom sidekick" not in section or "custom sidekick" not in section.split("Character Reference Library")[-1]
+
+    def test_context_without_cards_no_library_block(self):
+        from video_prompt_engine.prompt_builder import VideoPromptBuilder
+        ctx = {"character": {"name": "custom hero Zorg"}, "synopsis": "a story"}
+        section = VideoPromptBuilder.build_context_section(ctx)
+        assert "Character Reference Library" not in section
+        assert "custom hero Zorg" in section
+
+    def test_optimize_full_flow_injects_descriptor(self):
+        import json
+        raw = json.dumps({
+            "prompt": "a combat robot marches through the rain, cinematic medium shot, slow dolly, cool palette, sfx",
+            "shot": "medium", "camera": "dolly", "motion_intensity": 6,
+            "scene_transition": "cut", "continuity_token": "robot_rain", "duration_hint": 5,
+        })
+        o = make_optimizer()
+        o._provider = mock_provider(raw)
+        r = o.optimize(VideoOptimizeRequest(
+            prompt="combat robot in the rain",
+            context={"character": {"name": "Combat Robot"}},
+            creative_level=8, max_length=5000,
+        ))
+        assert r.video is not None
+        sp = o._provider.call.call_args.args[0]
+        assert "resolves EXACTLY to" in sp
+        assert "hydraulic pistons" in sp  # 描述符注入 system prompt

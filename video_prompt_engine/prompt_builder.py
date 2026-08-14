@@ -5,6 +5,14 @@ from typing import Optional
 
 from video_prompt_engine.models import VideoOptimizeRequest
 from video_prompt_engine.strategies import get_strategy
+from video_prompt_engine.knowledge.loader import load_character_descriptors, resolve_character_descriptor
+
+
+# P1-4 角色描述符资产库（Assets 卡模式，DEEP 报告 3.3 联动五-10）：
+# context 角色名命中知识库卡片 → 注入描述符 + 引用声明（POSITIVE LOCKS 正向锚点）
+_CHARACTER_CARDS = load_character_descriptors(
+    __import__("pathlib").Path(__file__).resolve().parent / "knowledge" / "character_descriptors.json"
+)
 
 
 class VideoPromptBuilder:
@@ -58,4 +66,48 @@ class VideoPromptBuilder:
         section = "\n\n## Video Fact-Fidelity Context / 视频事实保真上下文\n"
         section += "\n".join(parts)
         section += "\n- Keep the same subject identity, era/setting and core events consistent with the context."
+        section += VideoPromptBuilder.build_character_reference_section(context)
         return section
+
+    @staticmethod
+    def build_character_reference_section(context: Optional[dict]) -> str:
+        """角色描述符引用块（P1-4）：context 角色命中资产库 → 输出 Assets 卡描述符 + 引用声明。
+
+        未命中资产库的自定义角色不受影响（原事实保真上下文不变）。
+        """
+        names: list[str] = []
+        c = context.get("character") if context else None
+        if isinstance(c, dict):
+            if c.get("name"):
+                names.append(str(c["name"]))
+        elif c:
+            names.append(str(c))
+        if context:
+            for item in context.get("character_list", []) or []:
+                n = item.get("name", "") if isinstance(item, dict) else str(item)
+                if n:
+                    names.append(str(n))
+        locked = []
+        for n in names:
+            card = resolve_character_descriptor(n, _CHARACTER_CARDS)
+            if card and card["id"] not in {x["id"] for x in locked}:
+                locked.append(card)
+        if not locked:
+            return ""
+        variant_lines = []
+        for card in locked:
+            vs = card.get("variants", [])
+            variant_str = " | ".join(f"{v['name']}: {v['descriptor']}" for v in vs[:2]) if vs else "default"
+            variant_lines.append(
+                f"- <<<{card['name']}>>> resolves EXACTLY to: {card['descriptor']}. "
+                f"Views locked: {' + '.join(card.get('views', []))}. "
+                f"Negative lock: {card.get('negative', '')}. "
+                f"Variants: {variant_str}"
+            )
+        lines = "\n".join(variant_lines)
+        return (
+            "\n\n## Character Reference Library / 角色描述符引用（P1-4）\n"
+            f"{lines}\n"
+            "- When a locked character appears, the prompt MUST declare the reference: \"per <name> reference\", "
+            "and resolve its appearance EXACTLY to the descriptor above. Do NOT swap locked characters for each other."
+        )
