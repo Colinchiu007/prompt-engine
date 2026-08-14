@@ -10,10 +10,16 @@ from typing import Any, Optional
 
 from video_prompt_engine.models import VideoPlatformType, VIDEO_OUTPUT_KEYS
 from video_prompt_engine.strategies.base import BaseVideoStrategy, register
+from video_prompt_engine.knowledge.loader import load_director_styles, resolve_director_style
 
 VIDEO_SHOT_TYPES = ("extreme_close_up", "close_up", "medium", "medium_wide", "wide", "establishing")
 VIDEO_CAMERA_MOTIONS = ("static", "pan", "tilt", "dolly", "track", "crane", "handheld", "drone", "zoom_in", "zoom_out", "orbit")
 VIDEO_TRANSITIONS = ("cut", "fade", "dissolve", "wipe", "match_cut")
+
+# P1-6 导演风格词典（DEEP 报告）：knowledge/director_styles.json 17 位导演/摄影指导
+_DIRECTOR_STYLES = load_director_styles(
+    __import__("pathlib").Path(__file__).resolve().parent.parent / "knowledge" / "director_styles.json"
+)
 
 
 @register("generic_video")
@@ -35,6 +41,10 @@ class GenericVideoStrategy(BaseVideoStrategy):
         character_count: Optional[int] = None,
     ) -> str:
         style_text = f"，风格：{style}" if style else ""
+        # P1-6 导演风格引用：style 命中导演/摄影指导名时注入一句话风格（如 "Lubezki 风格"）
+        director = resolve_director_style(style or "", _DIRECTOR_STYLES)
+        if director:
+            style_text += f"（导演风格引用：{director['style_desc']}）"
         negative_text = cls.build_negative_section(negative_prompt)
         if creative_level <= 3:
             detail_instruction = "简洁精炼，保留核心视觉要点"
@@ -57,11 +67,15 @@ class GenericVideoStrategy(BaseVideoStrategy):
             else "Write a RICH, DETAILED video prompt of 150-300 words (about 900-2000 chars) — NOT a short one-liner."
         )
 
+        director_look = director["look"] if director else ""
         return f"""You are an expert prompt engineer for AI VIDEO generation. Transform user descriptions into high-quality, platform-agnostic video prompts.
 
 ## Core Principle: Platform-Agnostic
 - Works across major video models (Veo, Kling, Seedance, Hailuo, Doubao, Runway, MiniMax, Hunyuan, CogVideo).
 - Use universal descriptive language.
+
+## Director Style Reference
+- When a director/DP style is referenced in the style field, apply its visual language: {director_look}
 
 ## Fact-Fidelity (MANDATORY)
 - Do NOT change the subject's identity, era/setting, or event facts from the input.

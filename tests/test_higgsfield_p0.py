@@ -598,3 +598,73 @@ class TestReviewFixes:
         sp_zh = get_strategy("generic_video").build_system_prompt(
             creative_level=8, max_length=5000, output_language="zh", tier="refined")
         assert "500-5000 Chinese chars" in sp_zh
+
+class TestDirectorStyle:
+    """P1-6 导演风格词典（DEEP 报告）：解析 + generic_video 注入。"""
+
+    @staticmethod
+    def _styles():
+        from pathlib import Path as _P
+        from video_prompt_engine.knowledge.loader import load_director_styles
+        return load_director_styles(_P(__file__).resolve().parent.parent / "video_prompt_engine" / "knowledge" / "director_styles.json")
+
+    def test_resolve_english_name_case_insensitive(self):
+        from video_prompt_engine.knowledge.loader import resolve_director_style
+        styles = self._styles()
+        hit = resolve_director_style("Lubezki 风格", styles)
+        assert hit is not None and hit["name_en"] == "Emmanuel Lubezki"
+        hit2 = resolve_director_style("in lubezki style", styles)
+        assert hit2 is not None and hit2["name_en"] == "Emmanuel Lubezki"
+
+    def test_resolve_alias(self):
+        from video_prompt_engine.knowledge.loader import resolve_director_style
+        styles = self._styles()
+        assert resolve_director_style("chivo look", styles)["name_en"] == "Emmanuel Lubezki"
+
+    def test_resolve_chinese_name(self):
+        from video_prompt_engine.knowledge.loader import resolve_director_style
+        styles = self._styles()
+        assert resolve_director_style("王家卫风格", styles)["name_en"] == "Wong Kar-wai"
+        assert resolve_director_style("黑泽明的雨戏", styles)["name_en"] == "Akira Kurosawa"
+
+    def test_resolve_miss_returns_none(self):
+        from video_prompt_engine.knowledge.loader import resolve_director_style
+        styles = self._styles()
+        assert resolve_director_style("cyberpunk noir", styles) is None
+        assert resolve_director_style("", styles) is None
+        assert resolve_director_style(None, styles) is None
+        # 短名不误命中：子串必须完整出现（单字不匹配）
+        assert resolve_director_style("王", styles) is None
+
+    def test_system_prompt_injects_director_look(self):
+        sp = get_strategy("generic_video").build_system_prompt(
+            style="Lubezki 风格", creative_level=8, max_length=5000, tier="refined"
+        )
+        assert "导演风格引用：手持长镜头" in sp
+        assert "long handheld takes" in sp  # look 注入 system prompt
+
+    def test_system_prompt_miss_keeps_style_without_look(self):
+        sp = get_strategy("generic_video").build_system_prompt(
+            style="cyberpunk noir", creative_level=5, max_length=1800, tier="batch"
+        )
+        assert "风格：cyberpunk noir" in sp
+        assert "long handheld takes" not in sp
+
+    def test_optimize_full_flow_passes_director_look_to_llm(self):
+        import json
+        raw = json.dumps({
+            "prompt": "a sleek black cat dashes through a neon alley, cinematic medium-wide shot, "
+                      "slow dolly-in, cool blue and magenta palette, dramatic rim lighting, sfx of distant traffic",
+            "shot": "medium_wide", "camera": "dolly", "motion_intensity": 7,
+            "scene_transition": "cut", "continuity_token": "cat_neon_alley", "duration_hint": 5,
+        })
+        o = make_optimizer()
+        o._provider = mock_provider(raw)
+        r = o.optimize(VideoOptimizeRequest(
+            prompt="black cat in neon alley", style="王家卫风格",
+            creative_level=8, max_length=5000,
+        ))
+        assert r.video is not None
+        sp = o._provider.call.call_args.args[0]
+        assert "导演风格引用：手持霓虹" in sp
+        assert "handheld neon-soaked frames" in sp

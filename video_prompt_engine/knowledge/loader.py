@@ -42,3 +42,23 @@ def load_seed_video_prompts(path: Path) -> list[VideoPromptEntry]:
 def load_keywords_video(path: Path) -> dict[str, list[dict]]:
     """加载视频关键词词典：{dimension: [{zh, en}, ...]}。"""
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_director_styles(path: Path) -> list[dict]:
+    """加载导演/摄影指导风格词典：[{name_en, name_zh, aliases, style_desc, look}]。"""
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def resolve_director_style(style_text: str, styles: list[dict]) -> dict | None:
+    """在 style 文本中匹配导演/摄影指导名（别名大小写不敏感子串），返回命中的风格条目。
+
+    命中优先级按词典顺序（首条命中）；未命中返回 None（普通风格文本不受影响）。
+    """
+    if not style_text:
+        return None
+    low = style_text.lower()
+    for entry in styles:
+        names = [entry["name_en"], entry["name_zh"]] + entry.get("aliases", [])
+        if any(n and n.lower() in low for n in names):
+            return entry
+    return None
