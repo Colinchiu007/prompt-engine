@@ -35,10 +35,13 @@ from video_prompt_engine.knowledge.loader import load_keywords_video
 logger = logging.getLogger(__name__)
 
 # 与策略 Output Format 同源（VIDEO_OUTPUT_KEYS），禁止双份手写漂移（C5）
+_JSON_RETRY_KEYS = ", ".join('"' + k + '"' for k in VIDEO_OUTPUT_KEYS)
+
 JSON_RETRY_HINT = (
     "\n\nIMPORTANT: Your previous output was NOT a valid strict JSON object. "
-    f"Output ONLY a strict JSON object with EXACTLY these keys: "
-    f"{', '.join(f'\"{k}\"' for k in VIDEO_OUTPUT_KEYS)}. "
+    "Output ONLY a strict JSON object with EXACTLY these keys: "
+    + _JSON_RETRY_KEYS
+    + ". "
     "No markdown fences, no code blocks, no extra text outside the JSON object."
 )
 
