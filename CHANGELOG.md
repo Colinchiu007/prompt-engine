@@ -1,3 +1,10 @@
+## [未发布] 功能：Higgsfield DEEP 报告 P1 落地（导演风格/失败模式/角色描述符，2026-08-14）
+
+- **P1-6 导演风格词典**：`knowledge/director_styles.json` 17 位导演/摄影指导（Lubezki/Deakins/Vinterberg/Villeneuve/Nolan/Wes Anderson/Ridley Scott/Kubrick/Malick/王家卫/黑泽明/张艺谋/Hoytema/Fraser/Kamiński/杜可风/Cuarón），每条目含英文名+中文名+别名+一句话风格+look；`style` 字段命中导演名（别名大小写不敏感子串）时注入「导演风格引用」+ system prompt `## Director Style Reference` 块（对应 DEEP 报告 3.5/五-6）
+- **P1-3 失败模式闭环**：`knowledge/failure_patterns.json` 12 条失败模式规则库（FAIL CHECK 判据 + 禁令聚类实证：曝光/剪影/死中心构图/暖色泄漏/风格污染/皮肤细节 44%/视线镜头感 60%/缺席角色/防替换/时间轴/音频块/节奏）；`feedback.py` submit 增加 failure_patterns 采集 → `failure_stats.json` 累计（count/last_seen/recent_prompt，未知模式宽容记录 + 单条截断），`/v1/video/feedback` 透传（对应 3.1/五-12）
+- **P1-4 角色描述符资产库**：`knowledge/character_descriptors.json` 8 张 Assets 卡（战斗机器人/幸存者/霓虹侦探/义体战士/武侠女侠/老人/蒙面掠夺者/儿童主角），每卡含正/背/3-4 视图描述符 + Negative lock + 变体 + 语料出处；context 角色命中资产库 → `## Character Reference Library` 块（resolves EXACTLY to 描述符 + Views/Negative/Variants 锁定 + per <name> reference 引用声明），未命中自定义角色不受影响（对应 五-10）
+- **测试**：+18 项（导演解析/注入/全链路 7、失败模式采集/累计/截断/上限 6、角色卡完整性/解析/注入/全链路 5）；全量 616 passed + 1 预存在环境失败（rag_cases，与基线一致）
+
 ## [未发布] 修复：精修层长度判据改为词数刻度 + max_length 边界上浮（higgsfield-p0 边界修订，2026-08-14）
 
 - **evaluator 精修层判据（DEEP 报告 P0-1）**：refined 层长度由「max_length 字符预算联动上界（5000 字符 → 1000 词）」改为词数刻度 **500–5,000 词**；max_length 是输出裁剪预算（optimizer 先裁后评），不参与 refined 判据——此前 1000+ 词导演分镜单被硬扣，且直接评估与先裁后评行为不一致（裁后 ≤833 词 PASS / 直接评 2760 词 FAIL）；下界保持自适应（评审 C1，小预算先裁后评不误杀）
