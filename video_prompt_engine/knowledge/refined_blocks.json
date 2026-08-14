@@ -1,0 +1,132 @@
+{
+  "version": 2,
+  "source": "higgsfield hell-grind public corpus (read-only)",
+  "corpus_prompts": 599,
+  "family": {
+    "director": 135,
+    "inline": 464
+  },
+  "blocks": [
+    "SCENE NOTE",
+    "SPATIAL LAYOUT",
+    "LIGHTING",
+    "COLOR",
+    "CAMERA",
+    "ENVIRONMENT",
+    "CONTINUITY",
+    "CHARACTERS",
+    "SKIN",
+    "ACTING",
+    "STILLNESS LOCK",
+    "FINAL FRAME"
+  ],
+  "block_pattern": "^([A-Z][A-Z ]+):\\s*",
+  "block_frequency_pct": {
+    "SCENE NOTE": 11.7,
+    "SPATIAL LAYOUT": 3.5,
+    "LIGHTING": 5.0,
+    "COLOR": 3.7,
+    "CAMERA": 11.5,
+    "ENVIRONMENT": 17.7,
+    "CONTINUITY": 16.4,
+    "CHARACTERS": 22.4,
+    "SKIN": 3.5,
+    "ACTING": 3.5,
+    "STILLNESS LOCK": 3.3,
+    "FINAL FRAME": 9.3
+  },
+  "coverage": {
+    "min_blocks": 10,
+    "min_ratio": 0.8
+  },
+  "enabled_rules": [
+    "dead_center",
+    "exposure_break",
+    "eye_line"
+  ],
+  "lock_triggers": {
+    "warm_light_leak": {
+      "locks": [
+        "cold",
+        "cool palette",
+        "冷色"
+      ],
+      "forbidden": [
+        "warm",
+        "amber",
+        "golden",
+        "暖色"
+      ]
+    },
+    "dead_center": {
+      "locks": [
+        "rule of thirds",
+        "golden ratio",
+        "三分法"
+      ],
+      "forbidden": [
+        "center of frame",
+        "dead center"
+      ]
+    },
+    "exposure_break": {
+      "locks": [
+        "low-key",
+        "low light",
+        "dark",
+        "低光"
+      ],
+      "forbidden": [
+        "bright daylight",
+        "overexposed",
+        "high-key"
+      ]
+    },
+    "silhouette_break": {
+      "locks": [
+        "silhouette",
+        "剪影"
+      ],
+      "forbidden": [
+        "well-lit face",
+        "clear facial detail"
+      ]
+    },
+    "style_contamination": {
+      "locks": [
+        "hyper-realistic",
+        "photorealistic detail",
+        "写实"
+      ],
+      "forbidden": [
+        "anime",
+        "cartoon",
+        "3d render",
+        "动漫"
+      ]
+    },
+    "skin_guard": {
+      "locks": [
+        "pore-level",
+        "skin",
+        "皮肤"
+      ],
+      "forbidden": [
+        "plastic skin",
+        "waxy",
+        "塑料"
+      ]
+    },
+    "eye_line": {
+      "locks": [
+        "eye-line",
+        "eye line",
+        "视线"
+      ],
+      "forbidden": [
+        "looking at camera",
+        "breaking the fourth wall"
+      ]
+    }
+  }
+}

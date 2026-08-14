@@ -47,6 +47,23 @@ JSON_RETRY_HINT = (
 )
 
 
+def strip_rendered_trailer(optimized: str, tail: str) -> str:
+    """C6 尾行剥离（可测单元）：从「最后一个」Photoreal NON-IP 起剥离到串尾。
+
+    兼容旧形态 `{audio} only.` 与 Round3 Audio 段形态（Audio: ... / No music. 结尾）；
+    取末位匹配修复评审 Warning-5——blocks 渲染串中段若含 "Photoreal NON-IP aesthetic"
+    等字面量，从首处剥会连 FINAL FRAME 等块一起误删。
+    无尾行形态时回退 endswith(tail) 精确剥离；两者都不中 → 原样返回（调用方自行截断）。
+    """
+    import re
+    matches = list(re.finditer(r"Photoreal\.?\s+NON-IP\.?", optimized, flags=re.IGNORECASE))
+    if matches:
+        return optimized[: matches[-1].start()].rstrip()
+    if tail and optimized.endswith(tail):
+        return optimized[: -len(tail)].rstrip()
+    return optimized
+
+
 def derive_character_count(context: Optional[dict]) -> Optional[int]:
     """从 context 推导画面角色数：character_list 长度优先，character 单角色兜底。"""
     if not context or not isinstance(context, dict):
@@ -132,7 +149,7 @@ class VideoOptimizer:
                 json.dumps(request.context, sort_keys=True, ensure_ascii=False).encode("utf-8")
             ).hexdigest()[:16]
         return "|".join([
-            "HIGGSFIELD_FMT_V2",  # 版本盐：V2 = Round3 T2 教标记（shots>=2 必须 [SHOT N]/[HARD CUT]），旧形态缓存失效
+            "HIGGSFIELD_FMT_V4",  # 版本盐：V4 = Round3 B/C（承接段/块骨架输出形态变化），旧缓存一次失效重建（V2→V4 同批发布）
             str(platform),
             lang,
             _h(request.prompt),
@@ -142,6 +159,7 @@ class VideoOptimizer:
             str(request.num_candidates),
             _h(request.negative_prompt or ""),
             ctx_hash,
+            _h(request.prev_final_frame or ""),  # Round3 B：跨镜终态影响输出，必须入 key
         ])
 
     @staticmethod
@@ -200,6 +218,8 @@ class VideoOptimizer:
             )
             system_prompt += self._build_classification_section(classification, dims)
             system_prompt += self._builder.build_context_section(request.context)
+            # Round3 B：跨镜承接指令段（仅 prev_final_frame 提供时注入；refined/batch 双形态）
+            system_prompt += self._builder.build_continuity_section(request.prev_final_frame, tier)
             few_shot = self._rag.retrieve_few_shot(request, platform=platform)
             if few_shot:
                 system_prompt += few_shot
@@ -227,15 +247,8 @@ class VideoOptimizer:
                         tail = strategy_cls.build_tail(video_meta) if tier == "refined" else ""
                         if tail:
                             # 剥离已存在尾行（LLM 直出或 append，格式可能漂移：5.5s/小写/Photoreal 缺句点）→ body 截断 → 重 append 规范尾行
-                            import re
-                            # C6 尾行剥离：兼容旧形态 `{audio} only.` 与 Round3 Audio 段形态（Audio: ... / No music. 结尾），
-                            # 否则 audio_layers 长尾被预算截断时会把 LLM 尾行拦腰切开产出双尾行（评审 C1）
-                            body = re.sub(
-                                r"\s*Photoreal\.?\s+NON-IP\.?\s+.*?(?:only\.|Audio:.*|No music\.)\s*$", "",
-                                optimized, flags=re.IGNORECASE | re.DOTALL,
-                            )
-                            if body == optimized and optimized.endswith(tail):
-                                body = optimized[: -len(tail)]
+                            # C6 尾行剥离：取末位 Photoreal NON-IP（评审 Warning-5：blocks 中段字面量不误剥；C1 双尾行防护）
+                            body = strip_rendered_trailer(optimized, tail)
                             if body.strip():
                                 optimized = body[: max(0, request.max_length - len(tail))] + tail
                             else:
@@ -251,10 +264,24 @@ class VideoOptimizer:
                     video_meta = {}
                 candidates.append((optimized, video_meta))
 
+            # Round3 B：角色白名单（context.character_list 角色名，continuity_check 硬判据用）
+            character_list: list[str] = []
+            if request.context:
+                cl = request.context.get("character_list")
+                if isinstance(cl, list):
+                    character_list = [
+                        str(c.get("name", "")).strip() if isinstance(c, dict) else str(c).strip()
+                        for c in cl if (c.get("name") if isinstance(c, dict) else c)
+                    ]
+
             # 多候选择优：evaluator 评分，最优在前
             if len(candidates) > 1:
                 scored = [
-                    (evaluate(p, m, source_prompt=request.prompt, language=lang, tier=tier, max_length=request.max_length)["score"], p, m)
+                    (evaluate(
+                        p, m, source_prompt=request.prompt, language=lang, tier=tier,
+                        max_length=request.max_length, prev_final_frame=request.prev_final_frame,
+                        character_list=character_list,
+                    )["score"], p, m)
                     for p, m in candidates
                 ]
                 scored.sort(key=lambda x: x[0], reverse=True)

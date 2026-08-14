@@ -80,6 +80,7 @@ class VideoOptimizeRequest(BaseModel):
     max_length: int = Field(default=1800, ge=200, le=20000, description="优化结果最大字符数（批量层默认 1800 字符；精修层 creative_level≥7 上限 20000，对齐契约层 videoMaxLengthMax——500-5000 词导演分镜单 ≈22871 字符）")
     num_candidates: int = Field(default=1, ge=1, le=5, description="候选版本数量")
     negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词")
+    prev_final_frame: Optional[str] = Field(default=None, max_length=1000, description="上一镜终态描述（跨镜承接；trim 后空由契约层丢弃，超长 422 双保险）")
     context: Optional[dict] = Field(default=None, description="上下文（白名单键）")
     output_language: str = Field(default="en", pattern="^(zh|en)$", description="输出语言：en/zh；zh 保留中文主体 + 镜头术语双语，结构化枚举仍英文")
 
@@ -121,7 +122,8 @@ class VideoPromptMeta(BaseModel):
     color_ratio: str = Field(default="60:30:10", max_length=20, description="色彩配比（默认 60:30:10）")
     shots: list[VideoShot] = Field(default_factory=list, max_length=3, description="镜头单元（≤3，每镜头 ≤6 时间块）")
     positive_constraints: list[str] = Field(default_factory=list, max_length=10, description="正向硬约束（必须如此），STRICT 块来源")
-    final_frame: str = Field(default="", max_length=500, description="最终画面描述（终态：位置/姿势/灯光/机位/禁文字）")
+    final_frame: str = Field(default="", max_length=1000, description="最终画面描述（终态：位置/姿势/灯光/机位/禁文字；与 prev_final_frame 同界 1000，防复杂多角色终态丢实体）")
+    blocks: Optional[dict] = Field(default=None, description="导演分镜块骨架（12 块白名单键，值 ≤4000；refined 渲染形态与覆盖度检查同源）")
 
 
 class VideoOptimizeResult(BaseModel):

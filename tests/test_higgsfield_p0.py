@@ -268,7 +268,7 @@ class TestOptimizerHiggsfield:
         o = make_optimizer()
         req = VideoOptimizeRequest(prompt="a cat", max_length=1800)
         key = o._cache_key(req, "generic_video", "en")
-        assert key.startswith("HIGGSFIELD_FMT_V2|")
+        assert key.startswith("HIGGSFIELD_FMT_V4|")
         # 旧格式 key（无盐）不命中新 key
         old = "|".join(key.split("|")[1:])
         assert old != key
@@ -357,13 +357,13 @@ class TestReviewFixes:
         from video_prompt_engine.models import VideoPromptMeta
         meta = BaseVideoStrategy.extract_video_meta(json.dumps({
             "positive_constraints": ["keep red coat", "", "keep scar"],
-            "final_frame": "x" * 600,
+            "final_frame": "x" * 1200,
         }))
         assert meta["positive_constraints"] == ["keep red coat", "keep scar"]
-        assert len(meta["final_frame"]) == 500
+        assert len(meta["final_frame"]) == 1000
         m = VideoPromptMeta(**meta)
         assert m.positive_constraints == ["keep red coat", "keep scar"]
-        assert len(m.final_frame) == 500
+        assert len(m.final_frame) == 1000
 
     def test_c3_extract_result_passes_pydantic(self):
         import json

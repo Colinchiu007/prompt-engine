@@ -55,6 +55,47 @@ def _clean_audio(value: Any) -> str:
 _AUDIO_LAYER_KEYS = ("environment", "sfx", "dialogue")
 _AUDIO_LAYER_MAX = 200
 
+# Round3 Batch C：导演分镜块白名单与顺序（refined 渲染骨架；与 refined_blocks.json blocks 同源）
+_BLOCKS_ORDER = (
+    "SCENE NOTE", "SPATIAL LAYOUT", "LIGHTING", "COLOR", "CAMERA",
+    "ENVIRONMENT", "CONTINUITY", "CHARACTERS", "SKIN", "ACTING",
+    "STILLNESS LOCK", "FINAL FRAME",
+)
+_BLOCK_MAX = 4000
+
+# 缺失块 → 旧字段回退（仅明显同源映射；其余块缺省省略）
+_BLOCK_FALLBACK = {
+    "FINAL FRAME": lambda d: str(d.get("final_frame") or "").strip(),
+    "CONTINUITY": lambda d: str(d.get("continuity_token") or "").strip(),
+    "COLOR": lambda d: str(d.get("color_ratio") or "").strip(),
+    "CAMERA": lambda d: str(d.get("camera") or "").strip(),
+}
+
+# 尾行形态正则（内嵌尾行剥离用；与 optimizer C6 口径一致）
+_TRAILER_TAIL_RE = __import__("re").compile(
+    r"\s*Photoreal\.?\s+NON-IP\.?\s+.*?(?:only\.|Audio:.*|No music\.)\s*$",
+    __import__("re").IGNORECASE | __import__("re").DOTALL,
+)
+
+
+def _strip_embedded_trailer(value: str) -> str:
+    """剥离块值内嵌尾行形态（Round3 C，评审 Warning-5）：防止渲染串中段出现 Photoreal NON-IP 被 C6 误剥。"""
+    text = str(value or "")
+    stripped = _TRAILER_TAIL_RE.sub("", text)
+    return stripped
+
+
+def _clean_blocks(value: Any) -> Optional[dict]:
+    """块骨架清洗（REQ-1）：12 键白名单 + 值字符串 strip/截断 4000；非法键/非字符串丢弃；空 → None。"""
+    if not isinstance(value, dict):
+        return None
+    cleaned: dict[str, str] = {}
+    for key in _BLOCKS_ORDER:
+        raw = value.get(key)
+        if isinstance(raw, str) and raw.strip():
+            cleaned[key] = raw.strip()[:_BLOCK_MAX]
+    return cleaned or None
+
 
 def _clean_audio_layers(value: Any) -> Optional[dict]:
     """音频分层清洗（REQ-3.2）：键白名单 + 字符串层 strip/截断 200 + music_off 布尔归一。
@@ -216,7 +257,14 @@ class BaseVideoStrategy(ABC):
         return data if isinstance(data, dict) else None
 
     @classmethod
-    def render(cls, data: dict[str, Any]) -> str:
+    def render(cls, data: dict[str, Any], tier: str = "batch") -> str:
+        """渲染单串：refined 且 blocks 非空 → 骨架拼单串（12 块顺序，行首 `块名:` + 文本，块间空行，
+        缺失块从旧字段回退，逐块剥离内嵌尾行）；否则旧逻辑（prompt 优先 → 六要素拼接，零回归）。"""
+        blocks = data.get("blocks")
+        if tier == "refined" and isinstance(blocks, dict) and any(
+            isinstance(v, str) and v.strip() for v in blocks.values()
+        ):
+            return cls._render_blocks(blocks, data)
         prompt = str(data.get("prompt") or "").strip()
         if prompt:
             return prompt
@@ -226,6 +274,22 @@ class BaseVideoStrategy(ABC):
             if val:
                 parts.append(val)
         return " ".join(parts)
+
+    @classmethod
+    def _render_blocks(cls, blocks: dict[str, Any], data: dict[str, Any]) -> str:
+        """骨架渲染实现：块值先剥离内嵌尾行；缺失块按 _BLOCK_FALLBACK 从旧字段补位；空块跳过。"""
+        lines: list[str] = []
+        for key in _BLOCKS_ORDER:
+            value = blocks.get(key)
+            if isinstance(value, str) and value.strip():
+                value = _strip_embedded_trailer(value)
+            else:
+                fallback = _BLOCK_FALLBACK.get(key)
+                value = fallback(data) if fallback else ""
+            value = str(value or "").strip()
+            if value:
+                lines.append(f"{key}: {value}")
+        return "\n\n".join(lines)
 
     @classmethod
     def extract_video_meta(cls, raw_output: str) -> dict[str, Any] | None:
@@ -254,7 +318,8 @@ class BaseVideoStrategy(ABC):
             "color_ratio": _clean_color_ratio(data.get("color_ratio")),
             "shots": _clean_shots(data.get("shots")),
             "positive_constraints": constraints,
-            "final_frame": str(data.get("final_frame") or "").strip()[:500],  # 对齐 VideoPromptMeta.final_frame max_length=500
+            "final_frame": str(data.get("final_frame") or "").strip()[:1000],  # 对齐 VideoPromptMeta.final_frame max_length=1000（Round3 B 上调，防复杂终态丢实体）
+            "blocks": _clean_blocks(data.get("blocks")),  # Round3 C：导演分镜块骨架（12 键白名单 + 值 ≤4000）
         }
 
     @staticmethod
@@ -355,7 +420,16 @@ class BaseVideoStrategy(ABC):
                 "- The rendered `prompt` MUST end with the exact trailer line: `Photoreal. NON-IP. {aspect}. {duration}s. {audio} only.` (fill from `aspect` / `duration_hint` / `audio` fields).\n"
                 "- `audio_layers` (optional): object with optional string layers `environment` / `sfx` / `dialogue` (each ≤200 chars) and optional boolean `music_off` (true = no music). When provided, the trailer ends with the Audio segment (e.g. `Audio: Environmental forest ambience. SFX: gunfire. No music.`) instead of `{audio} only.`; omit or null when not needed.\n"
                 "- If `audio_layers` is provided, do NOT render the `{audio} only.` tail; the Audio segment IS the trailer ending.\n"
-                "- Keep the trailer EXACTLY as specified; do not append anything after it."
+                "- Keep the trailer EXACTLY as specified; do not append anything after it.\n"
+                "- `blocks` (refined only, optional): object with ≤12 STRING values keyed EXACTLY by SCENE NOTE / SPATIAL LAYOUT / LIGHTING / COLOR / CAMERA / ENVIRONMENT / CONTINUITY / CHARACTERS / SKIN / ACTING / STILLNESS LOCK / FINAL FRAME (each ≤4000 chars). When provided, the rendered `prompt` MUST be the single-string version of the SAME blocks — one line per block starting with the block name and colon (`SCENE NOTE: ...`), blank line between blocks; NEVER inline the trailer inside a block. Omit or null when not needed.\n"
+                "- Skin realism (MANDATORY when characters are shown close-up): pore-level skin, natural texture and blemishes — NEVER plastic/waxy skin.\n"
+                "- Eye-line discipline (MANDATORY): keep characters' gaze in-world — NEVER look at camera / break the fourth wall unless the shot explicitly requires it.\n"
+                "## FAIL CHECK (MANDATORY self-audit before finalizing; this section is INSTRUCTION ONLY — never output it inside the JSON)\n"
+                "- If prev_final_frame was provided: the prompt reuses the previous shot end state (SCENE pickup).\n"
+                "- Every declared excluded/no-swap ban has its reference marker [ABSENT]/<<<...>>> in the text.\n"
+                "- Timeline markers ([SHOT N] / [HARD CUT] / CUT N) exist at every shot boundary (shots >= 2).\n"
+                "- The trailer line is the exact last line (Photoreal. NON-IP. ...), nothing after it.\n"
+                "- No banned text/watermark/logo is described as present."
             )
         return (
             "\n## Director Workflow (batch mode)\n"
@@ -371,7 +445,7 @@ class BaseVideoStrategy(ABC):
         if data is None:
             rendered = str(raw_output or "").strip().strip('"').strip()
             return rendered, {}
-        rendered = cls.render(data)
+        rendered = cls.render(data, tier=tier)
         meta = cls.extract_video_meta(raw_output) or {}
         # C6 生命周期：render body → append 尾行 → 再交 optimizer 按预算截断（tail 永不截断）
         rendered = cls.append_trailer(rendered, meta, tier)
