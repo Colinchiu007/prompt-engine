@@ -40,6 +40,36 @@ def _strip_reference_markers(text: str) -> str:
     return stripped
 
 
+def _parse_time_span(value: str) -> list[float] | None:
+    """解析时间区间 "m:ss-m:ss" / "s.s-s.s"，返回 [start, end] 秒；解析失败返回 None。"""
+    if not value:
+        return None
+    parts = str(value).split("-")
+    if len(parts) != 2:
+        return None
+
+    def _to_seconds(token: str) -> float | None:
+        token = token.strip()
+        if not token:
+            return None
+        if ":" in token:
+            m, _, sec = token.partition(":")
+            try:
+                return int(m) * 60 + float(sec)
+            except (TypeError, ValueError):
+                return None
+        try:
+            return float(token)
+        except (TypeError, ValueError):
+            return None
+
+    start = _to_seconds(parts[0])
+    end = _to_seconds(parts[1])
+    if start is None or end is None:
+        return None
+    return [start, end]
+
+
 def detect_tier(prompt: str, video: dict | None, explicit_tier: str | None = None) -> str:
     """tier 判定：explicit（optimizer 按 creative_level≥7 传入 refined，否则 batch）优先；无 explicit 时 auto-detect 兜底。
 
@@ -127,7 +157,14 @@ def evaluate(
     lower_text = text.lower()
     # 缺 Audio 块：refined 尾行自带 `{audio} only.`（meta.audio 非空即满足）；batch 检查正文音频词（否定词优先）
     audio_field = str((video or {}).get("audio") or "").strip()
-    if tier == "refined":
+    audio_layers = (video or {}).get("audio_layers")
+    if tier == "refined" and isinstance(audio_layers, dict):
+        # REQ-3.4 判定表仅 refined 生效（Audio 段真实渲染进尾行）；batch 无尾行，仍走正文音频词检查，
+        # 否则 batch 带 audio_layers 而正文无音频词会假阴性（评审 W1）
+        has_audio = bool(str(audio_layers.get("sfx") or "").strip()) or bool(
+            str(audio_layers.get("dialogue") or "").strip()
+        )
+    elif tier == "refined":
         has_audio = bool(audio_field) or any(k in lower_text for k in ("sfx", "sound", "audio", "music", "score"))
     else:
         if any(k in lower_text for k in ("silent", "no sound", "无声", "静音")):
@@ -136,6 +173,48 @@ def evaluate(
             has_audio = any(k in lower_text for k in ("sfx", "sound", "audio", "music", "score", "音效", "配乐", "声音", "旋律"))
     if not has_audio:
         violations["missing_audio"] = -5
+
+    # 6) Round3 Batch A T2 — 确定性 FAIL CHECK（纯结构/数学判定，无 LLM）：
+    # timeline_missing：shots≥2 时正文（标记区剥离后）缺 [SHOT N]/[HARD CUT] 切分标记 → -5
+    # timing_break：shots≥2 时 beats[].time 区间端点最大值超出 shot.duration+2s 容差 → -5
+    shots = (video or {}).get("shots") or []
+    if isinstance(shots, list) and len(shots) >= 2:
+        # 引用协议标记区已剥离（<<<...>>>/[ABSENT] 内嵌的 [SHOT 不计数，评审 I1）；真实切分标记保留
+        body_upper = body_text.upper()
+        timeline_hits = ("[SHOT" in body_upper) or ("[HARD CUT" in body_upper)
+        checks["timeline_hits"] = timeline_hits
+        if not timeline_hits:
+            violations["timeline_missing"] = -5
+
+        timing_diff = None
+        for shot in shots:
+            if not isinstance(shot, dict):
+                continue
+            duration = shot.get("duration")
+            beats = shot.get("beats") or []
+            if not isinstance(beats, list):
+                continue
+            for beat in beats:
+                if not isinstance(beat, dict):
+                    continue
+                time_span = str(beat.get("time") or "").strip()
+                parsed = _parse_time_span(time_span)
+                if parsed is None:
+                    continue
+                end_seconds = max(parsed)
+                try:
+                    duration_f = float(duration) if duration is not None and str(duration).strip() != "" else 0.0
+                except (TypeError, ValueError):
+                    continue
+                diff = end_seconds - (duration_f + 2.0)
+                if timing_diff is None or diff > timing_diff:
+                    timing_diff = diff
+                if diff > 0:
+                    violations["timing_break"] = -5
+        checks["timing_diff"] = round(timing_diff, 2) if timing_diff is not None else None
+    else:
+        checks["timeline_hits"] = None
+        checks["timing_diff"] = None
     checks["violations"] = violations
 
     # 2) 六要素（英文关键词）

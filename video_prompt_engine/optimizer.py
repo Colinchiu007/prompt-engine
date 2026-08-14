@@ -132,7 +132,7 @@ class VideoOptimizer:
                 json.dumps(request.context, sort_keys=True, ensure_ascii=False).encode("utf-8")
             ).hexdigest()[:16]
         return "|".join([
-            "HIGGSFIELD_FMT_V1",  # 版本盐：Output Format/尾行机制变化时旧缓存天然失效（C4）
+            "HIGGSFIELD_FMT_V2",  # 版本盐：V2 = Round3 T2 教标记（shots>=2 必须 [SHOT N]/[HARD CUT]），旧形态缓存失效
             str(platform),
             lang,
             _h(request.prompt),
@@ -228,8 +228,10 @@ class VideoOptimizer:
                         if tail:
                             # 剥离已存在尾行（LLM 直出或 append，格式可能漂移：5.5s/小写/Photoreal 缺句点）→ body 截断 → 重 append 规范尾行
                             import re
+                            # C6 尾行剥离：兼容旧形态 `{audio} only.` 与 Round3 Audio 段形态（Audio: ... / No music. 结尾），
+                            # 否则 audio_layers 长尾被预算截断时会把 LLM 尾行拦腰切开产出双尾行（评审 C1）
                             body = re.sub(
-                                r"\s*Photoreal\.?\s+NON-IP\.?\s+.*?only\.?\s*$", "",
+                                r"\s*Photoreal\.?\s+NON-IP\.?\s+.*?(?:only\.|Audio:.*|No music\.)\s*$", "",
                                 optimized, flags=re.IGNORECASE | re.DOTALL,
                             )
                             if body == optimized and optimized.endswith(tail):

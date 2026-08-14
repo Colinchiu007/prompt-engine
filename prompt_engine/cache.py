@@ -85,18 +85,58 @@ class SqlitePromptCache:
 
     @staticmethod
     def make_key(prompt: str, platform: str, creative_level: int,
-                 max_length: int, negative_prompt: str, num_candidates: int) -> str:
-        """生成缓存键"""
-        raw = f"{prompt}|{platform}|{creative_level}|{max_length}|{negative_prompt}|{num_candidates}"
-        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+                 max_length: int, negative_prompt: str, num_candidates: int,
+                 excluded_characters=None, no_swap_pairs=None,
+                 context=None, style=None, language: str = "en") -> str:
+        """生成缓存键：全组件 + 版本盐（对齐视频侧 optimizer 模式）。
+
+        组件：prompt/platform/creative_level/max_length/num_candidates/negative_prompt
+              + excluded_characters/no_swap_pairs/context/style/language。
+        版本盐 IMAGE_FMT_V1：Output Format/评分机制变化时旧缓存天然失效。
+        """
+        def _h(value) -> str:
+            if not value:
+                return ""
+            if isinstance(value, set):
+                value = sorted(value, key=str)
+            if isinstance(value, (dict, list, tuple)):
+                import json
+                value = json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
+            return hashlib.sha1(str(value).encode("utf-8")).hexdigest()[:16]
+
+        ctx_hash = ""
+        if context:
+            import json
+            ctx_hash = hashlib.sha1(
+                json.dumps(context, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
+            ).hexdigest()[:16]
+        style_val = style.value if hasattr(style, "value") else style
+        return "|".join([
+            "IMAGE_FMT_V1",  # 版本盐：约束/评分机制变化时旧缓存天然失效
+            str(platform),
+            str(language),
+            _h(prompt),
+            _h(style_val),
+            str(creative_level),
+            str(max_length),
+            str(num_candidates),
+            _h(negative_prompt),
+            ctx_hash,
+            _h(excluded_characters),
+            _h(no_swap_pairs),
+        ])
 
     def get(self, prompt: str, platform: str, creative_level: int,
-            max_length: int, negative_prompt: str, num_candidates: int) -> Optional[OptimizeResult]:
+            max_length: int, negative_prompt: str, num_candidates: int,
+            excluded_characters=None, no_swap_pairs=None,
+            context=None, style=None, language: str = "en") -> Optional[OptimizeResult]:
         """读取缓存，命中时返回结果（tokens=0, duration_ms=0），未命中返回 None"""
         if not self._check_ready():
             return None
 
-        key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+        key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
+                           excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
+                           context=context, style=style, language=language)
         cutoff = time.time() - self._ttl_hours * 3600
 
         try:
@@ -126,12 +166,16 @@ class SqlitePromptCache:
 
     def set(self, prompt: str, platform: str, creative_level: int,
             max_length: int, negative_prompt: str, num_candidates: int,
-            result: OptimizeResult):
+            result: OptimizeResult,
+            excluded_characters=None, no_swap_pairs=None,
+            context=None, style=None, language: str = "en"):
         """写入缓存"""
         if not self._check_ready():
             return
 
-        key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+        key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
+                           excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
+                           context=context, style=style, language=language)
 
         try:
             self._conn.execute("""

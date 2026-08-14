@@ -51,6 +51,40 @@ def _clean_audio(value: Any) -> str:
     return cleaned or "SFX"
 
 
+# 音频分层键白名单与单层上限（REQ-3.1：各层 ≤200 字符）
+_AUDIO_LAYER_KEYS = ("environment", "sfx", "dialogue")
+_AUDIO_LAYER_MAX = 200
+
+
+def _clean_audio_layers(value: Any) -> Optional[dict]:
+    """音频分层清洗（REQ-3.2）：键白名单 + 字符串层 strip/截断 200 + music_off 布尔归一。
+
+    environment/sfx/dialogue 全为空或非 dict → None（保持旧尾行/旧判定，零回归）。
+    """
+    if not isinstance(value, dict):
+        return None
+    cleaned: dict[str, Any] = {}
+    for key in _AUDIO_LAYER_KEYS:
+        raw = value.get(key)
+        if isinstance(raw, str) and raw.strip():
+            cleaned[key] = raw.strip()[:_AUDIO_LAYER_MAX]
+    if "music_off" in value:
+        raw = value.get("music_off")
+        if isinstance(raw, bool):
+            cleaned["music_off"] = raw
+        elif isinstance(raw, (int, float)) and raw in (0, 1):
+            cleaned["music_off"] = bool(raw)
+        elif isinstance(raw, str):
+            norm = raw.strip().lower()
+            if norm in ("true", "yes", "1", "on"):
+                cleaned["music_off"] = True
+            elif norm in ("false", "no", "0", "off"):
+                cleaned["music_off"] = False
+    if not any(k in cleaned for k in _AUDIO_LAYER_KEYS):
+        return None
+    return cleaned
+
+
 def _clean_swap_pairs(value: Any, limit: int) -> list[dict]:
     """禁止替换对清洗：兼容对象 {"from","to"} 与二元组 [from, to]（契约规范形态）；
     两端均须为 strip 后非空字符串（数字等非字符串丢弃，对齐契约 _normalizeNoSwapPairs），截断到 limit。"""
@@ -214,6 +248,7 @@ class BaseVideoStrategy(ABC):
             # --- Higgsfield 导演维度：全字段钳制/裁剪/清洗，非法值回退默认（C3）---
             "aspect": _clean_aspect(data.get("aspect")),
             "audio": _clean_audio(data.get("audio")),
+            "audio_layers": _clean_audio_layers(data.get("audio_layers")),
             "excluded_characters": clean_str_list(data.get("excluded_characters"), _DIRECTOR_LIMITS["excluded_characters_max"]),
             "no_swap_pairs": _clean_swap_pairs(data.get("no_swap_pairs"), _DIRECTOR_LIMITS["no_swap_pairs_max"]),
             "color_ratio": _clean_color_ratio(data.get("color_ratio")),
@@ -253,17 +288,43 @@ class BaseVideoStrategy(ABC):
         )
 
     @classmethod
+    def _build_audio_layer_segment(cls, audio_layers: dict[str, Any]) -> str:
+        """Audio 段渲染（REQ-3.3）：`Audio: Environmental {env}. SFX: {sfx}. Dialogue: {dialogue}. No music.`
+        空层省略；music_off 非 true 省略 "No music."。"""
+        parts: list[str] = []
+        env = str(audio_layers.get("environment") or "").strip()
+        sfx = str(audio_layers.get("sfx") or "").strip()
+        dialogue = str(audio_layers.get("dialogue") or "").strip()
+        if env:
+            parts.append(f"Environmental {env}.")
+        if sfx:
+            parts.append(f"SFX: {sfx}.")
+        if dialogue:
+            parts.append(f"Dialogue: {dialogue}.")
+        if audio_layers.get("music_off") is True:
+            parts.append("No music.")
+        if not parts:
+            return ""
+        return "Audio: " + " ".join(parts)
+
+    @classmethod
     def build_tail(cls, meta: dict[str, Any]) -> str:
         """refined 收尾行模板（与契约层 appendVideoTrailer 一致）：
-        `Photoreal. NON-IP. {aspect}. {duration}s. {audio} only.`"""
+        `Photoreal. NON-IP. {aspect}. {duration}s. {audio} only.`；
+        audio_layers 提供时以 Audio 段替换 `{audio} only.`（REQ-3.3，向后兼容）。"""
         aspect = _clean_aspect((meta or {}).get("aspect"))
-        audio = _clean_audio((meta or {}).get("audio"))
         duration = (meta or {}).get("duration_hint")
         try:
             # 默认 15 对齐契约 appendVideoTrailer（duration 缺失时同一兜底值，防跨仓漂移）
             dur = int(float(duration)) if duration is not None and str(duration).strip() != "" else 15
         except (TypeError, ValueError):
             dur = 15
+        audio_layers = (meta or {}).get("audio_layers")
+        if isinstance(audio_layers, dict):
+            segment = cls._build_audio_layer_segment(audio_layers)
+            if segment:
+                return f"Photoreal. NON-IP. {aspect}. {dur}s. {segment}"
+        audio = _clean_audio((meta or {}).get("audio"))
         return f"Photoreal. NON-IP. {aspect}. {dur}s. {audio} only."
 
     @classmethod
@@ -289,8 +350,11 @@ class BaseVideoStrategy(ABC):
                 "- `color_ratio`: color proportion as \"60:30:10\" (three integer parts) matching the dominant palette.\n"
                 "- `shots`: array of ≤3 shot units; each shot has `shot` (id), `camera` (one of the camera motions), `duration` (1-15 seconds), and `beats` (≤6 timed blocks {\"time\": \"0:00-0:04\", \"action\": ..., \"camera\": ...}).\n"
                 "- The rendered `prompt` MUST be a long, detailed single-string description (500+ English words / 500-5000 Chinese chars) covering ALL shots.\n"
+                "- Timeline markers (MANDATORY when shots >= 2): the rendered `prompt` body MUST embed `[SHOT N]` (N = 1,2,...) or `[HARD CUT]` at each shot boundary so the multi-shot timeline is explicit. Single-shot prompts do NOT need markers.\n"
                 "- Reference protocol (MANDATORY): whenever `excluded_characters` or `no_swap_pairs` is non-empty, the rendered `prompt` body MUST embed at least one reference marker `[ABSENT] <name>` (or `<<<...>>>`) so the ban is visibly enforced — e.g. `hero walks. [ABSENT] JAX stays off-frame` or `crowd removed [ABSENT] background crowd`. Never declare a ban without marking it in the text.\n"
                 "- The rendered `prompt` MUST end with the exact trailer line: `Photoreal. NON-IP. {aspect}. {duration}s. {audio} only.` (fill from `aspect` / `duration_hint` / `audio` fields).\n"
+                "- `audio_layers` (optional): object with optional string layers `environment` / `sfx` / `dialogue` (each ≤200 chars) and optional boolean `music_off` (true = no music). When provided, the trailer ends with the Audio segment (e.g. `Audio: Environmental forest ambience. SFX: gunfire. No music.`) instead of `{audio} only.`; omit or null when not needed.\n"
+                "- If `audio_layers` is provided, do NOT render the `{audio} only.` tail; the Audio segment IS the trailer ending.\n"
                 "- Keep the trailer EXACTLY as specified; do not append anything after it."
             )
         return (

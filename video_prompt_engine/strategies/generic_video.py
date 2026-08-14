@@ -120,8 +120,10 @@ Output ONLY a strict JSON object with EXACTLY these keys: {keys_line}.
   "excluded_characters": ["character/element that MUST NOT appear (≤10, or empty array)"],
   "no_swap_pairs": [{{"from": "must-not-appear", "to": "replacement"}}],
   "color_ratio": "60:30:10",
-  "shots": [{{"shot": "shot_01", "camera": "camera motion", "duration": 5, "beats": [{{"time": "0:00-0:04", "action": "...", "camera": "..."}}]}}]
+  "shots": [{{"shot": "shot_01", "camera": "camera motion", "duration": 5, "beats": [{{"time": "0:00-0:04", "action": "...", "camera": "..."}}]}}],
+  "audio_layers": null
 }}
+IMPORTANT (timeline markers): when `shots` has 2 or more units, the rendered `prompt` body MUST embed a cut marker at each shot boundary: `[SHOT N]` (N = 1, 2, ...) or `[HARD CUT]` — e.g. "[SHOT 1] hero enters the hall. [HARD CUT] hero draws his sword." Single-shot prompts do NOT need markers.
 No explanations, no markdown fences, no text outside the JSON object.
 {cls.build_higgsfield_section(tier)}
 {style_text}

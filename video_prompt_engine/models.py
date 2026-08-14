@@ -67,6 +67,7 @@ VIDEO_OUTPUT_KEYS = (
     "prompt", "shot", "camera", "motion_intensity", "scene_transition",
     "continuity_token", "duration_hint", "positive_constraints", "final_frame",
     "excluded_characters", "no_swap_pairs", "color_ratio", "shots",
+    "audio_layers",
 )
 
 
@@ -114,6 +115,7 @@ class VideoPromptMeta(BaseModel):
     # --- Higgsfield 导演维度（上限对齐 VIDEO_DIRECTOR_LIMITS；新字段全默认值，旧缓存可重建）---
     aspect: str = Field(default="16:9", max_length=10, description="画面比例（默认 16:9）")
     audio: str = Field(default="SFX", max_length=50, description="音频提示（默认 SFX，对齐契约 appendVideoTrailer）")
+    audio_layers: Optional[dict] = Field(default=None, description="音频分层（可选：environment/sfx/dialogue 字符串层各 ≤200 字符 + music_off 布尔；默认 None 保持旧尾行）")
     excluded_characters: list[str] = Field(default_factory=list, max_length=10, description="禁止出现角色/元素（≤10）")
     no_swap_pairs: list[dict] = Field(default_factory=list, max_length=5, description="禁止替换对 [{\"from\":...,\"to\":...}]（≤5）")
     color_ratio: str = Field(default="60:30:10", max_length=20, description="色彩配比（默认 60:30:10）")

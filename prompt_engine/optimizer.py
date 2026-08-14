@@ -98,19 +98,31 @@ class Optimizer:
     # ── 缓存：通过 CacheManager 代理 ──────────────────────────
 
     def _cache_key(self, prompt: str, platform: str, creative_level: int,
-                   max_length: int, negative_prompt: str, num_candidates: int) -> str:
-        return self._cache.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+                   max_length: int, negative_prompt: str, num_candidates: int,
+                   excluded_characters=None, no_swap_pairs=None,
+                   context=None, style=None, language: str = "en") -> str:
+        return self._cache.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
+                                    excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
+                                    context=context, style=style, language=language)
 
     def _cache_get(self, prompt: str, platform: str, creative_level: int,
-                   max_length: int, negative_prompt: str, num_candidates: int) -> Optional[OptimizeResult]:
+                   max_length: int, negative_prompt: str, num_candidates: int,
+                   excluded_characters=None, no_swap_pairs=None,
+                   context=None, style=None, language: str = "en") -> Optional[OptimizeResult]:
         """双级缓存读取：L1 内存 → L2 SQLite（预热 L1）"""
-        return self._cache.get(prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+        return self._cache.get(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
+                               excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
+                               context=context, style=style, language=language)
 
     def _cache_set(self, prompt: str, platform: str, creative_level: int,
                    max_length: int, negative_prompt: str, num_candidates: int,
-                   result: OptimizeResult):
+                   result: OptimizeResult,
+                   excluded_characters=None, no_swap_pairs=None,
+                   context=None, style=None, language: str = "en"):
         """写入双级缓存"""
-        self._cache.set(prompt, platform, creative_level, max_length, negative_prompt, num_candidates, result)
+        self._cache.set(prompt, platform, creative_level, max_length, negative_prompt, num_candidates, result,
+                        excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
+                        context=context, style=style, language=language)
 
     # ── 核心编排方法 ───────────────────────────────────────────
 
@@ -130,11 +142,18 @@ class Optimizer:
         """单条提示词优化主流程"""
         start_time = time.time()
         try:
-            # ✨ 双级缓存检查（SQLite + 内存）
+            # ✨ 双级缓存检查（SQLite + 内存）— Round3 T1：key 全组件化（约束/context/style/语言），防串号
+            cache_language = "zh" if re.search(r"[一-鿿]", request.prompt) else "en"
+            cache_style = request.style.value if request.style is not None else None
             cached = self._cache_get(
                 request.prompt, request.platform.value,
                 request.creative_level, request.max_length,
                 request.negative_prompt or "", request.num_candidates,
+                excluded_characters=request.excluded_characters,
+                no_swap_pairs=request.no_swap_pairs,
+                context=request.context,
+                style=cache_style,
+                language=cache_language,
             )
             if cached:
                 logger.info("Cache hit: %s @ %s", request.prompt[:50], request.platform.value)
@@ -290,6 +309,11 @@ class Optimizer:
                 request.creative_level, request.max_length,
                 request.negative_prompt or "", request.num_candidates,
                 result,
+                excluded_characters=request.excluded_characters,
+                no_swap_pairs=request.no_swap_pairs,
+                context=request.context,
+                style=cache_style,
+                language=cache_language,
             )
             return result
 
