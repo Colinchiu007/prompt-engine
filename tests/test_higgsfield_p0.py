@@ -268,7 +268,7 @@ class TestOptimizerHiggsfield:
         o = make_optimizer()
         req = VideoOptimizeRequest(prompt="a cat", max_length=1800)
         key = o._cache_key(req, "generic_video", "en")
-        assert key.startswith("HIGGSFIELD_FMT_V1|")
+        assert key.startswith("HIGGSFIELD_FMT_V2|")
         # 旧格式 key（无盐）不命中新 key
         old = "|".join(key.split("|")[1:])
         assert old != key

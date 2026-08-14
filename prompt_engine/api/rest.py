@@ -470,7 +470,9 @@ async def engine_resources():
     for fp in rag_paths:
         if fp.exists():
             try:
-                d = _json.loads(fp.read_text())
+                # 显式 utf-8：prompts.json 含中文，GBK locale 下 read_text() 默认编码抛 UnicodeDecodeError
+                # 被吞后 rag_cases 恒为 0（Windows 资源端点基线缺陷，评审期发现）
+                d = _json.loads(fp.read_text(encoding="utf-8"))
                 if isinstance(d, list):
                     rag_cases += len(d)
                 elif isinstance(d, dict):
@@ -486,7 +488,7 @@ async def engine_resources():
     mj_fp = base / "data" / "mj_style_final.json"
     if mj_fp.exists():
         try:
-            d = _json.loads(mj_fp.read_text())
+            d = _json.loads(mj_fp.read_text(encoding="utf-8"))
             if isinstance(d, dict):
                 mj_count = sum(len(v) if isinstance(v, list) else 0 for v in d.values())
             elif isinstance(d, list):
@@ -502,7 +504,7 @@ async def engine_resources():
     if wc.exists():
         try:
             import yaml
-            d = yaml.safe_load(wc.read_text())
+            d = yaml.safe_load(wc.read_text(encoding="utf-8"))
             if isinstance(d, dict):
                 wildcards_count = sum(len(v) for v in d.values() if isinstance(v, list))
         except Exception:

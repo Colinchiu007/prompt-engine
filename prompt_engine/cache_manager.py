@@ -100,23 +100,33 @@ class CacheManager:
     def make_key(
         self, prompt: str, platform: str, creative_level: int,
         max_length: int, negative_prompt: str, num_candidates: int,
+        excluded_characters=None, no_swap_pairs=None,
+        context=None, style=None, language: str = "en",
     ) -> str:
         return SqlitePromptCache.make_key(
             prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
+            excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
+            context=context, style=style, language=language,
         )
 
     def get(
         self, prompt: str, platform: str, creative_level: int,
         max_length: int, negative_prompt: str, num_candidates: int,
+        excluded_characters=None, no_swap_pairs=None,
+        context=None, style=None, language: str = "en",
     ) -> Optional[OptimizeResult]:
         """双级缓存读取：L1 内存 → L2 SQLite（预热 L1）"""
-        key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+        key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
+                            excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
+                            context=context, style=style, language=language)
         # L1
         cached = self._mem_cache.get(key)
         if cached:
             return cached
         # L2
-        cached = self._sqlite_cache.get(prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+        cached = self._sqlite_cache.get(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
+                                        excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
+                                        context=context, style=style, language=language)
         if cached:
             self._mem_cache.set(key, cached)  # 预热 L1
             return cached
@@ -126,11 +136,17 @@ class CacheManager:
         self, prompt: str, platform: str, creative_level: int,
         max_length: int, negative_prompt: str, num_candidates: int,
         result: OptimizeResult,
+        excluded_characters=None, no_swap_pairs=None,
+        context=None, style=None, language: str = "en",
     ) -> None:
         """写入双级缓存"""
-        key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates)
+        key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
+                            excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
+                            context=context, style=style, language=language)
         self._mem_cache.set(key, result)
-        self._sqlite_cache.set(prompt, platform, creative_level, max_length, negative_prompt, num_candidates, result)
+        self._sqlite_cache.set(prompt, platform, creative_level, max_length, negative_prompt, num_candidates, result,
+                               excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
+                               context=context, style=style, language=language)
         # 同时写入旧版 dict 缓存（兼容 fuzzy_match_prompt）
         _PromptCache[(prompt.strip().lower(), platform, creative_level, max_length, negative_prompt, num_candidates)] = result
 
