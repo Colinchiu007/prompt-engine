@@ -1,3 +1,11 @@
+## [未发布] 功能：视频引擎 Higgsfield Round3 B/C（跨镜承接 + 导演分镜块骨架，2026-08-15）
+
+- **跨镜承接（Batch B）**：`prev_final_frame`（≤1000 字符）承载上一场景最终画面描述，注入 SCENE Continuity 事实引用段；V4 缓存盐加入 `prev_final_frame` SHA-1 前缀哈希（承接状态变化缓存必然失效）；承接一致性 advisory -5——英文共享实体 ≥40% 且角色名（character_list 白名单）硬命中，中文白名单词重合 ≥60% 或无名单时整句字符重合 ≥0.5；无 `prev_final_frame` 零回归
+- **导演分镜块骨架（Batch C）**：`refined_blocks.json` v2——590 条《Hell Grind》语料统计 12 块顺序（SCENE NOTE → SPATIAL LAYOUT → LIGHTING → COLOR → CAMERA → ENVIRONMENT → CONTINUITY → CHARACTERS → SKIN → ACTING → STILLNESS LOCK → FINAL FRAME）+ 块频率 + 覆盖率 `min_ratio=0.8` + 7 条 lock-trigger 规则（默认启用 dead_center/exposure_break/eye_line）；`models.py` `blocks` 12 键白名单 + 每键 ≤4000 字符；`strategies/base.py` 12 块顺序渲染（行首 `块名:`、块间空行）、尾行安全归一（中段 "Photoreal NON-IP aesthetic" 字面量不误删 FINAL FRAME）、tail 永不截断（render body → append 尾行 → optimizer 按预算截断）、FAIL CHECK 强制自审
+- **否定感知 gated 规则（evaluator）**：`block_coverage -5`（分母=非空块数、分子=渲染串命中块标记数、ratio<0.8 扣分）；lock-gated -5 仅当 lock 词真实（非否定）出现时检测 forbidden；style_contamination locks 用 hyper-realistic/photorealistic detail/写实，**不含裸词 photoreal**（防 "Photoreal. NON-IP." 尾行误触发）；资产缺失/损坏回退空表 → 规则不启用零误报
+- **测试**：新增 `tests/test_refined_blocks.py` / `tests/test_analyze_hg_corpus.py` 等；全量 824 passed / 3 skipped（5 个 web E2E 需本地 server，环境性）
+- **评审修复（Claude 双模型，antigravity 地区不可用降级）**：否定词表扩充（nobody/no one/do not/避免 等）+ `exposure_break` 锁词精确化防误伤（C1）；中文连续性改最长公共子串覆盖率替代不可达的 ratio（C2）；漂移尾行（缺 duration/aspect）宽松剥离防双尾行回归（C3）；连续性角色硬判据收窄为「终态帧实际出现」防 roster 稀释（W1）；JSON 重试提示 tier 感知追加 blocks 与 refined 样例一致（W2）；`fit_refined_trailer` 超预算截断降级不再整单失败（W3）；死导入清理 + FAIL CHECK 裸形态剥离（Info）。回归用例 +14（cross_scene 4 / refined_blocks 6 / higgsfield_p0 4），全部锚定
+
 ## [未发布] 功能：图片引擎 Higgsfield 对齐（多候选择优/违规扣分/tier 层级，image-engine-higgsfield-alignment，2026-08-14）
 
 - **确定性启发式评分（evaluator）**：`prompt_engine/evaluator.py` 新增 `evaluate_quality`（命名规避既有 LLM 对比评估 `evaluate` 冲突；签名与视频引擎对齐 prompt/meta/source_prompt/language/tier/max_length）+ `detect_tier`/`select_best`/`_contains_word`/`_strip_reference_markers`/`count_words`；六要素命中 + 层级长度 + 源保真 + 违规扣分，0-100 确定性输出，无 LLM 调用

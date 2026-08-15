@@ -57,7 +57,16 @@ class GenericVideoStrategy(BaseVideoStrategy):
         lang_note = "Chinese 中文主体 + 英文镜头术语双语" if str(output_language or "en").lower().startswith("zh") else "English"
         lang_section = cls.build_language_section(output_language, tier=tier)
         lens_discipline = cls.build_lens_discipline_section(character_count)
-        keys_line = ", ".join(f'"{k}"' for k in VIDEO_OUTPUT_KEYS)
+        # 评审 W2：refined 层 keys 追加 "blocks"（与 blocks_sample 同源，batch 零回归）
+        keys = list(VIDEO_OUTPUT_KEYS)
+        if tier == "refined":
+            keys.append("blocks")
+        keys_line = ", ".join(f'"{k}"' for k in keys)
+        # Round3 C：refined 层 JSON 样例附加 blocks 键（batch 不输出，保持字节级零回归）
+        blocks_sample = (
+            ',\n  "blocks": {"SCENE NOTE": "scene pickup & current state (required when prev_final_frame provided)", "SPATIAL LAYOUT": "blocking and frame composition", "LIGHTING": "sources, quality, direction", "COLOR": "dominant palette and ratios", "CAMERA": "shot scale, angle, lens, camera motion", "ENVIRONMENT": "setting, props, weather", "CONTINUITY": "cross-scene consistency tokens", "CHARACTERS": "who appears, wardrobe, identity locks", "SKIN": "pore-level realism notes", "ACTING": "performance direction", "STILLNESS LOCK": "elements that must NOT move", "FINAL FRAME": "explicit end state"}'
+            if tier == "refined" else ""
+        )
         # 长度口径与 evaluator tier 层级对齐（DEEP P0-1）：refined 500-5000 词（zh 500 字符-预算上限）；
         # max_length 是字符预算上限不是目标长度——小预算（如 1800）下 LLM 写不满 500 词属正常，
         # evaluator 下界随预算自适应（评审 C1/W4），不再要求「fill the budget」与词数下限同时成立
@@ -121,7 +130,7 @@ Output ONLY a strict JSON object with EXACTLY these keys: {keys_line}.
   "no_swap_pairs": [{{"from": "must-not-appear", "to": "replacement"}}],
   "color_ratio": "60:30:10",
   "shots": [{{"shot": "shot_01", "camera": "camera motion", "duration": 5, "beats": [{{"time": "0:00-0:04", "action": "...", "camera": "..."}}]}}],
-  "audio_layers": null
+  "audio_layers": null{blocks_sample}
 }}
 IMPORTANT (timeline markers): when `shots` has 2 or more units, the rendered `prompt` body MUST embed a cut marker at each shot boundary: `[SHOT N]` (N = 1, 2, ...) or `[HARD CUT]` — e.g. "[SHOT 1] hero enters the hall. [HARD CUT] hero draws his sword." Single-shot prompts do NOT need markers.
 No explanations, no markdown fences, no text outside the JSON object.

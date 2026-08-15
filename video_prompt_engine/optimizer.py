@@ -32,19 +32,89 @@ from video_prompt_engine.cache_manager import VideoCacheManager
 from video_prompt_engine.classifier import classify, suggest_dimensions
 from video_prompt_engine.evaluator import evaluate, select_best
 from video_prompt_engine.knowledge.loader import load_keywords_video
+from video_prompt_engine.refined_blocks import DRIFT_TRAILER_RE, TRAILER_TAIL_RE
 
 logger = logging.getLogger(__name__)
 
 # 与策略 Output Format 同源（VIDEO_OUTPUT_KEYS），禁止双份手写漂移（C5）
-_JSON_RETRY_KEYS = ", ".join('"' + k + '"' for k in VIDEO_OUTPUT_KEYS)
+def _json_retry_keys(tier: str) -> str:
+    keys = list(VIDEO_OUTPUT_KEYS)
+    if tier == "refined":
+        # 评审 W2：refined 层策略样例含 blocks 键，重试提示必须同源，否则重试会引导 LLM 丢弃 blocks
+        keys.append("blocks")
+    return ", ".join('"' + k + '"' for k in keys)
 
-JSON_RETRY_HINT = (
-    "\n\nIMPORTANT: Your previous output was NOT a valid strict JSON object. "
-    "Output ONLY a strict JSON object with EXACTLY these keys: "
-    + _JSON_RETRY_KEYS
-    + ". "
-    "No markdown fences, no code blocks, no extra text outside the JSON object."
-)
+
+def build_json_retry_hint(tier: str = "batch") -> str:
+    """结构化输出重试提示（tier 感知 keys；batch 恒等于 JSON_RETRY_HINT 保持兼容）。"""
+    return (
+        "\n\nIMPORTANT: Your previous output was NOT a valid strict JSON object. "
+        "Output ONLY a strict JSON object with EXACTLY these keys: "
+        + _json_retry_keys(tier)
+        + ". "
+        "No markdown fences, no code blocks, no extra text outside the JSON object."
+    )
+
+
+JSON_RETRY_HINT = build_json_retry_hint("batch")
+
+
+def strip_rendered_trailer(optimized: str, tail: str) -> str:
+    """C6 尾行剥离（可测单元）：从「最后一段内以尾行形态存在」的 Photoreal NON-IP 起剥离到串尾。
+
+    兼容旧形态 `{audio} only.` 与 Round3 Audio 段形态（Audio: ... / No music. 结尾）；
+    尾行形态判定限定在最后一段（\n\n 块分隔之后，评审 C1-1）——正文中段字面量（如
+    "Photoreal NON-IP aesthetic with deep blacks"）即使后接 only./Audio:/No music. 结尾
+    也不跨块吸收，FINAL FRAME 等后续块不误删（评审 Warning-5 口径延续）。
+    残缺裸尾行（以 NON-IP. 收尾的短残片，评审 C1-2）同样剥离，防 append 后双尾行残留。
+    无尾行形态时回退 endswith(tail) 精确剥离；两者都不中 → 原样返回（调用方自行截断）。
+    """
+    import re
+    blocks = re.split(r"\n\s*\n", optimized)
+    last_block = blocks[-1]
+    m = TRAILER_TAIL_RE.search(last_block)
+    if m:
+        body = optimized[: len(optimized) - len(last_block) + m.start()].rstrip()
+        return re.sub(r"\n\s*$", "", body)
+    m = DRIFT_TRAILER_RE.search(last_block)
+    if m:
+        # 评审 C3：漂移尾行（缺 aspect/duration 的 Photoreal NON-IP 形态）→ 剥离防双尾行
+        body = optimized[: len(optimized) - len(last_block) + m.start()].rstrip()
+        return re.sub(r"\n\s*$", "", body)
+    marker = re.search(r"Photoreal\.?\s+NON-IP\.?", last_block, flags=re.IGNORECASE)
+    if marker:
+        # 评审 C1-2：残缺裸尾行（Photoreal...NON-IP 后无 only./Audio/No music 且以句点收尾、
+        # 单行残片）→ 剥离防双尾行；中段字面量（后接描述性正文）不以 NON-IP. 结尾 → 保留
+        suffix = last_block[marker.start():]
+        if "\n" not in suffix and re.search(r"non-ip\.\s*$", suffix, flags=re.IGNORECASE):
+            body = optimized[: len(optimized) - len(last_block) + marker.start()].rstrip()
+            return re.sub(r"\n\s*$", "", body)
+    if tail and optimized.endswith(tail):
+        return optimized[: -len(tail)].rstrip()
+    return optimized
+
+
+def fit_refined_trailer(optimized: str, tail: str, max_length: int) -> str:
+    """Fit a refined body plus its complete trailer inside max_length.
+
+    The separator is part of the budget. If the complete trailer leaves no
+    room for meaningful body content, fail closed instead of returning an
+    overlong or trailer-only prompt.
+    """
+    try:
+        limit = int(max_length)
+    except (TypeError, ValueError) as error:
+        raise ValueError("max_length must be an integer") from error
+    trailer = str(tail or "").strip()
+    body = strip_rendered_trailer(str(optimized or ""), trailer).strip()
+    separator = " "
+    if not trailer or limit <= len(trailer) + len(separator):
+        raise ValueError("refined trailer cannot fit within max_length")
+    body_budget = limit - len(trailer) - len(separator)
+    fitted_body = body[:body_budget].rstrip()
+    if not fitted_body:
+        raise ValueError("refined prompt body cannot fit within max_length")
+    return fitted_body + separator + trailer
 
 
 def derive_character_count(context: Optional[dict]) -> Optional[int]:
@@ -132,7 +202,7 @@ class VideoOptimizer:
                 json.dumps(request.context, sort_keys=True, ensure_ascii=False).encode("utf-8")
             ).hexdigest()[:16]
         return "|".join([
-            "HIGGSFIELD_FMT_V2",  # 版本盐：V2 = Round3 T2 教标记（shots>=2 必须 [SHOT N]/[HARD CUT]），旧形态缓存失效
+            "HIGGSFIELD_FMT_V4",  # 版本盐：V4 = Round3 B/C（承接段/块骨架输出形态变化），旧缓存一次失效重建（V2→V4 同批发布）
             str(platform),
             lang,
             _h(request.prompt),
@@ -142,6 +212,7 @@ class VideoOptimizer:
             str(request.num_candidates),
             _h(request.negative_prompt or ""),
             ctx_hash,
+            _h(request.prev_final_frame or ""),  # Round3 B：跨镜终态影响输出，必须入 key
         ])
 
     @staticmethod
@@ -200,6 +271,8 @@ class VideoOptimizer:
             )
             system_prompt += self._build_classification_section(classification, dims)
             system_prompt += self._builder.build_context_section(request.context)
+            # Round3 B：跨镜承接指令段（仅 prev_final_frame 提供时注入；refined/batch 双形态）
+            system_prompt += self._builder.build_continuity_section(request.prev_final_frame, tier)
             few_shot = self._rag.retrieve_few_shot(request, platform=platform)
             if few_shot:
                 system_prompt += few_shot
@@ -216,7 +289,7 @@ class VideoOptimizer:
                     retried += 1
                     total_retried += 1
                     raw, _tokens = self._provider.call(
-                        system_prompt + JSON_RETRY_HINT, request.prompt, variant=i + 100 * retried,
+                        system_prompt + build_json_retry_hint(tier), request.prompt, variant=i + 100 * retried,
                         max_length=request.max_length,
                     )
                     raw = strip_reasoning_blocks(raw)
@@ -227,18 +300,11 @@ class VideoOptimizer:
                         tail = strategy_cls.build_tail(video_meta) if tier == "refined" else ""
                         if tail:
                             # 剥离已存在尾行（LLM 直出或 append，格式可能漂移：5.5s/小写/Photoreal 缺句点）→ body 截断 → 重 append 规范尾行
-                            import re
-                            # C6 尾行剥离：兼容旧形态 `{audio} only.` 与 Round3 Audio 段形态（Audio: ... / No music. 结尾），
-                            # 否则 audio_layers 长尾被预算截断时会把 LLM 尾行拦腰切开产出双尾行（评审 C1）
-                            body = re.sub(
-                                r"\s*Photoreal\.?\s+NON-IP\.?\s+.*?(?:only\.|Audio:.*|No music\.)\s*$", "",
-                                optimized, flags=re.IGNORECASE | re.DOTALL,
-                            )
-                            if body == optimized and optimized.endswith(tail):
-                                body = optimized[: -len(tail)]
-                            if body.strip():
-                                optimized = body[: max(0, request.max_length - len(tail))] + tail
-                            else:
+                            # C6 尾行剥离：取末位 Photoreal NON-IP（评审 Warning-5：blocks 中段字面量不误剥；C1 双尾行防护）
+                            # 评审 W3：fit 失败（body 空/预算过小）→ 截断降级，不整单失败
+                            try:
+                                optimized = fit_refined_trailer(optimized, tail, request.max_length)
+                            except ValueError:
                                 optimized = optimized[:request.max_length]
                         else:
                             optimized = optimized[:request.max_length]
@@ -251,10 +317,24 @@ class VideoOptimizer:
                     video_meta = {}
                 candidates.append((optimized, video_meta))
 
+            # Round3 B：角色白名单（context.character_list 角色名，continuity_check 硬判据用）
+            character_list: list[str] = []
+            if request.context:
+                cl = request.context.get("character_list")
+                if isinstance(cl, list):
+                    character_list = [
+                        str(c.get("name", "")).strip() if isinstance(c, dict) else str(c).strip()
+                        for c in cl if (c.get("name") if isinstance(c, dict) else c)
+                    ]
+
             # 多候选择优：evaluator 评分，最优在前
             if len(candidates) > 1:
                 scored = [
-                    (evaluate(p, m, source_prompt=request.prompt, language=lang, tier=tier, max_length=request.max_length)["score"], p, m)
+                    (evaluate(
+                        p, m, source_prompt=request.prompt, language=lang, tier=tier,
+                        max_length=request.max_length, prev_final_frame=request.prev_final_frame,
+                        character_list=character_list,
+                    )["score"], p, m)
                     for p, m in candidates
                 ]
                 scored.sort(key=lambda x: x[0], reverse=True)

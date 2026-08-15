@@ -4,7 +4,7 @@
 - _clean_audio_layers：键白名单/类型/长度清洗，非法 → None
 - build_tail：audio_layers 非空 → Audio 段替换 {audio} only.；空层省略；music_off=false 省略 No music
 - 零回归：无 audio_layers → 旧尾行形态不变
-- missing_audio 判定表：sfx/dialogue 至少一层满足；仅 environment 不算
+- missing_audio 判定表：environment/sfx/dialogue 任一非空层满足
 - 链路端到端：extract_video_meta → post_process_video 渲染含 Audio 段
 """
 from __future__ import annotations
@@ -80,8 +80,8 @@ class TestMissingAudioJudgment:
     def test_dialogue_layer_satisfies(self):
         assert "missing_audio" not in self._evaluate({"dialogue": "\"Run!\""})["violations"]
 
-    def test_environment_alone_not_enough(self):
-        assert self._evaluate({"environment": "forest"})["violations"].get("missing_audio") == -5
+    def test_environment_layer_satisfies(self):
+        assert "missing_audio" not in self._evaluate({"environment": "forest"})["violations"]
 
     def test_no_layers_legacy_behavior(self):
         # 无 audio_layers + audio 空 + 正文无音频词 → 仍触发（零回归）

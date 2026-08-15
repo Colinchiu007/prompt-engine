@@ -1,0 +1,8 @@
+{"file":"video_prompt_engine/models.py","role":"Round3 state and block metadata bounds"}
+{"file":"video_prompt_engine/prompt_builder.py","role":"safe cross-scene instruction"}
+{"file":"video_prompt_engine/optimizer.py","role":"V4 cache and trailer lifecycle"}
+{"file":"video_prompt_engine/evaluator.py","role":"continuity, coverage, and gated diagnostics"}
+{"file":"video_prompt_engine/refined_blocks.py","role":"shared block schema"}
+{"file":"video_prompt_engine/knowledge/refined_blocks.json","role":"versioned corpus configuration"}
+{"file":"tests/test_cross_scene.py","role":"Round3 B regression suite"}
+{"file":"tests/test_refined_blocks.py","role":"Round3 C regression suite"}

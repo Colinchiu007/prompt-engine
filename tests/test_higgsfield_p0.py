@@ -268,7 +268,7 @@ class TestOptimizerHiggsfield:
         o = make_optimizer()
         req = VideoOptimizeRequest(prompt="a cat", max_length=1800)
         key = o._cache_key(req, "generic_video", "en")
-        assert key.startswith("HIGGSFIELD_FMT_V2|")
+        assert key.startswith("HIGGSFIELD_FMT_V4|")
         # 旧格式 key（无盐）不命中新 key
         old = "|".join(key.split("|")[1:])
         assert old != key
@@ -317,6 +317,27 @@ class TestStrategyPrompts:
             assert "Do NOT append any trailer line" in pb, f"{name} batch section missing"
 
 
+class TestRound3ReviewFixes:
+    def test_retry_hint_tier_aware(self):
+        # 评审 W2：refined 重试提示 keys 含 blocks（与策略样例同源），batch 恒等于 JSON_RETRY_HINT
+        from video_prompt_engine.optimizer import build_json_retry_hint
+        assert '"blocks"' in build_json_retry_hint("refined")
+        assert '"blocks"' not in build_json_retry_hint("batch")
+        assert build_json_retry_hint("batch") == JSON_RETRY_HINT
+
+    def test_trailer_only_output_degrades_not_fails(self):
+        # 评审 W3：LLM 只输出尾行（body 空）→ fit_refined_trailer 抛 ValueError 被调用处捕获，
+        # 截断降级而非整单失败（optimized_prompt 非空、无 error）
+        o = make_optimizer()
+        o._provider = mock_provider(
+            '{"prompt": "Photoreal. NON-IP. 16:9. 15s. SFX only.", "shot": "wide", '
+            '"final_frame": "hero stands", "aspect": "16:9", "duration_hint": 15, "audio": "SFX"}'
+        )
+        r = o.optimize(VideoOptimizeRequest(prompt="hero walks", creative_level=8, max_length=200))
+        assert r.optimized_prompt
+        assert not r.error
+
+
 class Test8013Untouched:
     def test_mirror_has_no_higgsfield_fields(self):
         mirror = Path(__file__).parent.parent / "prompt_engine" / "strategies" / "video" / "generic.py"
@@ -357,13 +378,13 @@ class TestReviewFixes:
         from video_prompt_engine.models import VideoPromptMeta
         meta = BaseVideoStrategy.extract_video_meta(json.dumps({
             "positive_constraints": ["keep red coat", "", "keep scar"],
-            "final_frame": "x" * 600,
+            "final_frame": "x" * 1200,
         }))
         assert meta["positive_constraints"] == ["keep red coat", "keep scar"]
-        assert len(meta["final_frame"]) == 500
+        assert len(meta["final_frame"]) == 1000
         m = VideoPromptMeta(**meta)
         assert m.positive_constraints == ["keep red coat", "keep scar"]
-        assert len(m.final_frame) == 500
+        assert len(m.final_frame) == 1000
 
     def test_c3_extract_result_passes_pydantic(self):
         import json
@@ -442,10 +463,14 @@ class TestReviewFixes:
         assert "NON-IP" not in rendered
 
     def test_t7_lowercase_non_ip_idempotent_and_batch_leak(self):
-        # 小写 non-ip 也幂等（T7：不双写）
+        # 小写 non-ip 以尾行形态结束也幂等（T7：不双写）
         meta = {"aspect": "16:9", "audio": "sfx", "duration_hint": 8.0}
-        out = BaseVideoStrategy.append_trailer("body with non-ip marker", meta, "refined")
-        assert out == "body with non-ip marker"
+        tail_line = "body ends with Photoreal. non-ip. 16:9. 8s. sfx only."
+        out = BaseVideoStrategy.append_trailer(tail_line, meta, "refined")
+        assert out == tail_line
+        # 评审 C1 新口径：正文中段字面量（非尾行形态）不幂等 → 真实尾行仍追加（旧断言固化了错误行为）
+        out1 = BaseVideoStrategy.append_trailer("body with non-ip marker", meta, "refined")
+        assert out1 == "body with non-ip marker Photoreal. NON-IP. 16:9. 8s. sfx only."
         # batch 层即使 meta 有尾行字段也不追加（尾行不泄漏到 batch）
         out2 = BaseVideoStrategy.append_trailer("body", meta, "batch")
         assert out2 == "body"
@@ -502,6 +527,22 @@ class TestReviewFixes:
             "", "en", tier="refined", max_length=5000,
         )
         assert "excluded_present" not in r4["violations"]
+
+    def test_t8_chinese_absent_marker_preserves_following_prose(self):
+        from video_prompt_engine.evaluator import _strip_reference_markers
+
+        stripped = _strip_reference_markers(
+            "[ABSENT] 贾克斯不在场内，英雄继续前进。",
+            ["贾克斯"],
+        )
+        assert stripped == "不在场内，英雄继续前进。"
+
+        result = evaluate(
+            "[ABSENT] 贾克斯不在场内，英雄继续前进。" * 6,
+            {"excluded_characters": ["贾克斯"], "shots": [], "audio": "SFX"},
+            "", "zh", tier="batch", max_length=1800,
+        )
+        assert "excluded_present" not in result["violations"]
 
     def test_t10_swap_tuple_form_guard(self):
         # 契约规范形态二元组 [from, to] 回流 evaluator 不崩（类型防御），对象形态正常命中

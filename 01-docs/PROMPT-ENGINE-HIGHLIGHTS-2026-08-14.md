@@ -112,6 +112,19 @@
 ### 4.4 API 端点
 `POST /v1/video/optimize`、`POST /v1/video/optimize/batch`、`GET /v1/video/platforms`、`GET /v1/video/keywords`、`POST /v1/video/classify`、`POST /v1/video/feedback`、`GET /v1/video/cache/stats`、`GET /health`
 
+### 4.5 Round3 B/C：跨镜承接 + 导演分镜块骨架（2026-08-15 已实施）
+
+**Batch B · 跨镜承接（cross-scene continuity）**
+13. **承接事实注入**：请求携带 `prev_final_frame`（≤1000 字符，上一场景"计划中的最终画面描述"），引擎注入 SCENE Continuity 事实引用段（refined/batch 双形态），要求新输出延续人物、场景、光影、机位状态——不是语义模糊的"保持一致"，而是逐字引用上一镜终态。
+14. **V4 缓存盐**：`_cache_key` 加入 `prev_final_frame` 的 SHA-1 前缀哈希——上一镜终态不同缓存必然失效，杜绝"换了上一镜还返回旧结果"的跨镜污染。
+15. **承接一致性 advisory -5**：refined 层输出与上一镜终态做启发式核对——英文共享实体 ≥40% 且角色名（`context.character_list` 白名单）硬命中；中文白名单词重合 ≥60%，或无名单时整句字符重合 ≥0.5；无 `prev_final_frame` 时零回归（不扣分）。
+
+**Batch C · 导演分镜块骨架（refined blocks）**
+16. **块骨架语料资产**：`refined_blocks.json` v2——从 590 条《Hell Grind》公开语料统计出 12 块导演分镜结构（SCENE NOTE / SPATIAL LAYOUT / LIGHTING / COLOR / CAMERA / ENVIRONMENT / CONTINUITY / CHARACTERS / SKIN / ACTING / STILLNESS LOCK / FINAL FRAME），含块频率统计、覆盖率 `min_ratio=0.8`、7 条 lock-trigger 规则（默认启用 dead_center / exposure_break / eye_line 三条）。
+17. **结构化输出扩展**：`models.py` 新增 `blocks`（12 键白名单、每键值 ≤4000 字符）；LLM 指令要求 blocks 与渲染单串同内容——单行 `块名: 内容`、块间空行、不在块内嵌入 trailer。
+18. **块渲染与尾行安全**：`strategies/base.py` 按 12 块顺序拼单串；`strip_embedded_trailer` 与 `append_trailer` 同口径——中段字面量（如 "Photoreal NON-IP aesthetic"）不会误删 FINAL FRAME；生命周期 = render body → append 尾行 → optimizer 按预算截断（**tail 永不截断**）；FAIL CHECK 强制自审指令（块名拼写、全块覆盖、尾行精确、trailer 置底）。
+19. **否定感知 gated 规则（evaluator）**：`block_coverage -5`（分母=blocks 非空块数，分子=渲染串命中块标记数，统一正则匹配行首标题+冒号，ratio<0.8 扣分）；lock-gated 规则仅当 lock 词真实（非否定）出现时检测 forbidden 词（"no cold palette" 不触发 warm_light_leak），命中 -5 advisory，refined 专属；`style_contamination` locks 用 hyper-realistic / photorealistic detail / 写实，**不含裸词 photoreal**（防 "Photoreal. NON-IP." 尾行误触发）；资产缺失/损坏回退空表 → 规则不启用零误报。
+
 ---
 
 ## 五、桌面端契约层（Multi-Publish）
@@ -145,15 +158,15 @@
 ## 七、测试与性能基线
 
 - **全量测试**：654 passed / 3 skipped（P2 合并时实测记录）；Higgsfield 专项 89 项；共享内核锚定 11 项。
-- **契约层**：`video-prompt-engine-contract.test.js` 93/93，关联套件 240/240。
+- **契约层（Round3 B/C 分支实测）**：`video-prompt-engine-contract.test.js` 99/99 + `story2video-stages.test.js` 101/101 + `story2video-manual-assets.test.js` 21/21（合计 221）。
 - **性能**：向量检索 119s → 17ms（300 次 fuzz 逐位一致）；语料加载 3MB lru_cache 共享。
-- **评审**：P0/P1/P2 均完成双模型评审（antigravity 不可用期间 Claude 降级），Critical 0 项。
+- **评审**：P0/P1/P2 均完成双模型评审（antigravity 不可用期间 Claude 降级），Critical 0 项；Round3 B/C 评审记录见 `.ccg/tasks/prompt-engine-round3bc-delivery/review.md`。
 
 ---
 
-## 八、演进路线（规划中，未实现）
+## 八、演进路线（更新）
 
-- **image-engine-higgsfield-alignment**（OpenSpec change 已提案、规划产物就绪）：把视频侧 `select_best` / 违规扣分 / tier 层级同步到图片引擎（启发式评分 + excluded/swap 扣分 + 图片适配波段），提案见 `openspec/changes/image-engine-higgsfield-alignment/`。
+- **image-engine-higgsfield-alignment** **已实施**（2026-08-14，图片引擎 CHANGELOG 顶部条目）：把视频侧 `select_best` / 违规扣分 / tier 层级同步到图片引擎（启发式评分 + excluded/swap 扣分 + 图片适配波段）。
 - 图片/视频评估逻辑未来可进一步收敛到共享内核（当前语义对齐、双份存在）。
 
-*报告完。本文档描述的能力均已在 `origin/main @ 85ff485`（prompt-engine）与 `main @ 87e25fd9`（Multi-Publish）上可验证。*
+*报告完。Round3 B/C 在 `codex/prompt-engine-round3bc-delivery`（PR 待合并，合并前以分支实测为准）；此前能力基线见 prompt-engine `origin/main @ 85ff485` 与 Multi-Publish `main @ 87e25fd9`。*

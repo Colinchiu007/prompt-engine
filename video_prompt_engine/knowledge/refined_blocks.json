@@ -1,0 +1,164 @@
+{
+  "version": 2,
+  "source": "higgsfield hell-grind public corpus (read-only)",
+  "corpus_prompts": 599,
+  "family": {
+    "director": 135,
+    "inline": 464
+  },
+  "blocks": [
+    "SCENE NOTE",
+    "SPATIAL LAYOUT",
+    "LIGHTING",
+    "COLOR",
+    "CAMERA",
+    "ENVIRONMENT",
+    "CONTINUITY",
+    "CHARACTERS",
+    "SKIN",
+    "ACTING",
+    "STILLNESS LOCK",
+    "FINAL FRAME"
+  ],
+  "block_pattern": "^[ \\t]*([A-Z][A-Z ]{2,30}):[ \\t]*",
+  "block_frequency_pct": {
+    "SCENE NOTE": 11.7,
+    "SPATIAL LAYOUT": 3.5,
+    "LIGHTING": 5.0,
+    "COLOR": 3.7,
+    "CAMERA": 11.5,
+    "ENVIRONMENT": 17.7,
+    "CONTINUITY": 16.4,
+    "CHARACTERS": 22.4,
+    "SKIN": 3.5,
+    "ACTING": 3.5,
+    "STILLNESS LOCK": 3.3,
+    "FINAL FRAME": 9.3
+  },
+  "block_frequency_pct_by_family": {
+    "director": {
+      "SCENE NOTE": 51.9,
+      "SPATIAL LAYOUT": 15.6,
+      "LIGHTING": 20.7,
+      "COLOR": 15.6,
+      "CAMERA": 0.0,
+      "ENVIRONMENT": 41.5,
+      "CONTINUITY": 25.9,
+      "CHARACTERS": 99.3,
+      "SKIN": 15.6,
+      "ACTING": 15.6,
+      "STILLNESS LOCK": 14.8,
+      "FINAL FRAME": 0.0
+    },
+    "inline": {
+      "SCENE NOTE": 0.0,
+      "SPATIAL LAYOUT": 0.0,
+      "LIGHTING": 0.4,
+      "COLOR": 0.2,
+      "CAMERA": 14.9,
+      "ENVIRONMENT": 10.8,
+      "CONTINUITY": 13.6,
+      "CHARACTERS": 0.0,
+      "SKIN": 0.0,
+      "ACTING": 0.0,
+      "STILLNESS LOCK": 0.0,
+      "FINAL FRAME": 12.1
+    }
+  },
+  "coverage": {
+    "min_ratio": 0.8
+  },
+  "enabled_rules": [
+    "dead_center",
+    "exposure_break",
+    "eye_line"
+  ],
+  "lock_triggers": {
+    "warm_light_leak": {
+      "locks": [
+        "cold",
+        "cool palette",
+        "冷色"
+      ],
+      "forbidden": [
+        "warm",
+        "amber",
+        "golden",
+        "暖色"
+      ]
+    },
+    "dead_center": {
+      "locks": [
+        "rule of thirds",
+        "golden ratio",
+        "三分法"
+      ],
+      "forbidden": [
+        "center of frame",
+        "dead center"
+      ]
+    },
+    "exposure_break": {
+      "locks": [
+        "low-key",
+        "low light",
+        "dark scene",
+        "dark lighting",
+        "dark atmosphere",
+        "dark environment",
+        "低光"
+      ],
+      "forbidden": [
+        "bright daylight",
+        "overexposed",
+        "high-key"
+      ]
+    },
+    "silhouette_break": {
+      "locks": [
+        "silhouette",
+        "剪影"
+      ],
+      "forbidden": [
+        "well-lit face",
+        "clear facial detail"
+      ]
+    },
+    "style_contamination": {
+      "locks": [
+        "hyper-realistic",
+        "photorealistic detail",
+        "写实"
+      ],
+      "forbidden": [
+        "anime",
+        "cartoon",
+        "3d render",
+        "动漫"
+      ]
+    },
+    "skin_guard": {
+      "locks": [
+        "pore-level",
+        "skin",
+        "皮肤"
+      ],
+      "forbidden": [
+        "plastic skin",
+        "waxy",
+        "塑料"
+      ]
+    },
+    "eye_line": {
+      "locks": [
+        "eye-line",
+        "eye line",
+        "视线"
+      ],
+      "forbidden": [
+        "looking at camera",
+        "breaking the fourth wall"
+      ]
+    }
+  }
+}

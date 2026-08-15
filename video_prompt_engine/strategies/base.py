@@ -14,6 +14,14 @@ from typing import Any, Optional
 from prompt_engine_core.registry import StrategyRegistry
 from prompt_engine_core.text import clamp_int, clean_str_list
 from video_prompt_engine.models import VideoPlatformType, VIDEO_DIRECTOR_LIMITS
+from video_prompt_engine.refined_blocks import (
+    BLOCK_ORDER as _BLOCKS_ORDER,
+    DRIFT_TRAILER_RE,
+    TRAILER_TAIL_RE,
+    clean_block_value as _clean_block_value,
+    clean_blocks as _clean_blocks,
+    strip_fail_check as _strip_fail_check,
+)
 
 _DIRECTOR_LIMITS = VIDEO_DIRECTOR_LIMITS
 
@@ -54,6 +62,20 @@ def _clean_audio(value: Any) -> str:
 # 音频分层键白名单与单层上限（REQ-3.1：各层 ≤200 字符）
 _AUDIO_LAYER_KEYS = ("environment", "sfx", "dialogue")
 _AUDIO_LAYER_MAX = 200
+
+# 缺失块 → 旧字段回退。SCENE NOTE 承接旧 prompt，避免稀疏 blocks 丢失主体内容。
+_BLOCK_FALLBACK = {
+    "SCENE NOTE": lambda d: d.get("prompt"),
+    "SPATIAL LAYOUT": lambda d: d.get("environment"),
+    "LIGHTING": lambda d: d.get("lighting"),
+    "FINAL FRAME": lambda d: d.get("final_frame"),
+    "CONTINUITY": lambda d: d.get("continuity_token"),
+    "COLOR": lambda d: d.get("colors") or d.get("color_ratio"),
+    "CAMERA": lambda d: d.get("camera"),
+    "ENVIRONMENT": lambda d: d.get("environment"),
+    "CHARACTERS": lambda d: d.get("subject"),
+    "ACTING": lambda d: d.get("action"),
+}
 
 
 def _clean_audio_layers(value: Any) -> Optional[dict]:
@@ -216,8 +238,13 @@ class BaseVideoStrategy(ABC):
         return data if isinstance(data, dict) else None
 
     @classmethod
-    def render(cls, data: dict[str, Any]) -> str:
-        prompt = str(data.get("prompt") or "").strip()
+    def render(cls, data: dict[str, Any], tier: str = "batch") -> str:
+        """渲染单串：refined 且 blocks 非空 → 骨架拼单串（12 块顺序，行首 `块名:` + 文本，块间空行，
+        缺失块从旧字段回退，逐块剥离内嵌尾行）；否则旧逻辑（prompt 优先 → 六要素拼接，零回归）。"""
+        blocks = _clean_blocks(data.get("blocks"))
+        if tier == "refined" and blocks:
+            return cls._render_blocks(blocks, data)
+        prompt = _strip_fail_check(data.get("prompt")).strip()
         if prompt:
             return prompt
         parts = []
@@ -226,6 +253,19 @@ class BaseVideoStrategy(ABC):
             if val:
                 parts.append(val)
         return " ".join(parts)
+
+    @classmethod
+    def _render_blocks(cls, blocks: dict[str, Any], data: dict[str, Any]) -> str:
+        """骨架渲染实现：块值先剥离内嵌尾行；缺失块按 _BLOCK_FALLBACK 从旧字段补位；空块跳过。"""
+        lines: list[str] = []
+        for key in _BLOCKS_ORDER:
+            value = _clean_block_value(key, blocks.get(key))
+            if not value:
+                fallback = _BLOCK_FALLBACK.get(key)
+                value = _clean_block_value(key, fallback(data) if fallback else "")
+            if value:
+                lines.append(f"{key}: {value}")
+        return "\n\n".join(lines)
 
     @classmethod
     def extract_video_meta(cls, raw_output: str) -> dict[str, Any] | None:
@@ -254,7 +294,8 @@ class BaseVideoStrategy(ABC):
             "color_ratio": _clean_color_ratio(data.get("color_ratio")),
             "shots": _clean_shots(data.get("shots")),
             "positive_constraints": constraints,
-            "final_frame": str(data.get("final_frame") or "").strip()[:500],  # 对齐 VideoPromptMeta.final_frame max_length=500
+            "final_frame": str(data.get("final_frame") or "").strip()[:1000],  # 对齐 VideoPromptMeta.final_frame max_length=1000（Round3 B 上调，防复杂终态丢实体）
+            "blocks": _clean_blocks(data.get("blocks")),  # Round3 C：导演分镜块骨架（12 键白名单 + 值 ≤4000）
         }
 
     @staticmethod
@@ -333,9 +374,13 @@ class BaseVideoStrategy(ABC):
         text = str(rendered or "").rstrip()
         if tier != "refined" or not text:
             return text
-        # 幂等：body 已含 NON-IP 标记（LLM 直出或契约层已 append）；词边界整名匹配 + 大小写不敏感，防双写
+        # 幂等（评审 C1/C1-1）：仅当「最后一段」（\n\n 块分隔之后）以尾行形态结束时不重复；
+        # 与 strip_rendered_trailer 同口径——中段字面量（如 "Photoreal NON-IP aesthetic"）
+        # 即使位于末行也不算已含尾行；限定最后一段防止 DOTALL 跨块吸收到偶然的
+        # only./Audio:/No music. 结尾（评审 C1-1 复现洞）
         import re
-        if re.search(r"(?<![A-Za-z0-9])non-ip", text, flags=re.IGNORECASE):
+        last_block = re.split(r"\n\s*\n", text)[-1]
+        if TRAILER_TAIL_RE.search(last_block) or DRIFT_TRAILER_RE.search(last_block):
             return text
         return f"{text} {cls.build_tail(meta)}"
 
@@ -355,7 +400,16 @@ class BaseVideoStrategy(ABC):
                 "- The rendered `prompt` MUST end with the exact trailer line: `Photoreal. NON-IP. {aspect}. {duration}s. {audio} only.` (fill from `aspect` / `duration_hint` / `audio` fields).\n"
                 "- `audio_layers` (optional): object with optional string layers `environment` / `sfx` / `dialogue` (each ≤200 chars) and optional boolean `music_off` (true = no music). When provided, the trailer ends with the Audio segment (e.g. `Audio: Environmental forest ambience. SFX: gunfire. No music.`) instead of `{audio} only.`; omit or null when not needed.\n"
                 "- If `audio_layers` is provided, do NOT render the `{audio} only.` tail; the Audio segment IS the trailer ending.\n"
-                "- Keep the trailer EXACTLY as specified; do not append anything after it."
+                "- Keep the trailer EXACTLY as specified; do not append anything after it.\n"
+                "- `blocks` (refined only, optional): object with ≤12 STRING values keyed EXACTLY by SCENE NOTE / SPATIAL LAYOUT / LIGHTING / COLOR / CAMERA / ENVIRONMENT / CONTINUITY / CHARACTERS / SKIN / ACTING / STILLNESS LOCK / FINAL FRAME (each ≤4000 chars). When provided, the rendered `prompt` MUST be the single-string version of the SAME blocks — one line per block starting with the block name and colon (`SCENE NOTE: ...`), blank line between blocks; NEVER inline the trailer inside a block. Omit or null when not needed.\n"
+                "- Skin realism (MANDATORY when characters are shown close-up): pore-level skin, natural texture and blemishes — NEVER plastic/waxy skin.\n"
+                "- Eye-line discipline (MANDATORY): keep characters' gaze in-world — NEVER look at camera / break the fourth wall unless the shot explicitly requires it.\n"
+                "## FAIL CHECK (MANDATORY self-audit before finalizing; this section is INSTRUCTION ONLY — never output it inside the JSON)\n"
+                "- If prev_final_frame was provided: the prompt reuses the previous shot end state (SCENE pickup).\n"
+                "- Every declared excluded/no-swap ban has its reference marker [ABSENT]/<<<...>>> in the text.\n"
+                "- Timeline markers ([SHOT N] / [HARD CUT] / CUT N) exist at every shot boundary (shots >= 2).\n"
+                "- The trailer line is the exact last line (Photoreal. NON-IP. ...), nothing after it.\n"
+                "- No banned text/watermark/logo is described as present."
             )
         return (
             "\n## Director Workflow (batch mode)\n"
@@ -370,8 +424,9 @@ class BaseVideoStrategy(ABC):
         data = cls.parse_video_json(raw_output)
         if data is None:
             rendered = str(raw_output or "").strip().strip('"').strip()
+            rendered = _strip_fail_check(rendered)
             return rendered, {}
-        rendered = cls.render(data)
+        rendered = cls.render(data, tier=tier)
         meta = cls.extract_video_meta(raw_output) or {}
         # C6 生命周期：render body → append 尾行 → 再交 optimizer 按预算截断（tail 永不截断）
         rendered = cls.append_trailer(rendered, meta, tier)
