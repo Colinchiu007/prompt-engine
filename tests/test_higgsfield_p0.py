@@ -406,9 +406,12 @@ class TestReviewFixes:
         r = evaluate("word " * 500 + " Photoreal. NON-IP. 16:9. 8s. music only.",
                      {"audio": "music", "shots": []}, "", "en", tier="refined", max_length=5000)
         assert "missing_audio" not in r["violations"]
-        # batch 无任何音频词 → 扣
+        # batch 纯视觉/静态描述无显式音频需求 → 不扣（质量评估 P1-1：missing_audio 改显式音频需求判定）
         r2 = evaluate("A plain static description of a room interior. " * 5, {}, "", "en", tier="batch")
-        assert r2["violations"].get("missing_audio") == -5
+        assert "missing_audio" not in r2["violations"]
+        # batch meta 显式声明音频（audio 字段）但正文无音频词 → 不扣（评审 W1：meta 声明即满足）
+        r2b = evaluate("A quiet room interior, no dialogue. " * 5, {"audio": "sfx"}, "", "en", tier="batch")
+        assert "missing_audio" not in r2b["violations"]
         # batch 有配乐 → 不扣
         r3 = evaluate("Epic orchestral score plays. " * 5, {}, "", "en", tier="batch")
         assert "missing_audio" not in r3["violations"]

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "hg-demo-refined-001",
+    "title": "Scene_74 CUT 序列（精修层示例）",
+    "description": "higgsfield 语料示例：控制段 + 分镜标记 + 角色锚点的精修形态",
+    "prompt_text": "🔥 SCENE NOTE 🔥\nThe end. Three-cut sequence on in heavy BLIZZARD. CUT 1 — wide establishing on <<<455232e3-57fa-4aad-8663-894758df74c5>>> on his knees facing camera with SLOW PUSH-IN, <<<74548308-e6cf-41f1-9cbe-3cc706281a26>>> and <<<daf0186f-4651-4cf3-a8b4-6524ae16e227>>> sleeping in the snow with HEADS POINTING TOWARD EACH OTHER in foreground. Roko stares THROUGH/PAST camera into the far distance, hands limp on thighs from exhaustion. CUT 2 — profile wide on <<<455232e3-57fa-4aad-8663-894758df74c5>>> from JAX'S SIDE of the tableau, Roko in profile facing screen-LEFT toward where Jax lies, he leans forward and reaches out his hand toward Jax's face. Jax's eyes slightly open but vacant/empty. CUT 3 — extreme close-up insert: Roko's BLOODY PALM sweeps DOWN across Jax's face from forehead to chin in a single slow motion; when the hand finishes the sweep and lifts away, Jax's eyes are FULLY ",
+    "language": "en",
+    "platform": "seedance",
+    "style": "",
+    "categories": [
+      "higgsfield",
+      "tier:refined",
+      "model:seedance_2_0",
+      "scene_74"
+    ],
+    "quality_score": 8,
+    "source": "higgsfield-corpus",
+    "corpus_type": "positive",
+    "applicable_to": "few-shot",
+    "tier": "refined"
+  },
+  {
+    "id": "hg-demo-batch-001",
+    "title": "Scene_15-16 身份锚点（批次层示例）",
+    "description": "higgsfield 语料示例：引用协议 + 身份锁的批次形态",
+    "prompt_text": "[REFERENCES + IDENTITY ANCHORS]\n<<<76c847f2-eb01-4e09-a629-723425cfbba3>>> — woman ~50s, silver-platinum wavy bob, pale-grey eyes, deep-red matte lips, small chin mole. Long open black wool overcoat over fitted dark leather vest with central zip, deep-green palazzo trousers, dark heeled ankle boots, tall ornate dark twisted-iron cane. Lock: face + hair + outfit + cane.\n<<<e92f3ea2-1332-4d0f-b95b-b99280a663f5>>> — man ~30s, mid-length wet-disheveled black hair across forehead, faint mustache, slim wiry build. Multiple small bloodied cuts and red blood streaks on face/shoulders/arms. Small horizontal RED medical nose-tape across bridge of nose. Grey ribbed tank-top with blood spatter, deep-red",
+    "language": "en",
+    "platform": "seedance",
+    "style": "",
+    "categories": [
+      "higgsfield",
+      "tier:batch",
+      "model:seedance_2_0",
+      "scene_15_16"
+    ],
+    "quality_score": 8,
+    "source": "higgsfield-corpus",
+    "corpus_type": "positive",
+    "applicable_to": "both",
+    "tier": "batch"
+  }
+]
