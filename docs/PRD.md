@@ -1,4 +1,4 @@
-# Prompt Engine — PRD v0.9.3
+# Prompt Engine — PRD v0.9.4
 
 > 项目 011 / 图片生成提示词优化引擎
 > 状态：已交付 | 迭代周期：s1-s5 + P0-P4 + F1-F12
@@ -700,6 +700,12 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 - **否定感知 gated 规则**：block_coverage -5（渲染串块标记命中率 <0.8 扣分）；lock-trigger 规则默认启用
   dead_center / exposure_break / eye_line 三条，仅当 lock 词真实（非否定）出现时检测 forbidden；
   资产缺失/损坏回退空表 → 规则不启用零误报。
+#### 13.2.9 语料目录规范 + 负样本资产化 + 评估器误伤修复（#52，2026-08-15）
+- **评估器误伤修复（评测器模式校准）**：`missing_audio` 改显式音频需求判定（纯视觉/静态 N/A 不扣分、显式无声意图仍扣）；`missing_trailer` 识别控制段等价形态（Duration:/Aspect ratio:/ONE CONTINUOUS SHOT/CUT n/终态块名），不再强制 NON-IP 字面量；长度带双口径 `length_strict`（True=引擎候选口径计分，False=评测用户/语料输入仅提示，checks 保留真实判定）；六要素词表扩充（摄影纪实风格词 + 具体色名 + 中英双语）；镜头字段文本级兜底（正文检测 shot/cut/camera/lens/movement 等词，纯文本评测消除 58.3 硬顶）。
+- **语料目录规范 + 校验门禁**：`scripts/build_corpus_index.py` glob 合并 `knowledge/corpus/**/*.json`（多目录、prompt_text 去重、必填/tier/长度/质量分校验，`--strict` fail-closed），产物 `corpus_index.json` 由 loader 显式 extra 并入（主文件原位兼容）。
+- **负样本资产化 + few-shot 排除**：`knowledge/seed_failure_samples.json` 14 条失败样本（曝光/死中心/视线/音频/尾行/时间轴/节奏/缺席角色/互换/跨镜承接/剪影/风格污染/暖色泄漏，failure_tags 对齐失败模式库）；`corpus_type=negative` 或 `applicable_to` 不含 few-shot 的条目不进注入段（防污染生成参考），检索路径仍可访问。
+- **evaluator 负样本校验模式**：`evaluate_negatives(samples)` 按 failure_tags 与 evaluate() 触发违规匹配，输出逐类 {recall, hits, misses, false_positives}；gated 未启用规则动态标 covered=False，不污染召回分母；常规评分路径零影响。
+
 
 ### 13.3 知识库与语料资产
 
@@ -712,14 +718,25 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 | failure_patterns.json | 12 条失败模式规则 | evaluator 扣分 + 反馈采集 |
 | character_descriptors.json | 8 张角色资产卡 | Character Reference Library 注入 |
 | refined_blocks.json | 12 块导演分镜块骨架 v2 | refined 渲染结构 + block_coverage |
+| corpus/ 目录（<source>/ 组织） | 按来源分目录的语料 JSON（higgsfield 等） | build_corpus_index.py 合并 → corpus_index.json |
+| seed_failure_samples.json | 14 条失败样本（failure_tags + meta + prev_final_frame） | evaluate_negatives 校验 + 规则召回统计 |
+| corpus_index.json | 构建产物（合并去重 + 门禁校验） | loader 显式 extra 并入知识库 |
 
 ### 13.4 评估与择优机制（evaluator）
 
-- 评分公式：长度 20 + 六要素 30 + 镜头字段 50 + 源保真 20，叠加违规扣分，0-100。
-- 多候选择优：`select_best` 按评分降序取最优，`candidates` 降序返回。
-- 已知限制（2026-08-15 质量评估报告）：纯文本评测形态下镜头字段 50 分不可得 → 硬上限 58.3；
-  auto-tier 判据对非引擎格式文本误分层；missing_audio/missing_trailer 对真实语料存在误伤。
-  优化建议见 `docs/VIDEO-PROMPT-ENGINE-QUALITY-EVAL-2026-08-15.md` §5。
+- 评分公式：长度 20 + 六要素 30 + 镜头字段 50 + 源保真 20，叠加违规扣分，0-100；镜头字段支持结构化 meta 优先、
+  文本词级兜底（shot/cut/camera/lens/movement 等），纯文本评测不再有 58.3 硬顶。
+- 多候选择优：`select_best` 按评分降序取最优，`candidates` 降序返回；`length_strict` 双口径
+  （True=引擎自产候选口径计分，False=评测用户/语料输入长度仅提示，checks 保留真实判定）。
+- **质量评估与修复闭环（2026-08-15，258 条《Hell Grind》语料全量复测）**：确定性评分器逐条 `evaluate()`（tier=batch 口径）
+  暴露 4 类系统性问题——纯文本评分硬上限 58.3（镜头字段 50 分仅结构化 meta 可得）、auto-tier 误分层 70/258、
+  missing_audio 误伤 73 次、missing_trailer 误伤 48 次；修复后复测：max 58.3→**100**、
+  mean（length_strict=False）43.7→**95.6**（median=100）、strict 口径 80.0、missing_trailer 48→**0**、
+  score≥90 从 0 到 **231/258（90%）**。完整方法/证据/剩余边界见 `docs/VIDEO-PROMPT-ENGINE-QUALITY-EVAL-2026-08-15.md`。
+- **负样本校验模式**：`evaluate_negatives` 对 14 条失败样本按 failure_tags 匹配违规触发，
+  11 个已启用可判定模式召回 1.0、漏检 0、误报 0；4 个 gated 规则（剪影/风格污染/暖色泄漏/肤色保护）资产保留，
+  规则启用后自动进入召回统计。
+- 剩余边界（诚实记录）：俄语等多语种六要素仍受词表限制（仅 en/zh）；语料族级形态（asset/variant）仍未建模独立 tier。
 
 ### 13.5 依赖开源项目
 
@@ -730,6 +747,6 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 
 ### 13.6 参考文档
 
-- 规格：`openspec/specs/video-prompt-engine/spec.md`（21 条需求）与 `openspec/specs/image-prompt-quality/spec.md`
+- 规格：`openspec/specs/video-prompt-engine/spec.md`（25 条需求）与 `openspec/specs/image-prompt-quality/spec.md`
 - 实现细节：`CHANGELOG.md`；成本模型：`docs/HELLGRIND-NUM-CANDIDATES-COST-MODEL.md`
 - 质量评估：`docs/VIDEO-PROMPT-ENGINE-QUALITY-EVAL-2026-08-15.md`
