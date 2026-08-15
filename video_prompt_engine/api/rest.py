@@ -22,7 +22,7 @@ from video_prompt_engine.models import (
 from video_prompt_engine.optimizer import VideoOptimizer
 from video_prompt_engine.strategies import list_strategies
 from video_prompt_engine.classifier import classify
-from video_prompt_engine.evaluator import evaluate as evaluate_prompt
+from video_prompt_engine.evaluator import evaluate as evaluate_prompt, _EVALUATOR_VERSION
 
 app = FastAPI(title="Video Prompt Engine", version="0.2.0")
 _optimizer: VideoOptimizer | None = None
@@ -177,5 +177,5 @@ def video_evaluate(request: VideoEvaluateRequest):
                 "by_criterion": _compare_criteria(before, info),
             }
         results.append(item)
-    # evaluator 版本标识：确定性规则评分器（v0.10 起），与 app version 无对应关系
-    return {"results": results, "meta": {"count": len(results), "evaluator": "v0.10-deterministic"}}
+    # evaluator 版本标识：确定性规则评分器（v0.11 起），与 app version 无对应关系
+    return {"results": results, "meta": {"count": len(results), "evaluator": _EVALUATOR_VERSION}}

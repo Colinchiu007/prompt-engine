@@ -1,0 +1,1094 @@
+diff --git a/prompt_engine_core/knowledge.py b/prompt_engine_core/knowledge.py
+index c4b971b..8b49646 100644
+--- a/prompt_engine_core/knowledge.py
++++ b/prompt_engine_core/knowledge.py
+@@ -75,6 +75,7 @@ _ELEMENT_KEYWORDS_FALLBACK: dict =     {
+           "character",
+           "subject",
+           "hero",
++          "heroic",
+           "woman",
+           "man",
+           "general",
+@@ -122,7 +123,14 @@ _ELEMENT_KEYWORDS_FALLBACK: dict =     {
+           "девушка",
+           "мальчик",
+           "ребёнок",
+-          "толпа"
++          "толпа",
++          "полицейский",
++          "полицейских",
++          "мужчина",
++          "мужчины",
++          "женщина",
++          "женщины",
++          "группа"
+         ]
+       },
+       "action": {
+@@ -226,7 +234,9 @@ _ELEMENT_KEYWORDS_FALLBACK: dict =     {
+           "море",
+           "снег",
+           "развалины",
+-          "станция"
++          "станция",
++          "фон",
++          "фоне"
+         ]
+       },
+       "lighting": {
+@@ -307,7 +317,12 @@ _ELEMENT_KEYWORDS_FALLBACK: dict =     {
+           "золотой",
+           "чёрный",
+           "белый",
+-          "палитра"
++          "палитра",
++          "серый",
++          "серой",
++          "сером",
++          "однотонный",
++          "однотонном"
+         ]
+       },
+       "style": {
+diff --git a/prompt_engine_core/knowledge/element_keywords.json b/prompt_engine_core/knowledge/element_keywords.json
+index 2092df5..4ea57b5 100644
+--- a/prompt_engine_core/knowledge/element_keywords.json
++++ b/prompt_engine_core/knowledge/element_keywords.json
+@@ -1,36 +1,302 @@
+ {
+-  "version": 1,
+-  "description": "六要素关键词资产（视频/图片评估器共享；任一语言命中即算要素命中）",
++  "version": 2,
++  "description": "六要素关键词资产（视频/图片评估器共享；任一语言命中即算要素命中）。v2：RU 补齐（golden ru 样本缺词 полицейский/серый/фон 等，2026-08-16）",
+   "elements": {
+     "subject": {
+-      "en": ["character", "subject", "hero", "woman", "man", "general", "people", "person", "warrior", "soldier", "horse", "cat", "dog", "robot", "mech", "machine", "police", "crowd", "girl", "boy", "child", "knight", "assassin", "pilot"],
+-      "zh": ["人", "将军", "女子", "士兵", "战士", "主角", "机器人", "警察", "人群", "女孩", "男孩", "儿童", "机器"],
+-      "ru": ["персонаж", "герой", "человек", "солдат", "воин", "робот", "девушка", "мальчик", "ребёнок", "толпа"]
++      "en": [
++        "character",
++        "subject",
++        "hero",
++        "heroic",
++        "woman",
++        "man",
++        "general",
++        "people",
++        "person",
++        "warrior",
++        "soldier",
++        "horse",
++        "cat",
++        "dog",
++        "robot",
++        "mech",
++        "machine",
++        "police",
++        "crowd",
++        "girl",
++        "boy",
++        "child",
++        "knight",
++        "assassin",
++        "pilot"
++      ],
++      "zh": [
++        "人",
++        "将军",
++        "女子",
++        "士兵",
++        "战士",
++        "主角",
++        "机器人",
++        "警察",
++        "人群",
++        "女孩",
++        "男孩",
++        "儿童",
++        "机器"
++      ],
++      "ru": [
++        "персонаж",
++        "герой",
++        "человек",
++        "солдат",
++        "воин",
++        "робот",
++        "девушка",
++        "мальчик",
++        "ребёнок",
++        "толпа",
++        "полицейский",
++        "полицейских",
++        "мужчина",
++        "мужчины",
++        "женщина",
++        "женщины",
++        "группа"
++      ]
+     },
+     "action": {
+-      "en": ["running", "walking", "riding", "fighting", "motion", "moving", "move", "runs", "rushing", "chasing", "flying", "dancing", "walk", "posing", "standing", "sitting", "staring", "strike", "charging", "explode", "explosion", "blast", "aiming"],
+-      "zh": ["飞", "奔", "战", "走", "跑", "追", "舞", "骑", "立", "坐", "望", "持", "挥", "攻"],
+-      "ru": ["бежит", "бег", "движение", "идёт", "летит", "бой", "сражается", "стоит", "сидит", "взрыв"]
++      "en": [
++        "running",
++        "walking",
++        "riding",
++        "fighting",
++        "motion",
++        "moving",
++        "move",
++        "runs",
++        "rushing",
++        "chasing",
++        "flying",
++        "dancing",
++        "walk",
++        "posing",
++        "standing",
++        "sitting",
++        "staring",
++        "strike",
++        "charging",
++        "explode",
++        "explosion",
++        "blast",
++        "aiming"
++      ],
++      "zh": [
++        "飞",
++        "奔",
++        "战",
++        "走",
++        "跑",
++        "追",
++        "舞",
++        "骑",
++        "立",
++        "坐",
++        "望",
++        "持",
++        "挥",
++        "攻"
++      ],
++      "ru": [
++        "бежит",
++        "бег",
++        "движение",
++        "идёт",
++        "летит",
++        "бой",
++        "сражается",
++        "стоит",
++        "сидит",
++        "взрыв"
++      ]
+     },
+     "environment": {
+-      "en": ["environment", "scene", "background", "landscape", "city", "street", "room", "interior", "exterior", "forest", "desert", "mountain", "sea", "ocean", "snow", "wasteland", "ruins", "station", "warehouse"],
+-      "zh": ["室", "城", "原野", "景", "街道", "室内", "森林", "沙漠", "雪地", "废墟", "基地", "车站"],
+-      "ru": ["город", "улица", "комната", "лес", "пустыня", "горы", "море", "снег", "развалины", "станция"]
++      "en": [
++        "environment",
++        "scene",
++        "background",
++        "landscape",
++        "city",
++        "street",
++        "room",
++        "interior",
++        "exterior",
++        "forest",
++        "desert",
++        "mountain",
++        "sea",
++        "ocean",
++        "snow",
++        "wasteland",
++        "ruins",
++        "station",
++        "warehouse"
++      ],
++      "zh": [
++        "室",
++        "城",
++        "原野",
++        "景",
++        "街道",
++        "室内",
++        "森林",
++        "沙漠",
++        "雪地",
++        "废墟",
++        "基地",
++        "车站"
++      ],
++      "ru": [
++        "город",
++        "улица",
++        "комната",
++        "лес",
++        "пустыня",
++        "горы",
++        "море",
++        "снег",
++        "развалины",
++        "станция",
++        "фон",
++        "фоне"
++      ]
+     },
+     "lighting": {
+-      "en": ["light", "lighting", "sunlight", "golden hour", "glow", "backlight", "rim light", "moonlight", "neon", "flare", "haze", "gloom", "dark", "bright", "beam"],
+-      "zh": ["光", "辉光", "逆光", "月光", "霓虹", "光晕", "光束"],
+-      "ru": ["свет", "освещение", "неон", "блик", "лунный", "закат", "тень", "свечение"]
++      "en": [
++        "light",
++        "lighting",
++        "sunlight",
++        "golden hour",
++        "glow",
++        "backlight",
++        "rim light",
++        "moonlight",
++        "neon",
++        "flare",
++        "haze",
++        "gloom",
++        "dark",
++        "bright",
++        "beam"
++      ],
++      "zh": [
++        "光",
++        "辉光",
++        "逆光",
++        "月光",
++        "霓虹",
++        "光晕",
++        "光束"
++      ],
++      "ru": [
++        "свет",
++        "освещение",
++        "неон",
++        "блик",
++        "лунный",
++        "закат",
++        "тень",
++        "свечение"
++      ]
+     },
+     "color": {
+-      "en": ["color", "palette", "hue", "red", "blue", "green", "gold", "golden", "black", "white", "dark", "monochrome", "sepia", "teal", "orange", "purple", "gray", "grey"],
+-      "zh": ["色", "灰", "黑白", "红", "蓝", "绿", "金", "黑", "白"],
+-      "ru": ["цвет", "красный", "синий", "зелёный", "золотой", "чёрный", "белый", "палитра"]
++      "en": [
++        "color",
++        "palette",
++        "hue",
++        "red",
++        "blue",
++        "green",
++        "gold",
++        "golden",
++        "black",
++        "white",
++        "dark",
++        "monochrome",
++        "sepia",
++        "teal",
++        "orange",
++        "purple",
++        "gray",
++        "grey"
++      ],
++      "zh": [
++        "色",
++        "灰",
++        "黑白",
++        "红",
++        "蓝",
++        "绿",
++        "金",
++        "黑",
++        "白"
++      ],
++      "ru": [
++        "цвет",
++        "красный",
++        "синий",
++        "зелёный",
++        "золотой",
++        "чёрный",
++        "белый",
++        "палитра",
++        "серый",
++        "серой",
++        "сером",
++        "однотонный",
++        "однотонном"
++      ]
+     },
+     "style": {
+-      "en": ["style", "cinematic", "epic", "cinematography", "documentary", "moody", "hazy", "blur", "blurred", "grain", "grainy", "vignette", "contrast", "noir", "cyberpunk", "sci-fi", "fantasy", "realistic", "photoreal", "aesthetic"],
+-      "zh": ["风格", "写实", "纪实", "动漫", "赛博", "风格化"],
+-      "ru": ["стиль", "кинематографичный", "реалистичный", "нуар", "нео-нуар", "эстетика", "документальный"]
++      "en": [
++        "style",
++        "cinematic",
++        "epic",
++        "cinematography",
++        "documentary",
++        "moody",
++        "hazy",
++        "blur",
++        "blurred",
++        "grain",
++        "grainy",
++        "vignette",
++        "contrast",
++        "noir",
++        "cyberpunk",
++        "sci-fi",
++        "fantasy",
++        "realistic",
++        "photoreal",
++        "aesthetic"
++      ],
++      "zh": [
++        "风格",
++        "写实",
++        "纪实",
++        "动漫",
++        "赛博",
++        "风格化"
++      ],
++      "ru": [
++        "стиль",
++        "кинематографичный",
++        "реалистичный",
++        "нуар",
++        "нео-нуар",
++        "эстетика",
++        "документальный"
++      ]
+     }
+   }
+-}
++}
+diff --git a/tests/test_evaluator_p0p2.py b/tests/test_evaluator_p0p2.py
+index 959ef58..0de4169 100644
+--- a/tests/test_evaluator_p0p2.py
++++ b/tests/test_evaluator_p0p2.py
+@@ -225,7 +225,7 @@ class TestEvaluateEndpoint:
+         assert r.status_code == 200
+         data = r.json()
+         assert data["meta"]["count"] == 1
+-        assert data["meta"]["evaluator"] == "v0.10-deterministic"
++        assert data["meta"]["evaluator"] == "v0.11-deterministic"
+         res = data["results"][0]
+         assert 0 <= res["score"] <= 100
+         assert res["tier"] in ("batch", "refined", "asset", "variant")
+diff --git a/video_prompt_engine/api/rest.py b/video_prompt_engine/api/rest.py
+index 6c9a42d..99dc57b 100644
+--- a/video_prompt_engine/api/rest.py
++++ b/video_prompt_engine/api/rest.py
+@@ -22,7 +22,7 @@ from video_prompt_engine.models import (
+ from video_prompt_engine.optimizer import VideoOptimizer
+ from video_prompt_engine.strategies import list_strategies
+ from video_prompt_engine.classifier import classify
+-from video_prompt_engine.evaluator import evaluate as evaluate_prompt
++from video_prompt_engine.evaluator import evaluate as evaluate_prompt, _EVALUATOR_VERSION
+ 
+ app = FastAPI(title="Video Prompt Engine", version="0.2.0")
+ _optimizer: VideoOptimizer | None = None
+@@ -178,4 +178,4 @@ def video_evaluate(request: VideoEvaluateRequest):
+             }
+         results.append(item)
+     # evaluator 版本标识：确定性规则评分器（v0.10 起），与 app version 无对应关系
+-    return {"results": results, "meta": {"count": len(results), "evaluator": "v0.10-deterministic"}}
++    return {"results": results, "meta": {"count": len(results), "evaluator": _EVALUATOR_VERSION}}
+diff --git a/video_prompt_engine/evaluator.py b/video_prompt_engine/evaluator.py
+index ec8f2da..4b6c0c8 100644
+--- a/video_prompt_engine/evaluator.py
++++ b/video_prompt_engine/evaluator.py
+@@ -7,8 +7,49 @@ from difflib import SequenceMatcher
+ from video_prompt_engine.refined_blocks import clean_blocks, rendered_block_names
+ from prompt_engine_core.knowledge import load_element_keywords
+ 
++# P0-P2 round2：评估器版本指纹（rest.py meta 复用，消除双处硬编码漂移）
++_EVALUATOR_VERSION = "v0.11-deterministic"
++_ASSET_FP_CACHE: dict | None = None
++
++
++def _asset_fingerprint() -> dict[str, str]:
++    """评估相关资产 sha256（element_keywords/refined_blocks/golden_set），模块级缓存。"""
++    global _ASSET_FP_CACHE
++    if _ASSET_FP_CACHE is not None:
++        return _ASSET_FP_CACHE
++    import hashlib
++    from pathlib import Path
++    engine_base = Path(__file__).resolve().parent / "knowledge"
++    core_base = Path(__file__).resolve().parent.parent / "prompt_engine_core" / "knowledge"
++    _ASSET_FP_CACHE = {}
++    for name in ("element_keywords", "refined_blocks", "golden_set"):
++        candidate = (core_base / f"{name}.json") if name == "element_keywords" else (engine_base / f"{name}.json")
++        try:
++            _ASSET_FP_CACHE[name] = hashlib.sha256(candidate.read_bytes()).hexdigest()
++        except OSError:
++            _ASSET_FP_CACHE[name] = "missing"
++    return _ASSET_FP_CACHE
++
++
++def _WORD_BOUNDARY_RE(token: str) -> re.Pattern:
++    """拉丁词边界正则单一来源（合并 _contains_word 与 _token_occurrences 双处实现）。"""
++    return re.compile(
++        r"(?<![A-Za-z0-9])" + re.escape(token) + r"(?![A-Za-z0-9])",
++        flags=re.IGNORECASE,
++    )
++
+ # Round3 Batch C：lock-gated 规则资产缓存（refined_blocks.json，缺失/损坏回退空表 → 规则不启用零误报）
+ _GATED_RULES_CACHE: dict = {}
++_GATED_RULES_LOADED = False
++_GATED_RULES_LOCK = None
++
++
++def _gated_lock() -> object:
++    global _GATED_RULES_LOCK
++    if _GATED_RULES_LOCK is None:
++        import threading
++        _GATED_RULES_LOCK = threading.Lock()
++    return _GATED_RULES_LOCK
+ 
+ 
+ def count_words(text: str) -> int:
+@@ -20,14 +61,176 @@ def _contains_word(text: str, token: str) -> bool:
+     token = str(token or "").strip()
+     if not token or len(token) < 2:
+         return False
+-    return (
+-        re.search(
+-            r"(?<![A-Za-z0-9])" + re.escape(token) + r"(?![A-Za-z0-9])",
+-            str(text or ""),
+-            flags=re.IGNORECASE,
++    return _WORD_BOUNDARY_RE(token).search(str(text or "")) is not None
++
++
++# P0-2：CJK 名字后随字白名单（保守启发——宁漏勿误）。
++# 中文无空格，「林晓雨」里「林晓」是更长名字的前缀；当命中位置的后随字为 CJK 且
++# 不属于常见动词/助词/介词/方位等后随字时，视为未登记的长名前缀而跳过命中。
++# 泛词路径（posture/lock-gated）不经过此表，维持子串语义。
++_CJK_NAME_FOLLOW_OK = frozenset(
++    # 动词（站坐走跑看说拿握持举……）
++    "站坐躺趴跪蹲走跑跳奔飞骑乘坐爬滑跌倒摔翻滚转回退进出上下起停立"
++    "望看瞧盯注视瞥扫观察寻找见遇碰撞迎追赶逃避躲藏挡拦护扶挽拉拖拽"
++    "推搬抬扛举提拎拿握抓捏抱搂拥搀携带佩挂背负挑担顶触摸抚拍击打敲"
++    "砸砍劈刺戳捅射击中炸轰扔抛投掷洒泼倒灌浇注流淌涌喷滴落降升浮沉"
++    "漂荡摇晃摆颤抖震惊吓哭笑喊叫吼嚷唱说讲问答道述谈聊议论商量请求"
++    "邀请谢拒绝答应允诺承认辩解解释劝阻止制防抗抵反击攻打战斗拼搏挣扎"
++    "杀屠灭歼俘擒绑捆锁铐押送带领引导指挥命令派遣任命选择挑选拣拾收"
++    "藏存放摆放置搁丢弃传递交付给予送汇报知通知宣布广播播放演奏弹跳"
++    "舞跃翱翔盘旋俯冲掠过越过穿越跨登攀潜游划驾驶操控掌握运用使用借"
++    "助依靠信任相信怀疑质疑猜测推测判断决定规划计划筹谋设计构思准备"
++    "安排部署调配调度领导管理统治支配主宰掌管负责承担肩负履行执行实"
++    "施落实完成达成实现赢得获得取得争取抢夺掠夺劫持绑架威胁恐吓欺骗"
++    "哄骗隐瞒掩饰伪装装扮化妆变身转化蜕变进化升级强化增强削弱减退抵"
++    "御进攻突袭袭击偷袭伏击围攻包围困封锁禁囚押拘留逮捕抓捕搜捕追捕"
++    "审讯审判处决执行枪决斩首杀害谋杀暗杀刺杀行刺遇袭受伤负伤中弹流"
++    "血受困陷入困境求救援救抢救医治治疗包扎敷药服药喝水吃饭进食用餐"
++    "品尝嗅闻听倾听聆听谛听凝视端详打量审视环顾眺望遥望仰望俯瞰观赏"
++    "欣赏赞叹感慨感叹惊叹惊讶愣住呆住怔住恍惚清醒苏醒觉醒复苏恢复痊"
++    "愈好转恶化减轻缓解消除根除铲除肃清清理打扫收拾整理归置陈列展示"
++    "呈现显露露出浮现涌现出现闪现消失隐没隐藏潜藏藏匿潜伏埋伏遁逃溜"
++    "走逃走潜逃逃窜逃亡出逃叛变倒戈反水背叛出卖泄密告密检举揭发举报"
++    "起诉控告指控指责责怪埋怨抱怨诉苦申冤鸣冤喊冤伸冤平反昭雪报仇复"
++    "仇雪恨解恨泄愤出气撒气消气息怒安抚劝慰宽慰慰藉安慰抚慰温暖温馨"
++    "感动触动打动震撼冲击影响感染熏陶陶冶培养造就塑造铸造锻炼磨练锤"
++    "炼洗礼考验磨难历练成长进步提高提升增长上升飙升暴涨猛增激增递减"
++    "下降减少缩减削减压缩扩大扩张拓展延伸延长拉长缩短加快减速加速放"
++    "缓缓慢渐渐慢慢快速飞快急速高速徐徐悠悠轻轻悄悄静静默默"
++    # 助词/介词/连词/副词/数词
++    "着了过在到向从对和与或是为被把将就才也都又还再便已正于之而但却"
++    "则虽若当随沿朝往冲穿越及跟同并且因所以然后自至由经通凭借按照依"
++    "据根据关于对于至于除了除非假如如果只要只有无论不管尽管虽然但是"
++    "可是不过然而反而相反另外此外同时紧接着随后接着之后以前以后最后"
++    "首先最终结果于是因此故而由此由于鉴于考虑到针对面向朝向通向走向"
++    "驶向飞向冲向奔向指向面对直面迎面侧面背面后面前面上面下面里面外"
++    "面旁边左边右边前方后方上方下方内部外部中间中央四周周围附近远处"
++    "深处高处低处顶端底部末端尽头边缘角落墙角路边树下门口窗前床边桌"
++    "旁水边岸边海边湖边河边山脚山顶山腰山谷"
++    # 方位/位置单字尾随
++    "身背面前左右上下里外中旁近远深高底顶角墙路树门窗床桌水岸海湖河"
++    "山雪草花天空地面"
++    # 独立副词/数词首字
++    "一三四五六七八九十两半独突终开继缓轻悄静默慢渐逐悠快迅立马转回"
++    "低抬扭侧眯眨瞪闭睁张嘴抿咬舔咽吞吐呼吸喘叹松屏闷哼呢嘀嘟嚷"
++    "仍依刚忽猛骤顿径直单独仅只唯恰正好现将欲拟备算决意图企试尝怒悲"
++    "喜惊恐惧忧伤痛苦累困倦饿渴冷热凉寒安宁寂沉"
++)
++
++
++def _contains_name(text: str, token: str, known_names: list[str]) -> bool:
++    """角色名匹配（P0-2）：拉丁 token 词边界；CJK token 检查是否被更长已知名字覆盖。
++
++    中文无空格，名字后紧跟汉字是常态（「林晓走进」），不能加 CJK 边界；
++    但 excluded 角色「林晓」不得命中「林晓雨」——命中位置是某更长已知名字的
++    前缀时跳过（known_names = excluded + swap + character_list 并集）；
++    未登记的长名靠后随字白名单兜底（后随字为非常见动词/助词等时按长名前缀跳过）。
++    泛词路径（posture/gated locks）不经过此函数，维持子串语义。
++    """
++    token = str(token or "").strip()
++    text_value = str(text or "")
++    if not token or len(token) < 2:
++        return False
++    if not re.search(r"[\u4e00-\u9fff]", token):
++        return _contains_word(text_value, token)
++    longer = sorted(
++        (str(n).strip() for n in (known_names or []) if len(str(n or "").strip()) > len(token) and token in str(n)),
++        key=len,
++        reverse=True,
++    )
++    for match in re.finditer(re.escape(token), text_value):
++        start = match.start()
++        covered = any(
++            text_value[start:start + len(name)] == name
++            or (start - 1 >= 0 and text_value[start - 1:start - 1 + len(name)] == name)
++            for name in longer
+         )
+-        is not None
++        if not covered:
++            # 2 字 token 才是「更长名字前缀」的主要形态（林晓⊂林晓雨）；
++            # ≥3 字（贾克斯）已是完整名，后随汉字多为动词/副词，不做后随字过滤
++            after = text_value[start + len(token):start + len(token) + 1]
++            if len(token) == 2 and after and re.match(r"[\u4e00-\u9fff]", after) and after not in _CJK_NAME_FOLLOW_OK:
++                continue  # 疑似未登记更长名字前缀，宁漏勿误
++            return True
++    return False
++
++
++def _detect_translation_mode(source: str, prompt: str) -> bool:
++    """翻译模式（P0-1）：source 含 CJK 且 prompt 不含（或反之），且双方非空。"""
++    src, dst = str(source or ""), str(prompt or "")
++    if not src or not dst:
++        return False
++    src_zh = bool(re.search(r"[\u4e00-\u9fff]", src))
++    dst_zh = bool(re.search(r"[\u4e00-\u9fff]", dst))
++    return src_zh != dst_zh
++
++
++def _cross_lingual_fidelity(source: str, prompt: str) -> float:
++    """翻译模式保真：0.5 要素跨语言守恒 + 0.3 镜头结构保留 + 0.2 长度比。
++
++    仅 _detect_translation_mode 为真时启用（门控新路径，en→en/zh→zh 零触碰）。
++    局限（声明）：要素为 6 维粗粒度类别，测的是「类别保留」而非逐实体语义保真。
++    """
++    element_keywords, _ = load_element_keywords()
++    src_zh = str(source or "")
++    dst_en = str(prompt or "").lower()
++
++    conserved = 0.0
++    for _elem, _langs in element_keywords.items():
++        zh_hit = any(str(w) in src_zh for w in _langs.get("zh", []))
++        en_hit = any(
++            _contains_word(dst_en, str(w))
++            or _contains_word(dst_en, str(w) + "s")
++            or _contains_word(dst_en, str(w) + "es")
++            for w in _langs.get("en", [])
++        )
++        if zh_hit and en_hit:
++            conserved += 1.0
++    conserved /= max(1, len(element_keywords))
++
++    dims = (
++        (("镜头", "景别", "特写", "全景", "俯拍", "跟拍", "推移", "推近", "近景", "中景", "远景", "仰拍", "航拍"),
++         ("shot", "cut", "close-up", "closeup", "close up", "wide", "overhead", "tracking", "dolly",
++          "push-in", "push in", "establishing", "aerial", "crane")),
++        (("机位", "视角", "广角", "长焦", "镜头"),
++         ("camera", "lens", "angle", "perspective", "viewpoint", "wide-angle", "telephoto", "close-up", "closeup")),
++        (("运镜", "摇镜", "推镜", "拉镜", "旋转", "慢动作", "推近", "拉远", "环绕", "晃动", "抖动"),
++         ("slow-motion", "slow motion", "pan", "tilt", "tracking", "dolly", "zoom", "crane", "handheld",
++          "push-in", "push in", "drift", "whip", "orbit", "rotate", "shaky")),
++    )
++    kept = 0.0
++    for zh_toks, en_toks in dims:
++        src_has = any(t in src_zh for t in zh_toks)
++        dst_has = any(_contains_word(dst_en, t) for t in en_toks)
++        if src_has and dst_has:
++            kept += 1.0
++    kept /= len(dims)
++
++    # 长度比：CJK 无空格，split() 会坍缩为 1 词 → 用汉字数；拉丁按词数。
++    if re.search(r"[\u4e00-\u9fff]", str(source or "")):
++        src_len = max(1, len(re.findall(r"[\u4e00-\u9fff]", str(source or ""))))
++    else:
++        src_len = max(1, len(str(source or "").split()))
++    if re.search(r"[\u4e00-\u9fff]", str(prompt or "")):
++        dst_len = max(1, len(re.findall(r"[\u4e00-\u9fff]", str(prompt or ""))))
++    else:
++        dst_len = max(1, len(str(prompt or "").split()))
++    ratio = min(src_len / dst_len, dst_len / src_len)
++    return round(0.5 * conserved + 0.3 * kept + 0.2 * ratio, 3)
++
++
++_ZH_STOP_CHARS = frozenset("了着在的与及或是有一把被从向对到里个这那之也又都")
++
++
++def _zh_fidelity_grams(text: str) -> set[str]:
++    """中文保真 2-gram（P2-5）：去高频虚字/标点/空白后滑动取二元组集合，容忍语序与虚字差异。"""
++    cleaned = "".join(
++        ch for ch in str(text or "")
++        if ch not in _ZH_STOP_CHARS and not ch.isspace() and ch not in "，。！？；、,.!?;：:"
+     )
++    if len(cleaned) < 2:
++        return set()
++    return {cleaned[i:i + 2] for i in range(len(cleaned) - 1)}
+ 
+ 
+ def _strip_reference_markers(text: str, reference_names: list[str] | None = None) -> str:
+@@ -141,10 +344,7 @@ def _token_occurrences(text: str, token: str) -> tuple[str, list[re.Match]]:
+     if not token or len(token) < 2:
+         return str(text or ""), []
+     text_value = str(text or "")
+-    pattern = re.compile(
+-        r"(?<![A-Za-z0-9])" + re.escape(token) + r"(?![A-Za-z0-9])",
+-        flags=re.IGNORECASE,
+-    )
++    pattern = _WORD_BOUNDARY_RE(token)
+     return text_value, list(pattern.finditer(text_value))
+ 
+ 
+@@ -211,7 +411,7 @@ def _en_stems(text: str) -> set[str]:
+     return {_stem_en(t) for t in re.findall(r"[a-z][a-z0-9'\-]{1,}", str(text or "").lower())}
+ 
+ 
+-def _check_continuity(prompt: str, prev_final_frame: str, character_list: list) -> tuple[bool, dict]:
++def _check_continuity(body: str, prev_final_frame: str, character_list: list, absent_names: list[str] | None = None) -> tuple[bool, dict]:
+     """跨镜承接保真（Round3 Batch B，评审修订版）。
+ 
+     英文：实体 token 命中率 ≥40%，且终态帧中实际出现的角色名必中（硬判据，评审 W1 收窄——
+@@ -224,10 +424,12 @@ def _check_continuity(prompt: str, prev_final_frame: str, character_list: list)
+     """
+     if not prev_final_frame:
+         return True, {"continuity_hits": 0, "continuity_total": 0, "continuity_ratio": None, "continuity_method": None}
+-    body = _strip_reference_markers(prompt)
++    body = str(body or "")
+     roster = [str(n).strip() for n in (character_list or []) if str(n or "").strip()]
+     # 评审 W1：硬判据只针对"终态帧中实际出现的角色"，未入终态的副角色不要求出镜
+-    names = [n for n in roster if _contains_word(prev_final_frame, n)]
++    # P0-P2 round2：[ABSENT] 声明角色从硬判据豁免（有意缺席不判断裂）
++    names = [n for n in roster if _contains_name(prev_final_frame, n, roster) and n not in (absent_names or [])]
++    names_set = set(names)
+     is_zh = bool(re.search(r"[\u4e00-\u9fff]", str(prev_final_frame)))
+     if is_zh:
+         keywords = [w for w in _CONTINUITY_ZH_POSTURE if w in prev_final_frame]
+@@ -235,10 +437,13 @@ def _check_continuity(prompt: str, prev_final_frame: str, character_list: list)
+         if whitelist:
+             hits = []
+             for w in whitelist:
+-                if len(w) >= 2:
+-                    if _contains_word(body, w):
++                if len(w) < 2:
++                    if w in body:
++                        hits.append(w)
++                elif w in names_set:
++                    if _contains_name(body, w, roster):
+                         hits.append(w)
+-                elif w in body:
++                elif _contains_word(body, w):
+                     hits.append(w)
+             ratio = len(hits) / len(whitelist)
+             ok = ratio >= 0.6
+@@ -263,16 +468,34 @@ def _check_continuity(prompt: str, prev_final_frame: str, character_list: list)
+     }
+     ok = ratio >= 0.4
+     if names:
+-        missing = [n for n in names if not _contains_word(body, n)]
++        missing = [n for n in names if not _contains_name(body, n, roster)]
+         if missing:
+             ok = False
+             checks["continuity_missing"] = missing
+     return ok, checks
+ 
+ 
++def _extract_absent_names(text: str, reference_names: list[str]) -> list[str]:
++    """提取 [ABSENT] 标记声明的名字（P1-5 豁免语义用）。"""
++    found = []
++    for name in sorted(
++        {str(n).strip() for n in (reference_names or []) if str(n or "").strip()},
++        key=len,
++        reverse=True,
++    ):
++        if re.search(r"\[\s*ABSENT\s*\]\s*" + re.escape(name), str(text or ""), flags=re.IGNORECASE):
++            found.append(name)
++    return found
++
++
+ def _gated_rules() -> dict:
+-    """加载 refined_blocks.json lock_triggers/enabled_rules（缓存；缺失/损坏回退空表 → 规则不启用）。"""
+-    if not _GATED_RULES_CACHE:
++    """加载 refined_blocks.json lock_triggers/enabled_rules（哨兵+锁缓存；缺失/损坏回退空表 → 规则不启用）。"""
++    global _GATED_RULES_LOADED
++    if _GATED_RULES_LOADED:
++        return _GATED_RULES_CACHE
++    with _gated_lock():
++        if _GATED_RULES_LOADED:
++            return _GATED_RULES_CACHE
+         try:
+             from pathlib import Path
+             import json
+@@ -290,19 +513,20 @@ def _gated_rules() -> dict:
+             _GATED_RULES_CACHE["triggers"] = {}
+             _GATED_RULES_CACHE["enabled"] = set()
+             _GATED_RULES_CACHE["coverage"] = {}
++        _GATED_RULES_LOADED = True
+     return _GATED_RULES_CACHE
+ 
+ 
+-def _apply_gated_rules(prompt: str, tier: str, violations: dict, checks: dict) -> None:
++def _apply_gated_rules(body: str, tier: str, violations: dict, checks: dict) -> None:
+     """lock-gated 启发式（Round3 Batch C）：refined 专属；enabled_rules 控制启用；
+-    仅声明 lock 词时检测 forbidden（否定感知），命中 -5 advisory。"""
++    仅声明 lock 词时检测 forbidden（否定感知），命中 -5 advisory。body 为已剥离引用标记的正文。"""
+     if tier != "refined":
+         checks["gated_hits"] = []
+         return
+     rules = _gated_rules()
+     triggers = rules.get("triggers") or {}
+     enabled = rules.get("enabled") or set()
+-    body = _strip_reference_markers(prompt)
++    body = str(body or "")
+     hits: list[str] = []
+     for name, rule in triggers.items():
+         if name not in enabled:
+@@ -321,11 +545,16 @@ def _apply_gated_rules(prompt: str, tier: str, violations: dict, checks: dict) -
+     checks["gated_hits"] = hits
+ 
+ 
+-def detect_tier(prompt: str, video: dict | None, explicit_tier: str | None = None) -> str:
++def _batch_hi(max_length: int | None) -> int:
++    """batch 长度上界单一来源（P1-2）：batch 上界与 refined 长度兜底阈值共用，消除 500-833 双亏区。"""
++    return min(max(400, (max_length or 1800) // 6), 833)
++
++
++def detect_tier(prompt: str, video: dict | None, explicit_tier: str | None = None, max_length: int | None = None) -> str:
+     """tier 判定：explicit（optimizer 按 creative_level≥7 传入 refined，否则 batch）优先；无 explicit 时 auto-detect 兜底。
+ 
+     自动判据：shots 非空 / prompt 含 NON-IP 或 FINAL FRAME（refined 输出特征）；
+-    P0-1 长度兜底：无引擎标记且 >833 词 → refined（真实语料多无标记，旧判据 70/258 误分层）。
++    P1-2 长度兜底：无引擎标记且 > _batch_hi(max_length) 词 → refined（阈值与 batch 上界单一来源联动）。
+     语言限制（W11）：count_words 按空格切分，无空格中文不走长度兜底（中文精修通常带标记或显式 tier）。
+     """
+     if explicit_tier in ("refined", "batch", "asset", "variant"):
+@@ -333,7 +562,7 @@ def detect_tier(prompt: str, video: dict | None, explicit_tier: str | None = Non
+     upper = str(prompt or "").upper()
+     if (video and video.get("shots")) or "NON-IP" in upper or "FINAL FRAME" in upper:
+         return "refined"
+-    if count_words(prompt) > 833:
++    if count_words(prompt) > _batch_hi(max_length):
+         return "refined"
+     return "batch"
+ 
+@@ -359,13 +588,38 @@ def evaluate(
+     continuity_break -5（跨镜承接，评审修订版实体级算法）/ block_coverage -5（refined 块覆盖，自渲染口径）/
+     lock-gated 规则 -5（否定感知，默认 3 条启用）。
+     """
++    # P2-3 空输入契约：空/纯空白 → 显式 0 分 + empty 标记（API 层已 422，引擎内部不产生白送分假分数）
++    if not str(prompt or "").strip():
++        return {
++            "score": 0.0,
++            "checks": {"empty": True, "violations": {}},
++            "tier": "batch",
++            "violations": {},
++            "advice": ["空提示词，无法评估"] if enable_advice else [],
++            "evaluator_version": _EVALUATOR_VERSION,
++            "assets": _asset_fingerprint(),
++        }
++
+     checks = {}
+-    tier = detect_tier(prompt, video, explicit_tier=tier)
++    requested_tier = tier
++    tier = detect_tier(prompt, video, explicit_tier=requested_tier, max_length=max_length)
+     checks["tier"] = tier
++    # P1-2：tier 推断来源（marker/length/none）+ 长度兜底进 refined 时豁免 missing_trailer
++    _upper0 = str(prompt or "").upper()
++    marker_based = bool(video and video.get("shots")) or "NON-IP" in _upper0 or "FINAL FRAME" in _upper0
++    length_fallback = (
++        tier == "refined"
++        and requested_tier is None
++        and not marker_based
++        and count_words(prompt) > _batch_hi(max_length)
++    )
++    checks["tier_auto"] = "length" if length_fallback else ("marker" if marker_based and requested_tier is None else None)
++    trailer_waiver = length_fallback
+ 
+     # 1) 长度层级（batch/refined/asset/variant 分带；P2-1 asset/variant 语料形态层）
+     words = count_words(prompt)
+-    measure = len(str(prompt)) if language == "zh" else words
++    # P2-2：RU 与 zh 同样按字符刻度（短卡形态常见，词数下界过严），其余语言按词数
++    measure = len(str(prompt)) if language in ("zh", "ru") else words
+     # form 形态标签：显式 tier=asset/variant，或短卡（<100 词/字）推断为 asset；其余 regular
+     # （评审复验 W1-新：中文无空格 count_words≈1，必须用 measure（zh=字符数）判定，否则整语言误判 asset）
+     if tier in ("asset", "variant"):
+@@ -375,7 +629,7 @@ def evaluate(
+     else:
+         form = "regular"
+     checks["form"] = form
+-    if language == "zh":
++    if language in ("zh", "ru"):
+         if tier == "refined":
+             lo, hi = 500, (max_length or 5000)
+         elif tier == "asset":
+@@ -431,8 +685,12 @@ def evaluate(
+             continue
+         reference_names.extend(str(item).strip() for item in pair_names if str(item or "").strip())
+     body_text = _strip_reference_markers(text, reference_names)
++    _known = list(reference_names) + [
++        str(c).strip() for c in (character_list or []) if str(c or "").strip()
++    ]
++    known_names = list(dict.fromkeys(_known))  # excluded + swap + character_list 并集（_contains_name 长名覆盖守卫用）
+     if excluded:
+-        hit = [e for e in excluded if _contains_word(body_text, e)]
++        hit = [e for e in excluded if _contains_name(body_text, e, known_names)]
+         if hit:
+             violations["excluded_present"] = -10
+             checks["excluded_hits"] = hit
+@@ -446,12 +704,12 @@ def evaluate(
+                 from_name = p[0]
+             else:
+                 continue
+-            if _contains_word(body_text, from_name):
++            if _contains_name(body_text, from_name, known_names):
+                 hit.append(p)
+         if hit:
+             violations["swap_source_present"] = -10
+             checks["swap_hits"] = hit
+-    if tier == "refined" and "NON-IP" not in upper_text:
++    if tier == "refined" and "NON-IP" not in upper_text and not trailer_waiver:
+         # 质量评估 P1-2：真实精修语料以控制段（Duration/Aspect/连续长镜头/分镜标记/终态块）等价表达 trailer
+         # 预期，识别控制段形态即视为有 trailer 预期，不强制 NON-IP 字面量（引擎自产尾行仍为 NON-IP，不受影响）
+         _TRAILER_EQUIV = (
+@@ -494,6 +752,8 @@ def evaluate(
+     # timeline_missing：shots≥2 时正文（标记区剥离后）缺 [SHOT N]/[HARD CUT] 切分标记 → -5
+     # timing_break：shots≥2 时 beats[].time 区间端点最大值超出 shot.duration+2s 容差 → -5
+     shots = (video or {}).get("shots") or []
++    timing_count = 0
++    timing_total = 0.0
+     if isinstance(shots, list) and len(shots) >= 2:
+         # 引用协议标记区已剥离（<<<...>>>/[ABSENT] 内嵌的 [SHOT 不计数，评审 I1）；真实切分标记保留
+         body_upper = body_text.upper()
+@@ -526,6 +786,8 @@ def evaluate(
+                 if timing_diff is None or diff > timing_diff:
+                     timing_diff = diff
+                 if diff > 0:
++                    timing_count += 1
++                    timing_total += diff
+                     violations["timing_break"] = -5
+         checks["timing_diff"] = round(timing_diff, 2) if timing_diff is not None else None
+     else:
+@@ -534,7 +796,8 @@ def evaluate(
+ 
+     # 7) Round3 Batch B — 跨镜承接保真（实体级；引用标记剥离后判定；无 prev_final_frame 跳过零回归）
+     if prev_final_frame:
+-        continuity_ok, continuity_checks = _check_continuity(prompt, prev_final_frame, character_list or [])
++        absent_names = _extract_absent_names(text, reference_names)
++        continuity_ok, continuity_checks = _check_continuity(body_text, prev_final_frame, character_list or [], absent_names)
+         checks.update(continuity_checks)
+         if not continuity_ok:
+             violations["continuity_break"] = -5
+@@ -548,15 +811,18 @@ def evaluate(
+     # 分母 = meta.blocks 非空块数，分子 = 渲染串中命中块标记数（统一正则，行首标题+冒号）；
+     # 与语料分族统计解耦（评审 Critical-2：语料众数 8/12 卡阈值必误报）。
+     blocks = clean_blocks((video or {}).get("blocks"))
++    block_hits = 0
++    block_ratio = 0.0
+     if tier == "refined" and blocks:
+         non_empty = list(blocks)
+         if non_empty:
+             rendered_names = rendered_block_names(prompt)
+             hits = sum(1 for k in non_empty if k in rendered_names)
+             ratio = hits / len(non_empty)
+-            checks["block_coverage"] = {"hit": hits, "total": len(non_empty), "ratio": round(ratio, 3)}
++            block_hits, block_ratio = hits, ratio
++            checks["block_coverage"] = {"hit": block_hits, "total": len(non_empty), "ratio": round(block_ratio, 3)}
+             min_ratio = float((_gated_rules().get("coverage") or {}).get("min_ratio", 0.8))
+-            if ratio < min_ratio:
++            if block_ratio < min_ratio:
+                 violations["block_coverage"] = -5
+         else:
+             checks["block_coverage"] = None
+@@ -564,8 +830,28 @@ def evaluate(
+         checks["block_coverage"] = None
+ 
+     # 9) Round3 Batch C — lock-gated 启发式（否定感知；enabled_rules 默认 3 条；batch 不启用）
+-    _apply_gated_rules(prompt, tier, violations, checks)
++    _apply_gated_rules(body_text, tier, violations, checks)
+     checks["violations"] = violations
++    # P0-3 违规分级量化：violations_detail 并行结构（顶层 violations 保持 dict[str,int] 计分兼容）
++    violations_detail: dict = {}
++    for _key, _val in violations.items():
++        violations_detail[_key] = {"penalty": _val, "count": 1, "detail": None}
++    if "timing_break" in violations:
++        violations_detail["timing_break"] = {
++            "penalty": -5,
++            "count": timing_count,
++            "detail": {
++                "max_diff": round(timing_diff, 2) if timing_diff is not None else None,
++                "total_diff": round(timing_total, 2),
++            },
++        }
++    if "block_coverage" in violations:
++        violations_detail["block_coverage"] = {
++            "penalty": -5,
++            "count": 1,
++            "detail": {"hit": block_hits, "total": len(non_empty) if tier == "refined" and blocks else 0, "ratio": round(block_ratio, 3)},
++        }
++    checks["violations_detail"] = violations_detail
+ 
+     # 2) 六要素（关键词资产 prompt_engine_core/knowledge/element_keywords.json，P1-4 外置；
+     #    en/zh/ru 任一语言命中即算——P2-2 多语种；部分命中 score=min(1, 命中词数/3)——P1-1 区分度）
+@@ -573,8 +859,21 @@ def evaluate(
+     elements_detail: dict = {}
+     element_keywords, _kw_from_asset = load_element_keywords()
+     for _elem, _langs in element_keywords.items():
+-        _toks = list(dict.fromkeys(w for _v in _langs.values() for w in _v))
+-        _hits = sorted({t for t in _toks if t in lower})
++        _hits: list[str] = []
++        for _lang, _words in _langs.items():
++            for _w in _words:
++                _w = str(_w or "").strip()
++                if not _w or _w in _hits:
++                    continue
++                if re.search(r"[\u4e00-\u9fff\u0400-\u04ff]", _w):
++                    if _w in lower:
++                        _hits.append(_w)
++                elif (
++                    _contains_word(lower, _w)
++                    or _contains_word(lower, _w + "s")
++                    or _contains_word(lower, _w + "es")
++                ):
++                    _hits.append(_w)
+         elements_detail[_elem] = {
+             "hit": bool(_hits), "words": _hits[:8], "score": round(min(1.0, len(_hits) / 3.0), 3),
+         }
+@@ -595,20 +894,29 @@ def evaluate(
+     checks["has_camera"] = bool(video and video.get("camera")) or _has_txt(_TXT_CAMERA)
+     checks["has_motion"] = bool(video and video.get("motion_intensity")) or _has_txt(_TXT_MOTION)
+ 
+-    # 4) 保真（source 实体命中：中文 2-gram；英文实体 token 词边界命中——P0-3 英文保真补盲区）
++    # 4) 保真三路径（P0-1/P2-5）：跨语言翻译模式（门控）/ 中文 2-gram 归一 / 英文实体词干命中
+     fidelity = 1.0
++    checks["fidelity_method"] = "none"
+     if source_prompt:
+-        zh_chars = re.findall(r"[\u4e00-\u9fff]{2,}", source_prompt)
+-        if zh_chars:
+-            hit = sum(1 for c in zh_chars[:8] if c in str(prompt))
+-            fidelity = max(0.0, hit / min(8, len(zh_chars)))
++        if _detect_translation_mode(source_prompt, prompt):
++            fidelity = _cross_lingual_fidelity(source_prompt, prompt)
++            checks["fidelity_method"] = "cross_lingual"
+         else:
+-            tokens = _extract_continuity_tokens(source_prompt)
+-            if tokens:
+-                # W3：词形归一（robot→robots/run→runs）——全词边界对复数/时态假阴性，保真路径轻量容忍
+-                prompt_stems = _en_stems(prompt)
+-                hits = [t for t in tokens if _contains_word(prompt, t) or _stem_en(t) in prompt_stems]
+-                fidelity = round(len(hits) / len(tokens), 3)
++            zh_chars = re.findall(r"[\u4e00-\u9fff]{2,}", source_prompt)
++            if zh_chars:
++                src_grams = _zh_fidelity_grams(source_prompt)
++                if src_grams:
++                    hit = len(src_grams & _zh_fidelity_grams(prompt))
++                    fidelity = round(hit / len(src_grams), 3)
++                checks["fidelity_method"] = "zh2gram"
++            else:
++                tokens = _extract_continuity_tokens(source_prompt)
++                if tokens:
++                    # W3：词形归一（robot→robots/run→runs）——全词边界对复数/时态假阴性，保真路径轻量容忍
++                    prompt_stems = _en_stems(prompt)
++                    hits = [t for t in tokens if _contains_word(prompt, t) or _stem_en(t) in prompt_stems]
++                    fidelity = round(len(hits) / len(tokens), 3)
++                checks["fidelity_method"] = "wordlist"
+     checks["fidelity"] = fidelity
+ 
+     score = (
+@@ -626,6 +934,8 @@ def evaluate(
+         "tier": tier,
+         "violations": violations,
+         "advice": _build_advice(prompt, checks, violations, language) if enable_advice else [],
++        "evaluator_version": _EVALUATOR_VERSION,
++        "assets": _asset_fingerprint(),
+     }
+ 
+ 
+@@ -683,7 +993,7 @@ def _build_advice(prompt: str, checks: dict, violations: dict, language: str) ->
+     if not checks.get("has_motion"):
+         advice.append("未检测到运镜描述" if zh else "no camera motion description detected")
+ 
+-    for key in (violations or {}):
++    for key, _val in sorted((violations or {}).items(), key=lambda kv: abs(kv[1]), reverse=True):
+         text = _ADVICE_VIOLATION_TEXT.get(key)
+         if text:
+             advice.append(text[0] if zh else text[1])
+@@ -701,10 +1011,14 @@ def select_best(
+     prev_final_frame: str | None = None,
+     character_list: list | None = None,
+     length_strict: bool = True,
+-) -> tuple[str, dict, float]:
++    detail: bool = False,
++) -> tuple[str, dict, float] | tuple[str, dict, float, list[dict]]:
+     """多候选择优：返回 (prompt, video_meta, score)，分数最高者优先；
+-    同分时违规数少者胜（P1-3 tie-break），仍同分取先出现者（稳定）。"""
+-    best: tuple[str, dict, float, int] | None = None
++    同分时违规总惩罚量小者胜（P0-3：sum(abs(penalty))，1 个 -10 比 2 个 -5 更差），
++    仍同分取先出现者（稳定排序）。
++    detail=True 返回 4 元组 (prompt, meta, score, candidates_info)——每候选
++    checks/violations/advice/violations_penalty 明细（按分降序），供运营解释「为什么选它」。"""
++    scored: list[tuple[float, int, str, dict, dict]] = []
+     for prompt, meta in candidates:
+         info = evaluate(
+             prompt, meta, source_prompt=source_prompt, language=language, tier=tier,
+@@ -712,12 +1026,22 @@ def select_best(
+             length_strict=length_strict,
+         )
+         score = float(info["score"])
+-        n_violations = len(info.get("violations") or {})
+-        if best is None or score > best[2] or (score == best[2] and n_violations < best[3]):
+-            best = (prompt, meta, score, n_violations)
+-    if best is None:
+-        return "", {}, 0.0
+-    return best[0], best[1], best[2]
++        penalty = sum(abs(v) for v in (info.get("violations") or {}).values())
++        scored.append((score, penalty, prompt, meta, info))
++    scored.sort(key=lambda x: (-x[0], x[1]))  # 稳定排序：同分同惩罚保留先出现者
++    if not scored:
++        return ("", {}, 0.0, []) if detail else ("", {}, 0.0)
++    if detail:
++        infos = [
++            {
++                "prompt": p, "meta": m, "score": sc,
++                "checks": i.get("checks"), "violations": i.get("violations"),
++                "advice": i.get("advice"), "violations_penalty": pen,
++            }
++            for sc, pen, p, m, i in scored
++        ]
++        return scored[0][2], scored[0][3], scored[0][0], infos
++    return scored[0][2], scored[0][3], scored[0][0]
+ 
+ # video-corpus-expansion 组5：failure_patterns.json pattern → evaluate() violations 键 映射
+ # （gated rule 仅 refined 层启用，未启用的 rule 对应 tag 标记 covered=False，不污染召回分母）
+diff --git a/video_prompt_engine/optimizer.py b/video_prompt_engine/optimizer.py
+index 17d5490..d5a18af 100644
+--- a/video_prompt_engine/optimizer.py
++++ b/video_prompt_engine/optimizer.py
+@@ -337,7 +337,7 @@ class VideoOptimizer:
+                         max_length=request.max_length, prev_final_frame=request.prev_final_frame,
+                         character_list=character_list,
+                     )
+-                    scored.append((_info["score"], len(_info.get("violations") or {}), _idx, _p, _m))
++                    scored.append((_info["score"], sum(abs(v) for v in (_info.get("violations") or {}).values()), _idx, _p, _m))
+                 scored.sort(key=lambda x: (-x[0], x[1], x[2]))
+                 optimized, video_meta = scored[0][3], scored[0][4]
+                 final_candidates = [x[3] for x in scored]

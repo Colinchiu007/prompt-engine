@@ -1,0 +1,16 @@
+ROLE_FILE: C:/Users/邱领/.claude/.ccg/prompts/claude/reviewer.md
+<TASK>
+审查 video-prompt-engine 评估器 P0-P2 深水区优化（branch codex/evaluator-p0p2-round2，基于已合并 PR #54 0a914ac）的代码变更。
+
+变更范围（git diff 已导出到 .ccg/tasks/evaluator-p0p2-round2/review-diff.txt，请先读该文件；也可直接 git diff 核对）：
+1. video_prompt_engine/evaluator.py（+440 行）：v0.11 版本指纹+资产 sha256；_contains_name 中文名字边界（known_names 长名覆盖 + 2 字 token 后随字白名单 _CJK_NAME_FOLLOW_OK）；_detect_translation_mode/_cross_lingual_fidelity 跨语言保真（0.5 要素守恒+0.3 镜头结构+0.2 长度比，CJK 按汉字数）；_zh_fidelity_grams 中文 2-gram 归一；violations_detail 并行量化；_batch_hi 阈值单一来源+trailer 豁免；detect_tier tier_auto；空输入契约；六要素词边界（拉丁边界+复数容错）；RU 与 zh 同按字符刻度长度带；select_best(detail) 4 元组+tie-break sum(abs(penalty))；advice 按 penalty 降序；_check_continuity 角色名走 _contains_name。
+2. video_prompt_engine/api/rest.py：meta evaluator 版本常量。
+3. video_prompt_engine/optimizer.py：tie-break 排序口径。
+4. prompt_engine_core/knowledge/element_keywords.json v2 + knowledge.py fallback 同步：RU 词表补齐、subject.en 增 heroic。
+5. tests/test_evaluator_p0p2_round2.py（13 组 36 用例）+ test_evaluator_p0p2.py 版本号断言更新。
+
+已通过验证：round2 36/36；全量 927+5 修复后待复跑；golden MAE 15.77 / r 0.915（门禁 <=18 / >=0.90）；258 语料 mean 92.3 / >=90 213（哨兵通过）。
+
+重点检查：中文名字边界启发是否会造成误杀/误放；跨语言保真公式的边界（空/短文本、多词短语 _contains_word 空格边界）；violations_detail 与既有消费方兼容；RU 字符刻度是否影响 batch/refined；tie-break 改动对 select_best 稳定性的影响；线程安全（_gated_lock 缓存、_ASSET_FP_CACHE）；性能（正则编译、逐词 _contains_word 调用量）。
+OUTPUT: Critical/Warning/Info 分级审查报告，每条给出文件:行号、问题描述、修复建议。不要泛泛而谈，只报告真实问题。
+</TASK>
