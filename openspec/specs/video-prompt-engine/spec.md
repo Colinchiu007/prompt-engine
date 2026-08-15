@@ -175,3 +175,69 @@ Multi-Publish videogen SHALL 支持配置切换至独立视频引擎（8020）�
 #### Scenario: 历史格式兼容
 - **WHEN** 读取历史裸列表 index.json
 - **THEN** 正常加载并标记 schema_version=1，检索不受影响
+
+### Requirement: 跨镜承接保真（continuity_check）
+视频引擎 SHALL 支持跨镜承接检查：`prev_final_frame`（≤1000 字符）承载上一镜终态描述，注入 SCENE Continuity 事实引用段；V4 缓存盐 SHALL 加入终态 SHA-1 前缀哈希（承接状态变化缓存必然失效）；无 `prev_final_frame` 时零回归。
+
+#### Scenario: 英文承接命中
+- **WHEN** 英文 prompt 共享实体命中率 ≥40% 且终态帧实际出现的角色名（character_list 白名单）硬命中
+- **THEN** 承接判定通过；未达阈值记 continuity_break -5
+
+#### Scenario: 中文承接命中
+- **WHEN** 中文终态白名单词（角色名+姿势/位置词）重合 ≥60%，或白名单为空时最长公共子串覆盖率 ≥0.5
+- **THEN** 承接判定通过；未达阈值记 continuity_break -5
+
+### Requirement: 导演分镜块骨架与块覆盖
+视频引擎 refined 层 SHALL 使用《Hell Grind》语料统计的 12 块顺序渲染骨架（SCENE NOTE → SPATIAL LAYOUT → LIGHTING → COLOR → CAMERA → ENVIRONMENT → CONTINUITY → CHARACTERS → SKIN → ACTING → STILLNESS LOCK → FINAL FRAME）；`blocks` 12 键白名单（每键 ≤4000 字符）；块覆盖度 SHALL 按渲染串命中块标记比例判定（min_ratio=0.8，分母=meta.blocks 非空块数）。
+
+#### Scenario: 块覆盖达标
+- **WHEN** refined 渲染串命中块标记比例 ≥0.8
+- **THEN** block_coverage 通过，不扣分
+
+#### Scenario: 块覆盖不足
+- **WHEN** 命中比例 <0.8
+- **THEN** 记 block_coverage -5
+
+### Requirement: lock-trigger gated 规则（否定感知）
+视频引擎 SHALL 提供 lock-gated 启发式规则：默认启用 dead_center / exposure_break / eye_line 三条，仅当 lock 词真实（非否定）出现时检测 forbidden 词；规则资产（refined_blocks.json）缺失/损坏时回退空表（规则不启用零误报）；命中记 -5。
+
+#### Scenario: 否定前缀不误伤
+- **WHEN** 正文含 "keep the hero OUT of the center of frame" 等否定禁令形态
+- **THEN** 不记 lock 违规
+
+#### Scenario: 资产缺失零误报
+- **WHEN** refined_blocks.json 缺失或损坏
+- **THEN** gated 规则不启用，评估正常完成
+
+### Requirement: 精修层长度词数刻度
+视频引擎 refined 层长度判据 SHALL 使用词数刻度 500–5,000 词（max_length 为输出裁剪预算，不参与 refined 上界判据）；`max_length` 上限 SHALL 支持至 20,000 字符（容纳真实导演分镜单形态）；batch 上界封顶 833 词。
+
+#### Scenario: 长分镜单不误杀
+- **WHEN** refined 模板 1,000-5,000 词
+- **THEN** 长度判据通过
+
+#### Scenario: 超长拒绝
+- **WHEN** 词数 >5,000
+- **THEN** 长度判据失败
+
+### Requirement: 输出语言按平台路由
+视频引擎输出语言 SHALL 按「显式参数 → 目标平台集合 → model 关键词兜底 → 文本 CJK 检测」解析；国产视频模型（minimax/seedance/kling/hailuo/doubao/cogvideo/hunyuan/wan/agnes）默认 zh，国外模型（veo/runway/sora/ltx/pika/luma）默认 en，避免中文提示词错配国外模型。
+
+#### Scenario: veo 英文优先
+- **WHEN** platform=veo 且未显式指定语言
+- **THEN** 输出语言路由为 en
+
+#### Scenario: seedance 中文优先
+- **WHEN** platform=seedance 且未显式指定语言
+- **THEN** 输出语言路由为 zh
+
+### Requirement: 策略约束增强
+视频引擎策略 SHALL 支持：lens discipline（character lock / STRICT block / final frame / plausible negative）、文化/族裔锚定（角色外貌与文化背景一致）、Zero Text Artifacts（禁止画面内文字伪影）三类硬约束；相应约束进入系统提示词并随平台策略生效。
+
+#### Scenario: 无文字约束
+- **WHEN** 优化视频提示词
+- **THEN** system prompt 含 Zero Text Artifacts 强制约束
+
+#### Scenario: 文化锚定
+- **WHEN** 角色描述含族裔/文化背景
+- **THEN** 优化结果保持外貌与文化背景锚定，不漂移

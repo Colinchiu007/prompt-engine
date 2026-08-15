@@ -51,6 +51,11 @@
 
 本项目更新日志。
 
+## [未发布] 文档：视频引擎 PRD/openspec 补档（2026-08-15）
+
+- **PRD v0.9.3 补视频引擎章节**：`docs/PRD.md` 新增 §13「视频提示词优化引擎（v0.10+ 独立演进）」——定位与边界/能力清单（独立引擎→全面增强→Higgsfield P0/P1/P2→共享内核→图片引擎对齐→Round3 B/C）/知识库语料资产表/评估择优机制/依赖开源项目/参考文档
+- **openspec main spec 补6 条需求**：`openspec/specs/video-prompt-engine/spec.md` 15→21 条——跨镜承接保真（continuity_check）/导演分镜块骨架与块覆盖/lock-trigger gated 规则（否定感知）/精修层长度词数刻度（500-5000 词 + max_length 20000）/输出语言按平台路由/策略约束增强（lens discipline·文化锚定·Zero Text Artifacts）
+
 ## [未发布] 功能：视频提示词输出语言按目标平台路由（2026-08-12 增强）
 
 - **语言路由**：output_language 解析升级为「显式参数 → 目标平台集合 → model 关键词兜底 → 文本 CJK 检测」；国产视频模型（minimax/seedance/kling/hailuo/doubao/cogvideo/hunyuan/wan/agnes）→ zh，国外模型（veo/runway/sora/ltx/pika/luma）→ en，避免中文提示词发给 Veo/Runway 的错配。
