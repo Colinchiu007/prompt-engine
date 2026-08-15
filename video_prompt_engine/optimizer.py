@@ -327,19 +327,20 @@ class VideoOptimizer:
                         for c in cl if (c.get("name") if isinstance(c, dict) else c)
                     ]
 
-            # 多候选择优：evaluator 评分，最优在前
+            # 多候选择优：与 select_best 相同择优语义（分数降序 → 同分违规少者胜 → 仍同分先出现），
+            # 内联排序保证 optimized 与 final_candidates[0] 一致（评审复验 Info）
             if len(candidates) > 1:
-                scored = [
-                    (evaluate(
-                        p, m, source_prompt=request.prompt, language=lang, tier=tier,
+                scored = []
+                for _idx, (_p, _m) in enumerate(candidates):
+                    _info = evaluate(
+                        _p, _m, source_prompt=request.prompt, language=lang, tier=tier,
                         max_length=request.max_length, prev_final_frame=request.prev_final_frame,
                         character_list=character_list,
-                    )["score"], p, m)
-                    for p, m in candidates
-                ]
-                scored.sort(key=lambda x: x[0], reverse=True)
-                optimized, video_meta = scored[0][1], scored[0][2]
-                final_candidates = [p for _, p, _ in scored]
+                    )
+                    scored.append((_info["score"], len(_info.get("violations") or {}), _idx, _p, _m))
+                scored.sort(key=lambda x: (-x[0], x[1], x[2]))
+                optimized, video_meta = scored[0][3], scored[0][4]
+                final_candidates = [x[3] for x in scored]
             else:
                 optimized, video_meta = candidates[0]
                 final_candidates = []

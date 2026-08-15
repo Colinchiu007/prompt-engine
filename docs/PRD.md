@@ -706,6 +706,18 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 - **负样本资产化 + few-shot 排除**：`knowledge/seed_failure_samples.json` 14 条失败样本（曝光/死中心/视线/音频/尾行/时间轴/节奏/缺席角色/互换/跨镜承接/剪影/风格污染/暖色泄漏，failure_tags 对齐失败模式库）；`corpus_type=negative` 或 `applicable_to` 不含 few-shot 的条目不进注入段（防污染生成参考），检索路径仍可访问。
 - **evaluator 负样本校验模式**：`evaluate_negatives(samples)` 按 failure_tags 与 evaluate() 触发违规匹配，输出逐类 {recall, hits, misses, false_positives}；gated 未启用规则动态标 covered=False，不污染召回分母；常规评分路径零影响。
 
+#### 13.2.10 评估器 P0-P2 优化：评测器模式完善（evaluator-p0-p2-optimization，2026-08-15）
+- **tier/form 形态建模（P0-2/P2-2）**：tier 白名单扩展 asset/variant；auto 判定增加 >833 词→refined 长度兜底（真实语料多无引擎标记）；`checks["form"]` 形态标签（<100 词/字推断 asset）；长度带按 tier 分带（batch/refined/asset/variant，en 词数 / zh 字符）。
+- **英文保真补盲区（P0-3）**：source 无中文时用实体 token 词边界命中率（复用跨镜承接停用词/泛词表），无实体→1.0 不扣分。
+- **运镜词表拆分（P0-4）**：`has_motion` 只认镜头运动词（pan/dolly/zoom/crane/运镜…），walking/running/moving 等主体运动不再计运镜。
+- **区分度（P1-1/P1-2）**：六要素部分命中 score=min(1, 命中词数/3)（保留布尔 `elements` 兼容键）；长度梯度——评测口径（length_strict=False）带外按接近度 0-20 部分给分，引擎候选口径（True）保持 0/20 二值。
+- **词表资产化 + 多语种（P1-4/P2-2）**：六要素关键词外置 `prompt_engine_core/knowledge/element_keywords.json`（en/zh/ru，#52 扩充词入库，6 要素 × 3 语言），视频/图片评估器共用同一资产（图片引擎自动获得扩充词）；缺失/损坏回退内置默认（from_asset=False 零回归）。
+- **评测端点（P2-1/P2-4）**：`POST /v1/video/evaluate`（1-20 条、compare 等长双路对比 score_delta/by_criterion、tier/language/max_length/length_strict/detail 参数、空条目/超限/长度不匹配 422）。
+- **可解释性（P2-3）**：`evaluate()` 新增纯规则 `advice`（长度/缺失要素/镜头维度/违规逐条，zh/en 按 language，enable_advice 可关闭）。
+- **择优与负样本细节（P1-3/P1-5）**：`select_best` 同分时违规数少者胜（仍同分取先出现者）；`evaluate_negatives` FP 按样本×违规键去重归属（多 tag 同键不重复累计）。
+- **golden set（P2-5）**：`knowledge/golden_set.json` 12 条人工/评审分样本（含 rationale/source，不进 few-shot）+ `scripts/eval_golden_set.py`（MAE/RMSE/Pearson r + 逐条对比，退出码 0）；校准基线（评审修复后）MAE=16.93 / RMSE=19.74 / Pearson r=0.913。
+
+
 
 ### 13.3 知识库与语料资产
 
@@ -721,6 +733,8 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 | corpus/ 目录（<source>/ 组织） | 按来源分目录的语料 JSON（higgsfield 等） | build_corpus_index.py 合并 → corpus_index.json |
 | seed_failure_samples.json | 14 条失败样本（failure_tags + meta + prev_final_frame） | evaluate_negatives 校验 + 规则召回统计 |
 | corpus_index.json | 构建产物（合并去重 + 门禁校验） | loader 显式 extra 并入知识库 |
+| element_keywords.json | 六要素关键词资产（en/zh/ru，6 要素，含 #52 扩充词） | 视频/图片评估器共享命中（任一语言命中即算） |
+| golden_set.json | 12 条人工/评审打分校准样本（human_score/rationale/source） | scripts/eval_golden_set.py 校准（MAE/RMSE/Pearson） |
 
 ### 13.4 评估与择优机制（evaluator）
 
@@ -736,7 +750,18 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 - **负样本校验模式**：`evaluate_negatives` 对 14 条失败样本按 failure_tags 匹配违规触发，
   11 个已启用可判定模式召回 1.0、漏检 0、误报 0；4 个 gated 规则（剪影/风格污染/暖色泄漏/肤色保护）资产保留，
   规则启用后自动进入召回统计。
-- 剩余边界（诚实记录）：俄语等多语种六要素仍受词表限制（仅 en/zh）；语料族级形态（asset/variant）仍未建模独立 tier。
+- **P0-P2 评测器机制（2026-08-15，evaluator-p0-p2-optimization）**：tier/form 形态建模（asset/variant + >833 词 refined 兜底 + <100 词 asset 推断）；
+  六要素部分命中（score=min(1, 命中词数/3)）+ 词表资产化共享（en/zh/ru）；英文保真实体 token 命中率；
+  运镜只认镜头运动词；长度带按 tier 分带 + 评测口径梯度 0-20；select_best 同分违规数少者胜；
+  evaluate() 返回纯规则 advice；负样本 FP 样本×键去重；`POST /v1/video/evaluate` 评测端点（compare 双路对比）。
+- **golden set 校准（P2-5）**：12 条样本（6 条评估报告人工分 + 6 条评审模型补标，source 字段区分）
+  评审修复后 MAE=16.93 / RMSE=19.74 / Pearson r=0.913（词边界+词形归一使排序一致性 r +0.108）；长精修场景引擎分偏高（100 vs 85-90）、短卡与俄语偏低（-12~-39），
+  词表覆盖与短形态权重为下一轮优化方向（golden set 资产固化可复测）。
+- 复测快照（§8.5）：258 语料 auto 口径 P0-P2 基线 mean 92.0（median 98.5）/ score≥90 197 / <60 16 条；评审修复后 mean 90.9（median 98.5）/ score≥90 194 / ≥80 217 / <60 19 / missing_audio 28（auto 口径，refined 15 + batch 13）；
+  与 §8.1 基线（95.6/231）差异主因是长度梯度取代全额 20 分（91 条带外）——评测口径保留区分度，不再人人 100。
+- 剩余边界（诚实记录）：俄语词表已有基础覆盖但短卡/俄语信息密度低的样本仍被压低；
+  英文保真词干对双写基底词（fill→filling→fil）与 e-dropping 词（stare→stared）宁假阴性不归并（防 stares→star 撞干，评审复验 Minor）；
+  真实 LLM 优化链路与图/视频模型渲染仍需外部凭据验收。
 
 ### 13.5 依赖开源项目
 
@@ -747,6 +772,7 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 
 ### 13.6 参考文档
 
-- 规格：`openspec/specs/video-prompt-engine/spec.md`（25 条需求）与 `openspec/specs/image-prompt-quality/spec.md`
+- 规格：`openspec/specs/video-prompt-engine/spec.md`（27 条需求）与 `openspec/specs/image-prompt-quality/spec.md`
 - 实现细节：`CHANGELOG.md`；成本模型：`docs/HELLGRIND-NUM-CANDIDATES-COST-MODEL.md`
 - 质量评估：`docs/VIDEO-PROMPT-ENGINE-QUALITY-EVAL-2026-08-15.md`
+- golden set 校准：`video_prompt_engine/knowledge/golden_set.json` + `scripts/eval_golden_set.py`
