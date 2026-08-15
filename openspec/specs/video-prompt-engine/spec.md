@@ -326,3 +326,30 @@ Multi-Publish videogen SHALL 支持配置切换至独立视频引擎（8020）�
 - **WHEN** 运行 scripts/eval_golden_set.py
 - **THEN** 输出评估器分 vs 人工分 MAE/RMSE/Pearson r 与逐条对比表，退出码 0
 
+### Requirement: 评估器深水区优化 round2（跨语言保真/中文名字边界/违规量化/阈值联动/版本指纹/语料门禁）
+视频引擎 evaluator SHALL 支持：`evaluator_version`（v0.11-deterministic）与 `assets`（element_keywords/refined_blocks/golden_set sha256）版本指纹随 evaluate() 返回；`checks["violations_detail"]` 违规分级量化（顶层 `violations` 保持 dict[str,int] 计分兼容；timing_break 带 count+max_diff/total_diff，block_coverage 带 hit/total/ratio）；跨语言保真门控（source 与 prompt 一侧含 CJK 另一侧不含时启用 `fidelity_method=cross_lingual`：0.5 要素跨语言守恒 + 0.3 镜头结构保留 + 0.2 长度比（CJK 按汉字数），要素守恒与镜头结构按 zh→en/en→zh 双向配对计分，en→en/zh→zh 路径零触碰）；中文保真 2-gram 归一（`_zh_fidelity_grams` 去高频虚字后取二元组）；角色名匹配走 `_contains_name`（拉丁词边界；CJK 长名覆盖守卫 known_names=excluded+swap+character_list 并集，2 字 token 后随字白名单仅含纯功能字（动词/助词/介词/方位，剔除常用名字尾字）防「林晓」误击「林晓雨」；泛词路径维持子串）；[ABSENT] 标记豁免的剥离与识别共用 known_names 并集（覆盖 character_list roster 角色，拉丁名后随边界 + 同位置长名覆盖去重）；六要素拉丁词词边界命中（CJK 子串；西里尔左侧词边界防 фон 误击 телефон/микрофон，右侧容忍变格；复数 -s/-es 容错）；batch 长度上界与 refined 长度兜底阈值单一来源 `_batch_hi`（400-833 联动，长度兜底推断 refined 时豁免 missing_trailer，`checks["tier_auto"]` 输出推断来源）；RU 与 zh 同按字符刻度长度带；空输入显式 0 分契约（checks 形状与正常路径对齐，advice 按 language）；advice 按违规惩罚绝对值降序；`select_best(detail=False)` 扩展 4 元组（候选含 checks/violations/advice，默认 3 元组不变）；tie-break 改总惩罚量 `sum(abs(penalty))`（1 个 -10 与 2 个 -5 惩罚量相等并列，稳定排序）；RU 词表补齐（subject/color/environment，资产 version 2，knowledge.py fallback 同步）；golden set 校准门禁（MAE≤18 / Pearson r≥0.90）与 258 语料复测哨兵（mean 跌幅 ≤2.0、≥90 占比跌幅 ≤5pp）。
+
+#### Scenario: 中文名字边界
+- **WHEN** excluded 角色「林晓」而正文为「林晓雨站在门口」，或 character_list 含「林晓雨」
+- **THEN** 不触发 excluded_present（长名覆盖/后随字白名单）；正文「林晓走进房间」仍命中
+
+#### Scenario: 跨语言保真门控
+- **WHEN** source 为中文、prompt 为英文忠实翻译（要素/镜头/长度守恒），或反之 en→zh
+- **THEN** fidelity_method=cross_lingual 且 fidelity≥0.7（双向配对计分）；en→en/zh→zh 路径 fidelity_method 保持 wordlist/zh2gram
+
+#### Scenario: [ABSENT] 豁免覆盖 roster 角色
+- **WHEN** 正文含 `<<<[ABSENT] Roko>>>` 且 character_list=["Roko"]、prev_final_frame 含 Roko
+- **THEN** 不触发 continuity_break（豁免来自 [ABSENT] 判定而非标记残留）；无标记时缺席仍判 continuity_break
+
+#### Scenario: 阈值单一来源与豁免
+- **WHEN** 无引擎标记纯文本 400-833 词 auto tier 判 refined（tier_auto=length）
+- **THEN** 长度带按 refined 判定且 missing_trailer 不扣分
+
+#### Scenario: 版本指纹
+- **WHEN** 调用 evaluate() 或 POST /v1/video/evaluate
+- **THEN** 返回 evaluator_version 与 assets sha256；REST meta.evaluator 与引擎常量一致
+
+#### Scenario: golden 门禁与语料哨兵
+- **WHEN** 运行 scripts/eval_golden_set.py 与 258 语料复测
+- **THEN** golden MAE≤18 且 Pearson r≥0.90；258 mean 跌幅 ≤2.0 且 ≥90 占比跌幅 ≤5pp
+

@@ -757,10 +757,40 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 - **golden set 校准（P2-5）**：12 条样本（6 条评估报告人工分 + 6 条评审模型补标，source 字段区分）
   评审修复后 MAE=16.93 / RMSE=19.74 / Pearson r=0.913（词边界+词形归一使排序一致性 r +0.108）；长精修场景引擎分偏高（100 vs 85-90）、短卡与俄语偏低（-12~-39），
   词表覆盖与短形态权重为下一轮优化方向（golden set 资产固化可复测）。
+- **评估器深水区 round2（2026-08-16，evaluator-p0p2-round2，v0.11-deterministic）**：
+  跨语言保真门控（zh↔en 翻译模式：0.5 要素跨语言守恒 + 0.3 镜头结构保留 + 0.2 长度比（CJK 按汉字数），en→en/zh→zh 零触碰）；
+  中文名字边界（`_contains_name`：长名覆盖 known_names=excluded+swap+character_list 并集 + 2 字 token 后随字白名单，修复「林晓」误击「林晓雨」类 excluded/swap/continuity 误扣）；
+  违规分级量化 `violations_detail`（顶层 violations 兼容，timing_break/block_coverage 带 count+detail）；
+  batch/refined 阈值单一来源 `_batch_hi`（400-833 联动，长度兜底推断 refined 豁免 missing_trailer，`checks.tier_auto` 标注来源）；
+  六要素拉丁词词边界 + 复数 -s/-es 容错（CJK/西里尔子串）；RU 词表补齐（资产 v2 + knowledge.py fallback 同步，golden ru 样本要素命中修复）；
+  RU 与 zh 同按字符刻度长度带；版本指纹（evaluator_version + assets sha256，REST meta 同源）；空输入显式 0 分契约；
+  advice 按违规惩罚绝对值降序；`select_best(detail=False)` 4 元组扩展（默认 3 元组不变）；tie-break 改总惩罚量 sum(abs(penalty))；
+  中文保真 2-gram 归一（去高频虚字）。
+- **round2 复测（双门禁验收）**：golden MAE 16.93→**15.77** / RMSE 18.52 / Pearson r 0.913→**0.915**（门禁 MAE≤18 / r≥0.90 通过）；
+  258 语料复测 mean 90.9→**92.3**（median 98.6）/ score≥90 194→**213** / ≥80 217→**221** / missing_audio 28→**25**（哨兵 mean 跌幅≤2.0、≥90 占比跌幅≤5pp 通过）；
+  回归：round2 专用 36 用例 + 全量 932 通过（web E2E 5 条需本机 8094 服务环境）。
+  <60 尾部 20 条仍为已知短卡/模板重复形态缺口（hg-assets/credits 短卡 38-95 词 + 157-159 词模板族 + 1 条 refined 尾行缺失），
+  形态专属权重与封顶效应拆解列为 next change。
+- **round2 双模型评审修复（2026-08-16，评审 request changes 全量落地）**：
+  ① [ABSENT] 豁免扩展到 character_list（roster）角色——剥离与识别共用 known_names 并集（原实现漏 roster，
+     `<<<[ABSENT] Roko>>>`+character_list 整段剥离后角色名不在正文仍判 continuity_break，且原测试靠「标记残留→角色在场」假绿）；
+     拉丁名后随边界（`[ABSENT] Rokosh` 不判 Roko 缺席）+ 同位置长名覆盖去重（`[ABSENT] 王芳雨` 只判王芳雨）；
+  ② 跨语言保真双向配对——en→zh 方向 conserved/kept 不再恒≈0（旧实现只查「src 中文 vs dst 英文」，en→zh 只剩长度比）；
+  ③ 资产指纹缓存原子赋值（先构建局部 dict 再发布，消除并发首波读到半填充缓存）；
+  ④ 中文名字后随字白名单剔除常用名字尾字（山/海/雪/河/湖/水/岸/草/花/天/空/地），收窄为纯功能字（宁漏勿误）；
+  ⑤ 西里尔词左侧词边界（фон 不再误击 телефон/микрофон；右侧容忍变格——词形表已收录 полицейский/полицейских 等形态）；
+  ⑥ 空输入 checks 形状与正常路径对齐（form/elements/fidelity/violations_detail/tier_auto 齐备）+ advice 按 language；
+     RU advice 长度口径同按字符刻度（与 evaluate 长度带一致）；
+  ⑦ tie-break 注释修正（1 个 -10 与 2 个 -5 惩罚量相等并列，稳定排序）；variant 上界复用 `_batch_hi`；
+     `_gated_lock` 模块级直建消除惰性创建竞态；`_check_continuity` 单字符死分支移除。
+  修复后：round2 42 用例 + 全量 **938 passed / 3 skipped**（web E2E 5 条需本机 8094 服务）；golden MAE 15.77 / r 0.915、
+  258 复测 mean 92.3 / ≥90 213 与修复前完全持平（零分布漂移）。
 - 复测快照（§8.5）：258 语料 auto 口径 P0-P2 基线 mean 92.0（median 98.5）/ score≥90 197 / <60 16 条；评审修复后 mean 90.9（median 98.5）/ score≥90 194 / ≥80 217 / <60 19 / missing_audio 28（auto 口径，refined 15 + batch 13）；
   与 §8.1 基线（95.6/231）差异主因是长度梯度取代全额 20 分（91 条带外）——评测口径保留区分度，不再人人 100。
 - 剩余边界（诚实记录）：俄语词表已有基础覆盖但短卡/俄语信息密度低的样本仍被压低；
   英文保真词干对双写基底词（fill→filling→fil）与 e-dropping 词（stare→stared）宁假阴性不归并（防 stares→star 撞干，评审复验 Minor）；
+  中文名字边界为 2 字 token 后随字白名单启发（未登记更长名字靠后随字区分，长名登记进 character_list 可完全消除）；跨语言保真为 6 维粗粒度类别守恒，非逐实体语义保真；
+  golden 7/12 样本封顶 100（无 source fidelity 白送 + 镜头三布尔 + 六要素全中），权重全量搜索暂缓——镜头分级与 fidelity 重分配列为 next change；
   真实 LLM 优化链路与图/视频模型渲染仍需外部凭据验收。
 
 ### 13.5 依赖开源项目

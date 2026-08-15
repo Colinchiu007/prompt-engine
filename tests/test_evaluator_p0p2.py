@@ -225,7 +225,7 @@ class TestEvaluateEndpoint:
         assert r.status_code == 200
         data = r.json()
         assert data["meta"]["count"] == 1
-        assert data["meta"]["evaluator"] == "v0.10-deterministic"
+        assert data["meta"]["evaluator"] == "v0.11-deterministic"
         res = data["results"][0]
         assert 0 <= res["score"] <= 100
         assert res["tier"] in ("batch", "refined", "asset", "variant")

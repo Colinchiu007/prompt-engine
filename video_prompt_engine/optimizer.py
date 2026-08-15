@@ -337,7 +337,7 @@ class VideoOptimizer:
                         max_length=request.max_length, prev_final_frame=request.prev_final_frame,
                         character_list=character_list,
                     )
-                    scored.append((_info["score"], len(_info.get("violations") or {}), _idx, _p, _m))
+                    scored.append((_info["score"], sum(abs(v) for v in (_info.get("violations") or {}).values()), _idx, _p, _m))
                 scored.sort(key=lambda x: (-x[0], x[1], x[2]))
                 optimized, video_meta = scored[0][3], scored[0][4]
                 final_candidates = [x[3] for x in scored]
