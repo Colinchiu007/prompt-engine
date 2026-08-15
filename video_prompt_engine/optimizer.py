@@ -32,19 +32,31 @@ from video_prompt_engine.cache_manager import VideoCacheManager
 from video_prompt_engine.classifier import classify, suggest_dimensions
 from video_prompt_engine.evaluator import evaluate, select_best
 from video_prompt_engine.knowledge.loader import load_keywords_video
+from video_prompt_engine.refined_blocks import DRIFT_TRAILER_RE, TRAILER_TAIL_RE
 
 logger = logging.getLogger(__name__)
 
 # 与策略 Output Format 同源（VIDEO_OUTPUT_KEYS），禁止双份手写漂移（C5）
-_JSON_RETRY_KEYS = ", ".join('"' + k + '"' for k in VIDEO_OUTPUT_KEYS)
+def _json_retry_keys(tier: str) -> str:
+    keys = list(VIDEO_OUTPUT_KEYS)
+    if tier == "refined":
+        # 评审 W2：refined 层策略样例含 blocks 键，重试提示必须同源，否则重试会引导 LLM 丢弃 blocks
+        keys.append("blocks")
+    return ", ".join('"' + k + '"' for k in keys)
 
-JSON_RETRY_HINT = (
-    "\n\nIMPORTANT: Your previous output was NOT a valid strict JSON object. "
-    "Output ONLY a strict JSON object with EXACTLY these keys: "
-    + _JSON_RETRY_KEYS
-    + ". "
-    "No markdown fences, no code blocks, no extra text outside the JSON object."
-)
+
+def build_json_retry_hint(tier: str = "batch") -> str:
+    """结构化输出重试提示（tier 感知 keys；batch 恒等于 JSON_RETRY_HINT 保持兼容）。"""
+    return (
+        "\n\nIMPORTANT: Your previous output was NOT a valid strict JSON object. "
+        "Output ONLY a strict JSON object with EXACTLY these keys: "
+        + _json_retry_keys(tier)
+        + ". "
+        "No markdown fences, no code blocks, no extra text outside the JSON object."
+    )
+
+
+JSON_RETRY_HINT = build_json_retry_hint("batch")
 
 
 def strip_rendered_trailer(optimized: str, tail: str) -> str:
@@ -58,26 +70,51 @@ def strip_rendered_trailer(optimized: str, tail: str) -> str:
     无尾行形态时回退 endswith(tail) 精确剥离；两者都不中 → 原样返回（调用方自行截断）。
     """
     import re
-    _TAIL_FORM_RE = re.compile(
-        r"Photoreal\.?\s+NON-IP\.?\s+.*?(?:only\.|Audio:.*|No music\.)\s*$",
-        flags=re.IGNORECASE | re.DOTALL,
-    )
     blocks = re.split(r"\n\s*\n", optimized)
     last_block = blocks[-1]
-    m = re.search(r"Photoreal\.?\s+NON-IP\.?", last_block, flags=re.IGNORECASE)
-    if m and _TAIL_FORM_RE.match(last_block[m.start():]):
+    m = TRAILER_TAIL_RE.search(last_block)
+    if m:
         body = optimized[: len(optimized) - len(last_block) + m.start()].rstrip()
         return re.sub(r"\n\s*$", "", body)
+    m = DRIFT_TRAILER_RE.search(last_block)
     if m:
+        # 评审 C3：漂移尾行（缺 aspect/duration 的 Photoreal NON-IP 形态）→ 剥离防双尾行
+        body = optimized[: len(optimized) - len(last_block) + m.start()].rstrip()
+        return re.sub(r"\n\s*$", "", body)
+    marker = re.search(r"Photoreal\.?\s+NON-IP\.?", last_block, flags=re.IGNORECASE)
+    if marker:
         # 评审 C1-2：残缺裸尾行（Photoreal...NON-IP 后无 only./Audio/No music 且以句点收尾、
         # 单行残片）→ 剥离防双尾行；中段字面量（后接描述性正文）不以 NON-IP. 结尾 → 保留
-        suffix = last_block[m.start():]
+        suffix = last_block[marker.start():]
         if "\n" not in suffix and re.search(r"non-ip\.\s*$", suffix, flags=re.IGNORECASE):
-            body = optimized[: len(optimized) - len(last_block) + m.start()].rstrip()
+            body = optimized[: len(optimized) - len(last_block) + marker.start()].rstrip()
             return re.sub(r"\n\s*$", "", body)
     if tail and optimized.endswith(tail):
         return optimized[: -len(tail)].rstrip()
     return optimized
+
+
+def fit_refined_trailer(optimized: str, tail: str, max_length: int) -> str:
+    """Fit a refined body plus its complete trailer inside max_length.
+
+    The separator is part of the budget. If the complete trailer leaves no
+    room for meaningful body content, fail closed instead of returning an
+    overlong or trailer-only prompt.
+    """
+    try:
+        limit = int(max_length)
+    except (TypeError, ValueError) as error:
+        raise ValueError("max_length must be an integer") from error
+    trailer = str(tail or "").strip()
+    body = strip_rendered_trailer(str(optimized or ""), trailer).strip()
+    separator = " "
+    if not trailer or limit <= len(trailer) + len(separator):
+        raise ValueError("refined trailer cannot fit within max_length")
+    body_budget = limit - len(trailer) - len(separator)
+    fitted_body = body[:body_budget].rstrip()
+    if not fitted_body:
+        raise ValueError("refined prompt body cannot fit within max_length")
+    return fitted_body + separator + trailer
 
 
 def derive_character_count(context: Optional[dict]) -> Optional[int]:
@@ -252,7 +289,7 @@ class VideoOptimizer:
                     retried += 1
                     total_retried += 1
                     raw, _tokens = self._provider.call(
-                        system_prompt + JSON_RETRY_HINT, request.prompt, variant=i + 100 * retried,
+                        system_prompt + build_json_retry_hint(tier), request.prompt, variant=i + 100 * retried,
                         max_length=request.max_length,
                     )
                     raw = strip_reasoning_blocks(raw)
@@ -264,10 +301,10 @@ class VideoOptimizer:
                         if tail:
                             # 剥离已存在尾行（LLM 直出或 append，格式可能漂移：5.5s/小写/Photoreal 缺句点）→ body 截断 → 重 append 规范尾行
                             # C6 尾行剥离：取末位 Photoreal NON-IP（评审 Warning-5：blocks 中段字面量不误剥；C1 双尾行防护）
-                            body = strip_rendered_trailer(optimized, tail)
-                            if body.strip():
-                                optimized = body[: max(0, request.max_length - len(tail))] + tail
-                            else:
+                            # 评审 W3：fit 失败（body 空/预算过小）→ 截断降级，不整单失败
+                            try:
+                                optimized = fit_refined_trailer(optimized, tail, request.max_length)
+                            except ValueError:
                                 optimized = optimized[:request.max_length]
                         else:
                             optimized = optimized[:request.max_length]

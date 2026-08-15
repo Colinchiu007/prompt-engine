@@ -138,6 +138,43 @@ class TestContinuityCheck:
         assert info["checks"]["continuity_method"] == "ratio"
         assert info["checks"]["continuity_ratio"] >= 0.5
 
+    def test_zh_fallback_coverage_long_body(self):
+        # 评审 Critical-1：无白名单回退用 find_longest_match 覆盖率——长 body 逐字重述短终态
+        # （旧 SequenceMatcher 整句 ratio ≈ 2Lf/(Lf+Lb) < 0.2 数学不可达）→ 覆盖率 ≈1.0 通过
+        prev = "黄昏降临，镜头渐暗，风裹着雪粒扫过空旷的广场。"
+        body = "承接上镜终态：" + prev + "。"
+        body += "罗科从门廊阴影里迈出一步，斗篷被风掀起，靴子踩进积雪发出咯吱声，远处钟楼轮廓在暮色中若隐若现。" * 4
+        assert len(body) >= 5 * len(prev)
+        info = evaluate(body, {}, tier=REFINED, prev_final_frame=prev)
+        assert info["checks"]["continuity_method"] == "ratio"
+        assert info["checks"]["continuity_ratio"] >= 0.5
+        assert "continuity_break" not in info["violations"]
+
+    def test_zh_fallback_coverage_negative(self):
+        # 评审 Critical-1：终态内容完全未重述 → 覆盖率 < 0.5 扣分
+        prev = "黄昏降临，镜头渐暗，风裹着雪粒扫过空旷的广场。"
+        body = "正午的烈日下，罗科策马穿过燃烧的街巷，扬起滚滚烟尘，喊声震天。"
+        info = evaluate(body, {}, tier=REFINED, prev_final_frame=prev)
+        assert info["checks"]["continuity_ratio"] < 0.5
+        assert info["violations"].get("continuity_break") == -5
+
+    def test_en_character_hard_only_frame_present(self):
+        # 评审 W1：硬判据只针对终态帧中实际出现的角色——roster 含未入终态的副角色不误扣
+        prev = "Jax kneels in the snow, eyes closed."
+        prompt = "SCENE pickup: Jax kneels in the snow, eyes closed. Rein arrives from the left."
+        info = evaluate(prompt, {}, tier=REFINED, prev_final_frame=prev, character_list=["Jax", "Rein"])
+        assert "continuity_break" not in info["violations"]
+
+    def test_zh_whitelist_not_diluted_by_roster(self):
+        # 评审 W1 中文：roster 5 角色但终态只出现 1 个 → 白名单不稀释（旧逻辑 3/7≈0.43 误扣）
+        prev = "贾克斯跪在雪地里，闭着眼睛。"
+        prompt = "承接：贾克斯仍跪在雪地，闭着眼，罗科靠近。"
+        info = evaluate(prompt, {}, tier=REFINED, prev_final_frame=prev,
+                        character_list=["贾克斯", "罗科", "莱恩", "艾琳", "维托"])
+        assert info["checks"]["continuity_method"] == "whitelist"
+        assert info["checks"]["continuity_ratio"] >= 0.6
+        assert "continuity_break" not in info["violations"]
+
     def test_missing_prev_skipped(self):
         info = evaluate("hero walks", {}, tier=REFINED)
         assert info["checks"]["continuity_ratio"] is None

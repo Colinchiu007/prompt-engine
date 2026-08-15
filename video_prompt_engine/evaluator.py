@@ -4,6 +4,8 @@ from __future__ import annotations
 import re
 from difflib import SequenceMatcher
 
+from video_prompt_engine.refined_blocks import clean_blocks, rendered_block_names
+
 # Round3 Batch C：lock-gated 规则资产缓存（refined_blocks.json，缺失/损坏回退空表 → 规则不启用零误报）
 _GATED_RULES_CACHE: dict = {}
 
@@ -27,7 +29,7 @@ def _contains_word(text: str, token: str) -> bool:
     )
 
 
-def _strip_reference_markers(text: str) -> str:
+def _strip_reference_markers(text: str, reference_names: list[str] | None = None) -> str:
     """剥离引用协议标记区段（[ABSENT] <name> / <<<...>>>），避免合规标记自罚分。
 
     契约侧 _assertReferenceProtocol 要求声明禁止项时正文嵌入标记；标记本身含角色名，
@@ -36,12 +38,25 @@ def _strip_reference_markers(text: str) -> str:
     """
     import re
     stripped = str(text or "")
-    # 闭合 <<<...>>> 整段；未闭合的 <<< 前缀只剥标记 + 紧邻一个词（契约仅要求 includes('<<<')，不要求闭合）
+    # 闭合 <<<...>>> 整段；未闭合前缀只按已知引用名精确剥离，避免中文无空格正文被 \S+ 吞掉。
     stripped = re.sub(r"<<<.*?>>>", "", stripped, flags=re.DOTALL)
-    stripped = re.sub(r"<<<\s*\S+", "", stripped)
-    # [ABSENT] <name>：只剥标记与紧邻的一个词（中文无空格整段亦可），保留后续正文
-    stripped = re.sub(r"\[ABSENT\]\s*\S+", "", stripped, flags=re.IGNORECASE)
-    return stripped
+    names = sorted(
+        {str(name).strip() for name in (reference_names or []) if str(name or "").strip()},
+        key=len,
+        reverse=True,
+    )
+    for name in names:
+        suffix = r"(?![A-Za-z0-9])" if re.search(r"[A-Za-z0-9]$", name) else ""
+        stripped = re.sub(r"<<<\s*" + re.escape(name) + suffix, "", stripped, flags=re.IGNORECASE)
+        stripped = re.sub(
+            r"\[ABSENT\]\s*" + re.escape(name) + suffix,
+            "",
+            stripped,
+            flags=re.IGNORECASE,
+        )
+    stripped = re.sub(r"<<<", "", stripped)
+    stripped = re.sub(r"\[ABSENT\]", "", stripped, flags=re.IGNORECASE)
+    return stripped.strip()
 
 
 def _parse_time_span(value: str) -> list[float] | None:
@@ -111,26 +126,45 @@ _CONTINUITY_ZH_POSTURE = (
     "背景", "远处", "墙边", "窗边", "边缘", "水面", "台阶", "床边", "树下",
 )
 
-# 否定感知（评审 Critical-3）：forbidden 命中前查否定前缀，禁令形态不计命中
+# 否定感知（评审 Critical-2/C3）：forbidden 命中前查否定前缀，禁令形态不计命中。
+# 扩充：out of / away from / free of / devoid of / nobody / no one / do not / don't / absent（评审补充），
+# 覆盖三分法/视线约束的自然禁令措辞（"keep the hero OUT of the center of frame"、"nobody is looking at camera"）。
 _NEGATION_RE = re.compile(
-    r"(?i)(?:no|not|without|never|avoid)\s+(?:\S+\s+)*$"
-    r"|(?:no|not|without|never|avoid|无|不|禁止|切勿)\s*$"
+    r"(?i)(?:\b(?:no|not|without|never|avoid|nobody|no one|do not|don't|out of|away from|free of|devoid of|absent)\b(?:\s+\S+){0,4}\s*"
+    r"|(?:无|不|禁止|切勿|避免)[^，。！？；,;.!?\n]{0,16})$"
 )
 
 
+def _token_occurrences(text: str, token: str) -> tuple[str, list[re.Match]]:
+    token = str(token or "").strip()
+    if not token or len(token) < 2:
+        return str(text or ""), []
+    text_value = str(text or "")
+    pattern = re.compile(
+        r"(?<![A-Za-z0-9])" + re.escape(token) + r"(?![A-Za-z0-9])",
+        flags=re.IGNORECASE,
+    )
+    return text_value, list(pattern.finditer(text_value))
+
+
+def _occurrence_is_negated(text_value: str, match: re.Match) -> bool:
+    prefix = text_value[max(0, match.start() - 64):match.start()]
+    clause_prefix = re.split(r"[，。！？；,;.!?\n]", prefix)[-1]
+    return _NEGATION_RE.search(clause_prefix) is not None
+
+
+def _count_negated_occurrences(text: str, token: str) -> int:
+    """Count token occurrences negated in their own clause."""
+    text_value, matches = _token_occurrences(text, token)
+    return sum(1 for match in matches if _occurrence_is_negated(text_value, match))
+
+
 def _negated(text: str, token: str) -> bool:
-    """token 前 12 字符窗口内存在否定词 → True（如 "No 3D render" / "not overexposed" / "no waxy"）。"""
-    text_low = str(text or "").lower()
-    token_low = token.lower()
-    start = 0
-    while True:
-        idx = text_low.find(token_low, start)
-        if idx < 0:
-            return False
-        prefix = text_low[max(0, idx - 12):idx]
-        if _NEGATION_RE.search(prefix):
-            return True
-        start = idx + 1
+    """仅当 token 的每一次出现都在各自分句内被否定时返回 True。"""
+    text_value, matches = _token_occurrences(text, token)
+    if not matches:
+        return False
+    return all(_occurrence_is_negated(text_value, match) for match in matches)
 
 
 def _extract_continuity_tokens(text: str) -> list[str]:
@@ -151,15 +185,20 @@ def _extract_continuity_tokens(text: str) -> list[str]:
 def _check_continuity(prompt: str, prev_final_frame: str, character_list: list) -> tuple[bool, dict]:
     """跨镜承接保真（Round3 Batch B，评审修订版）。
 
-    英文：实体 token 命中率 ≥40%，且角色白名单提供时所有角色名必中（硬判据）。
+    英文：实体 token 命中率 ≥40%，且终态帧中实际出现的角色名必中（硬判据，评审 W1 收窄——
+    全量场景 roster 不要求全部出镜，只约束上一镜终态确实在场的主体）。
     中文：弃 2-gram——显式白名单（角色名 + 终态中出现的姿势/位置词）命中 ≥60%；
-          无白名单时整句重合度（SequenceMatcher）≥0.5。
+          无白名单时终态文本在 body 中的最长匹配覆盖率（find_longest_match 块长 / 终态长）≥0.5
+          （评审 Critical-1：旧 SequenceMatcher 整句 ratio 在生产长度下数学不可达——500+ 字符 body
+          逐字重述 50 字符终态也只有 ~0.18；覆盖率口径下完整重述 ≈1.0 可判定）。
     返回 (通过?, checks)。无 prev_final_frame 时通过且 ratio=None（零回归）。
     """
     if not prev_final_frame:
         return True, {"continuity_hits": 0, "continuity_total": 0, "continuity_ratio": None, "continuity_method": None}
     body = _strip_reference_markers(prompt)
-    names = [str(n).strip() for n in (character_list or []) if str(n or "").strip()]
+    roster = [str(n).strip() for n in (character_list or []) if str(n or "").strip()]
+    # 评审 W1：硬判据只针对"终态帧中实际出现的角色"，未入终态的副角色不要求出镜
+    names = [n for n in roster if _contains_word(prev_final_frame, n)]
     is_zh = bool(re.search(r"[\u4e00-\u9fff]", str(prev_final_frame)))
     if is_zh:
         keywords = [w for w in _CONTINUITY_ZH_POSTURE if w in prev_final_frame]
@@ -178,7 +217,9 @@ def _check_continuity(prompt: str, prev_final_frame: str, character_list: list) 
                 "continuity_hits": len(hits), "continuity_total": len(whitelist),
                 "continuity_ratio": round(ratio, 3), "continuity_method": "whitelist",
             }
-        ratio = SequenceMatcher(None, prev_final_frame, body).ratio()
+        sm = SequenceMatcher(None, prev_final_frame, body)
+        match = sm.find_longest_match(0, len(prev_final_frame), 0, len(body))
+        ratio = (match.size / len(prev_final_frame)) if prev_final_frame else 1.0
         ok = ratio >= 0.5
         return ok, {
             "continuity_hits": round(ratio, 3), "continuity_total": 1,
@@ -211,12 +252,15 @@ def _gated_rules() -> dict:
                 data = json.loads(p.read_text(encoding="utf-8"))
                 _GATED_RULES_CACHE["triggers"] = data.get("lock_triggers") or {}
                 _GATED_RULES_CACHE["enabled"] = set(data.get("enabled_rules") or [])
+                _GATED_RULES_CACHE["coverage"] = data.get("coverage") or {}
             else:
                 _GATED_RULES_CACHE["triggers"] = {}
                 _GATED_RULES_CACHE["enabled"] = set()
+                _GATED_RULES_CACHE["coverage"] = {}
         except Exception:
             _GATED_RULES_CACHE["triggers"] = {}
             _GATED_RULES_CACHE["enabled"] = set()
+            _GATED_RULES_CACHE["coverage"] = {}
     return _GATED_RULES_CACHE
 
 
@@ -238,7 +282,7 @@ def _apply_gated_rules(prompt: str, tier: str, violations: dict, checks: dict) -
         forbidden = rule.get("forbidden") or []
         if not locks or not forbidden:
             continue
-        if not any(_contains_word(body, l) for l in locks):
+        if not any(_contains_word(body, l) and not _negated(body, l) for l in locks):
             continue
         for f in forbidden:
             if _contains_word(body, f) and not _negated(body, f):
@@ -310,15 +354,24 @@ def evaluate(
     # 5) Higgsfield violations（词边界/整名匹配，字段为空时 N/A 不误扣；[ABSENT]/<<<>>> 标记区段先剥离防自罚分）
     text = str(prompt)
     upper_text = text.upper()
-    body_text = _strip_reference_markers(text)
     violations: dict[str, int] = {}
     excluded = (video or {}).get("excluded_characters") or []
+    pairs = (video or {}).get("no_swap_pairs") or []
+    reference_names = [str(item).strip() for item in excluded if str(item or "").strip()]
+    for pair in pairs:
+        if isinstance(pair, dict):
+            pair_names = (pair.get("from"), pair.get("to"))
+        elif isinstance(pair, (list, tuple)) and len(pair) == 2:
+            pair_names = pair
+        else:
+            continue
+        reference_names.extend(str(item).strip() for item in pair_names if str(item or "").strip())
+    body_text = _strip_reference_markers(text, reference_names)
     if excluded:
         hit = [e for e in excluded if _contains_word(body_text, e)]
         if hit:
             violations["excluded_present"] = -10
             checks["excluded_hits"] = hit
-    pairs = (video or {}).get("no_swap_pairs") or []
     if pairs:
         # 双形态兼容：契约规范形态二元组 [from, to] 与引擎对象形态 {from,to} 均读 from 侧；非法形态跳过防 AttributeError
         hit = []
@@ -343,8 +396,9 @@ def evaluate(
     if tier == "refined" and isinstance(audio_layers, dict):
         # REQ-3.4 判定表仅 refined 生效（Audio 段真实渲染进尾行）；batch 无尾行，仍走正文音频词检查，
         # 否则 batch 带 audio_layers 而正文无音频词会假阴性（评审 W1）
-        has_audio = bool(str(audio_layers.get("sfx") or "").strip()) or bool(
-            str(audio_layers.get("dialogue") or "").strip()
+        has_audio = any(
+            bool(str(audio_layers.get(key) or "").strip())
+            for key in ("environment", "sfx", "dialogue")
         )
     elif tier == "refined":
         has_audio = bool(audio_field) or any(k in lower_text for k in ("sfx", "sound", "audio", "music", "score"))
@@ -413,14 +467,16 @@ def evaluate(
     # 8) Round3 Batch C — 块覆盖度（refined 专属，引擎自渲染口径）
     # 分母 = meta.blocks 非空块数，分子 = 渲染串中命中块标记数（统一正则，行首标题+冒号）；
     # 与语料分族统计解耦（评审 Critical-2：语料众数 8/12 卡阈值必误报）。
-    blocks = (video or {}).get("blocks")
-    if tier == "refined" and isinstance(blocks, dict):
-        non_empty = [k for k, v in blocks.items() if isinstance(v, str) and v.strip()]
+    blocks = clean_blocks((video or {}).get("blocks"))
+    if tier == "refined" and blocks:
+        non_empty = list(blocks)
         if non_empty:
-            hits = sum(1 for k in non_empty if re.search(r"(?m)^" + re.escape(k) + r"\s*:", str(prompt)))
+            rendered_names = rendered_block_names(prompt)
+            hits = sum(1 for k in non_empty if k in rendered_names)
             ratio = hits / len(non_empty)
             checks["block_coverage"] = {"hit": hits, "total": len(non_empty), "ratio": round(ratio, 3)}
-            if ratio < 0.8:
+            min_ratio = float((_gated_rules().get("coverage") or {}).get("min_ratio", 0.8))
+            if ratio < min_ratio:
                 violations["block_coverage"] = -5
         else:
             checks["block_coverage"] = None

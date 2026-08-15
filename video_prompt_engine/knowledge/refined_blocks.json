@@ -20,7 +20,7 @@
     "STILLNESS LOCK",
     "FINAL FRAME"
   ],
-  "block_pattern": "^([A-Z][A-Z ]+):\\s*",
+  "block_pattern": "^[ \\t]*([A-Z][A-Z ]{2,30}):[ \\t]*",
   "block_frequency_pct": {
     "SCENE NOTE": 11.7,
     "SPATIAL LAYOUT": 3.5,
@@ -35,8 +35,37 @@
     "STILLNESS LOCK": 3.3,
     "FINAL FRAME": 9.3
   },
+  "block_frequency_pct_by_family": {
+    "director": {
+      "SCENE NOTE": 51.9,
+      "SPATIAL LAYOUT": 15.6,
+      "LIGHTING": 20.7,
+      "COLOR": 15.6,
+      "CAMERA": 0.0,
+      "ENVIRONMENT": 41.5,
+      "CONTINUITY": 25.9,
+      "CHARACTERS": 99.3,
+      "SKIN": 15.6,
+      "ACTING": 15.6,
+      "STILLNESS LOCK": 14.8,
+      "FINAL FRAME": 0.0
+    },
+    "inline": {
+      "SCENE NOTE": 0.0,
+      "SPATIAL LAYOUT": 0.0,
+      "LIGHTING": 0.4,
+      "COLOR": 0.2,
+      "CAMERA": 14.9,
+      "ENVIRONMENT": 10.8,
+      "CONTINUITY": 13.6,
+      "CHARACTERS": 0.0,
+      "SKIN": 0.0,
+      "ACTING": 0.0,
+      "STILLNESS LOCK": 0.0,
+      "FINAL FRAME": 12.1
+    }
+  },
   "coverage": {
-    "min_blocks": 10,
     "min_ratio": 0.8
   },
   "enabled_rules": [
@@ -73,7 +102,10 @@
       "locks": [
         "low-key",
         "low light",
-        "dark",
+        "dark scene",
+        "dark lighting",
+        "dark atmosphere",
+        "dark environment",
         "低光"
       ],
       "forbidden": [

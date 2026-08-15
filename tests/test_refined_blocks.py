@@ -11,12 +11,14 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from video_prompt_engine.strategies.base import (
-    BaseVideoStrategy, _clean_blocks, _BLOCKS_ORDER, _strip_embedded_trailer,
+    BaseVideoStrategy, _clean_blocks, _BLOCKS_ORDER,
 )
-from video_prompt_engine.optimizer import VideoOptimizer, strip_rendered_trailer
-from video_prompt_engine.evaluator import evaluate
+from video_prompt_engine.refined_blocks import strip_embedded_trailer as _strip_embedded_trailer
+from video_prompt_engine.optimizer import VideoOptimizer, fit_refined_trailer, strip_rendered_trailer
+from video_prompt_engine.evaluator import _negated, evaluate
 from video_prompt_engine.models import VideoOptimizeRequest, VideoPromptMeta
 
 REFINED = "refined"
@@ -74,6 +76,28 @@ class TestRenderBlocks:
         assert "FINAL FRAME: Roko still" in rendered
         assert "CONTINUITY: Roko/Jax" in rendered
 
+    def test_sparse_blocks_preserve_legacy_prompt(self):
+        data = {"blocks": {"FINAL FRAME": "Roko still"}, "prompt": "Roko crosses the frozen field."}
+        rendered = BaseVideoStrategy.render(data, tier=REFINED)
+        assert "SCENE NOTE: Roko crosses the frozen field." in rendered
+        assert "FINAL FRAME: Roko still" in rendered
+
+    def test_block_and_legacy_fallback_values_share_4000_limit(self):
+        rendered = BaseVideoStrategy.render(
+            {"blocks": {"SCENE NOTE": "x" * 5000}, "final_frame": "y" * 5000},
+            tier=REFINED,
+        )
+        scene_note, final_frame = rendered.split("\n\n")
+        assert scene_note == "SCENE NOTE: " + "x" * 4000
+        assert final_frame == "FINAL FRAME: " + "y" * 4000
+
+    def test_non_string_fallback_is_not_rendered(self):
+        rendered = BaseVideoStrategy.render(
+            {"blocks": {"FINAL FRAME": "camera rests"}, "prompt": {"secret": "value"}},
+            tier=REFINED,
+        )
+        assert rendered == "FINAL FRAME: camera rests"
+
     def test_zero_regression_without_blocks(self):
         assert BaseVideoStrategy.render({"prompt": "hero walks"}, tier=REFINED) == "hero walks"
         assert BaseVideoStrategy.render({"subject": "a", "action": "runs"}, tier=BATCH) == "a runs"
@@ -96,6 +120,28 @@ class TestRenderBlocks:
         rendered = BaseVideoStrategy.render({"blocks": blocks}, tier=REFINED)
         assert rendered.startswith("SCENE NOTE: Roko kneels.")
         assert "Photoreal. NON-IP. 16:9" not in rendered
+
+    def test_fail_check_never_leaks_from_prompt_or_blocks(self):
+        legacy = "hero walks\n\n## FAIL CHECK\n- internal audit only"
+        assert BaseVideoStrategy.render({"prompt": legacy}, tier=REFINED) == "hero walks"
+        blocks = {"SCENE NOTE": "hero walks\nFAIL CHECK:\n- internal audit only", "FINAL FRAME": "camera rests"}
+        rendered = BaseVideoStrategy.render({"blocks": blocks}, tier=REFINED)
+        assert "FAIL CHECK" not in rendered
+        assert "FINAL FRAME: camera rests" in rendered
+
+    def test_fail_check_prose_is_preserved(self):
+        text = "A technician says fail check lights are still visible in frame."
+        assert BaseVideoStrategy.render({"prompt": text}, tier=REFINED) == text
+
+    def test_non_json_fallback_strips_template_fail_check(self):
+        raw = "hero walks\n\n## FAIL CHECK\n- internal audit only"
+        rendered, meta = BaseVideoStrategy.post_process_video(raw, tier=REFINED)
+        assert rendered == "hero walks"
+        assert meta == {}
+
+    def test_non_trailer_mid_literals_are_preserved(self):
+        assert _strip_embedded_trailer("Photoreal NON-IP aesthetic for reference only.") == "Photoreal NON-IP aesthetic for reference only."
+        assert _strip_embedded_trailer("Photoreal NON-IP aesthetic. No music.") == "Photoreal NON-IP aesthetic. No music."
 
 
 class TestC6TrailerStrip:
@@ -153,6 +199,14 @@ class TestC6TrailerStrip:
         assert "Photoreal NON-IP aesthetic" in rendered
         assert rendered.endswith("Photoreal. NON-IP. 16:9. 15s. SFX only.")
 
+    def test_append_trailer_reference_only_literal_is_not_a_tail(self):
+        body = "Photoreal NON-IP aesthetic for reference only."
+        rendered = BaseVideoStrategy.append_trailer(
+            body, {"aspect": "16:9", "duration_hint": 15, "audio": "SFX"}, tier=REFINED
+        )
+        assert rendered.startswith(body)
+        assert rendered.endswith("Photoreal. NON-IP. 16:9. 15s. SFX only.")
+
     def test_append_trailer_last_line_non_ip_is_idempotent(self):
         # 评审 C1：末行已是真实尾行 → 不重复追加
         body = "hero walks. " + self.TAIL
@@ -177,6 +231,49 @@ class TestC6TrailerStrip:
         # 中段字面量后接描述性正文（非 NON-IP 收尾）→ 保留
         body = "SCENE NOTE: The end. Photoreal NON-IP aesthetic with deep blacks."
         assert strip_rendered_trailer(body, self.TAIL) == body
+
+    def test_drift_trailer_without_duration_stripped(self):
+        # 评审 C3：缺 duration 的漂移尾行（16:9 + SFX only.）→ 剥离防双尾行回归
+        text = "hero walks. Photoreal. NON-IP. 16:9. SFX only."
+        stripped = strip_rendered_trailer(text, self.TAIL)
+        assert stripped == "hero walks."
+        rendered = BaseVideoStrategy.append_trailer(
+            stripped, {"aspect": "16:9", "duration_hint": 15, "audio": "SFX"}, tier=REFINED
+        )
+        assert rendered.count("NON-IP") == 1
+
+    def test_drift_trailer_without_aspect_stripped(self):
+        text = "hero walks. Photoreal. NON-IP. 15s. SFX only."
+        assert strip_rendered_trailer(text, self.TAIL) == "hero walks."
+
+    def test_drift_mid_literal_not_stripped(self):
+        # 中段字面量（非末位尾行形态）→ 保留（C3 与 C1 边界一致）
+        body = "SCENE NOTE: The end. Photoreal NON-IP aesthetic with deep blacks."
+        assert strip_rendered_trailer(body, self.TAIL) == body
+
+    def test_append_trailer_idempotent_on_drift_tail(self):
+        # 评审 C3：body 已含漂移尾行 → append 不重复（幂等判据含 DRIFT 形态）
+        body = "hero walks. Photoreal. NON-IP. 16:9. SFX only."
+        rendered = BaseVideoStrategy.append_trailer(
+            body, {"aspect": "16:9", "duration_hint": 15, "audio": "SFX"}, tier=REFINED
+        )
+        assert rendered.count("NON-IP") == 1
+
+    def test_fit_trailer_counts_separator_and_preserves_contract(self):
+        fitted = fit_refined_trailer("abcdefghijk", self.TAIL, len(self.TAIL) + 6)
+        assert fitted == "abcde " + self.TAIL
+        assert len(fitted) == len(self.TAIL) + 6
+
+    def test_fit_trailer_fails_closed_when_tail_leaves_no_body_budget(self):
+        import pytest
+        with pytest.raises(ValueError, match="cannot fit"):
+            fit_refined_trailer("body", self.TAIL, len(self.TAIL) + 1)
+
+    def test_fit_trailer_rejects_invalid_max_length_consistently(self):
+        import pytest
+        for invalid in (None, "", "not-a-number"):
+            with pytest.raises(ValueError, match="max_length must be an integer"):
+                fit_refined_trailer("body", self.TAIL, invalid)
 
 
 class TestBlockCoverage:
@@ -210,6 +307,14 @@ class TestBlockCoverage:
         info = evaluate("hero walks", {"blocks": {k: "" for k in _BLOCKS_ORDER}}, tier=REFINED)
         assert info["checks"]["block_coverage"] is None
 
+    def test_invalid_block_values_do_not_inflate_denominator(self):
+        info = evaluate(
+            "SCENE NOTE: hero walks",
+            {"blocks": {"SCENE NOTE": "hero walks", "LIGHTING": 123, "BOGUS": "x"}},
+            tier=REFINED,
+        )
+        assert info["checks"]["block_coverage"] == {"hit": 1, "total": 1, "ratio": 1.0}
+
 
 class TestGatedRules:
     def _rule_state(self, name):
@@ -235,6 +340,50 @@ class TestGatedRules:
         prompt = "Rule of thirds composition, hero NOT dead center of frame."
         info = evaluate(prompt, {}, tier=REFINED)
         assert "dead_center" not in info["violations"]
+
+    def test_negation_examples_are_safe(self):
+        assert _negated("No 3D render", "3d render") is True
+        assert _negated("not overexposed", "overexposed") is True
+        assert _negated("no waxy", "waxy") is True
+
+    def test_negation_out_of_center_safe(self):
+        # 评审 Critical-2：自然禁令措辞 "OUT of the center of frame" 不再误触发 dead_center
+        prompt = "Rule of thirds composition, keep the hero OUT of the center of frame."
+        info = evaluate(prompt, {}, tier=REFINED)
+        assert "dead_center" not in info["violations"]
+
+    def test_negation_nobody_looking_at_camera_safe(self):
+        # 评审 Critical-2："nobody is looking at camera" 不触发 eye_line
+        prompt = "Eye-line continuity maintained, but nobody is looking at camera."
+        info = evaluate(prompt, {}, tier=REFINED)
+        assert "eye_line" not in info["violations"]
+
+    def test_dark_hair_not_exposure_break(self):
+        # 评审 Critical-2：锁词裸 dark 收紧——"dark hair" 属正常画面，不触发 exposure_break
+        prompt = "A woman with dark hair walks through a park in bright daylight."
+        info = evaluate(prompt, {}, tier=REFINED)
+        assert "exposure_break" not in info["violations"]
+
+    def test_dark_scene_still_triggers_exposure_break(self):
+        # 收紧后 "dark scene" 复合锁词仍触发（与 bright daylight 矛盾）
+        prompt = "A dark scene inside a crypt, then bright daylight floods in."
+        info = evaluate(prompt, {}, tier=REFINED)
+        assert info["violations"].get("exposure_break") == -5
+
+    def test_later_positive_occurrence_is_not_hidden_by_negation(self):
+        prompt = "Low-key lighting, not overexposed initially, later overexposed."
+        info = evaluate(prompt, {}, tier=REFINED)
+        assert info["violations"].get("exposure_break") == -5
+
+    def test_all_occurrences_negated_remain_safe(self):
+        prompt = "Low-key lighting, not overexposed and never overexposed."
+        info = evaluate(prompt, {}, tier=REFINED)
+        assert "exposure_break" not in info["violations"]
+
+    def test_negated_lock_does_not_activate_rule(self):
+        prompt = "Not low-key; the scene becomes overexposed."
+        info = evaluate(prompt, {}, tier=REFINED)
+        assert "exposure_break" not in info["violations"]
 
     def test_disabled_rule_not_applied(self):
         # style_contamination 默认 OFF（锁词已弃 photoreal）；即使写 "3d render" 也不触发
@@ -262,3 +411,13 @@ class TestSaltV4:
     def test_meta_blocks_roundtrip(self):
         meta = VideoPromptMeta(blocks=BLOCKS_SAMPLE)
         assert meta.blocks == BLOCKS_SAMPLE
+
+    def test_asset_uses_shared_block_schema_and_ratio_only(self):
+        from video_prompt_engine.refined_blocks import BLOCK_ORDER, RENDERED_BLOCK_PATTERN_SOURCE
+
+        asset_path = Path(__file__).resolve().parent.parent / "video_prompt_engine" / "knowledge" / "refined_blocks.json"
+        asset = json.loads(asset_path.read_text(encoding="utf-8"))
+        assert asset["blocks"] == list(BLOCK_ORDER)
+        assert asset["block_pattern"] == RENDERED_BLOCK_PATTERN_SOURCE
+        assert asset["coverage"] == {"min_ratio": 0.8}
+        assert set(asset["block_frequency_pct_by_family"]) == {"director", "inline"}

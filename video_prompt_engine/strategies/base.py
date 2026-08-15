@@ -14,6 +14,14 @@ from typing import Any, Optional
 from prompt_engine_core.registry import StrategyRegistry
 from prompt_engine_core.text import clamp_int, clean_str_list
 from video_prompt_engine.models import VideoPlatformType, VIDEO_DIRECTOR_LIMITS
+from video_prompt_engine.refined_blocks import (
+    BLOCK_ORDER as _BLOCKS_ORDER,
+    DRIFT_TRAILER_RE,
+    TRAILER_TAIL_RE,
+    clean_block_value as _clean_block_value,
+    clean_blocks as _clean_blocks,
+    strip_fail_check as _strip_fail_check,
+)
 
 _DIRECTOR_LIMITS = VIDEO_DIRECTOR_LIMITS
 
@@ -55,46 +63,19 @@ def _clean_audio(value: Any) -> str:
 _AUDIO_LAYER_KEYS = ("environment", "sfx", "dialogue")
 _AUDIO_LAYER_MAX = 200
 
-# Round3 Batch C：导演分镜块白名单与顺序（refined 渲染骨架；与 refined_blocks.json blocks 同源）
-_BLOCKS_ORDER = (
-    "SCENE NOTE", "SPATIAL LAYOUT", "LIGHTING", "COLOR", "CAMERA",
-    "ENVIRONMENT", "CONTINUITY", "CHARACTERS", "SKIN", "ACTING",
-    "STILLNESS LOCK", "FINAL FRAME",
-)
-_BLOCK_MAX = 4000
-
-# 缺失块 → 旧字段回退（仅明显同源映射；其余块缺省省略）
+# 缺失块 → 旧字段回退。SCENE NOTE 承接旧 prompt，避免稀疏 blocks 丢失主体内容。
 _BLOCK_FALLBACK = {
-    "FINAL FRAME": lambda d: str(d.get("final_frame") or "").strip(),
-    "CONTINUITY": lambda d: str(d.get("continuity_token") or "").strip(),
-    "COLOR": lambda d: str(d.get("color_ratio") or "").strip(),
-    "CAMERA": lambda d: str(d.get("camera") or "").strip(),
+    "SCENE NOTE": lambda d: d.get("prompt"),
+    "SPATIAL LAYOUT": lambda d: d.get("environment"),
+    "LIGHTING": lambda d: d.get("lighting"),
+    "FINAL FRAME": lambda d: d.get("final_frame"),
+    "CONTINUITY": lambda d: d.get("continuity_token"),
+    "COLOR": lambda d: d.get("colors") or d.get("color_ratio"),
+    "CAMERA": lambda d: d.get("camera"),
+    "ENVIRONMENT": lambda d: d.get("environment"),
+    "CHARACTERS": lambda d: d.get("subject"),
+    "ACTING": lambda d: d.get("action"),
 }
-
-# 尾行形态正则（内嵌尾行剥离用；与 optimizer C6 口径一致）
-_TRAILER_TAIL_RE = __import__("re").compile(
-    r"\s*Photoreal\.?\s+NON-IP\.?\s+.*?(?:only\.|Audio:.*|No music\.)\s*$",
-    __import__("re").IGNORECASE | __import__("re").DOTALL,
-)
-
-
-def _strip_embedded_trailer(value: str) -> str:
-    """剥离块值内嵌尾行形态（Round3 C，评审 Warning-5）：防止渲染串中段出现 Photoreal NON-IP 被 C6 误剥。"""
-    text = str(value or "")
-    stripped = _TRAILER_TAIL_RE.sub("", text)
-    return stripped
-
-
-def _clean_blocks(value: Any) -> Optional[dict]:
-    """块骨架清洗（REQ-1）：12 键白名单 + 值字符串 strip/截断 4000；非法键/非字符串丢弃；空 → None。"""
-    if not isinstance(value, dict):
-        return None
-    cleaned: dict[str, str] = {}
-    for key in _BLOCKS_ORDER:
-        raw = value.get(key)
-        if isinstance(raw, str) and raw.strip():
-            cleaned[key] = raw.strip()[:_BLOCK_MAX]
-    return cleaned or None
 
 
 def _clean_audio_layers(value: Any) -> Optional[dict]:
@@ -260,12 +241,10 @@ class BaseVideoStrategy(ABC):
     def render(cls, data: dict[str, Any], tier: str = "batch") -> str:
         """渲染单串：refined 且 blocks 非空 → 骨架拼单串（12 块顺序，行首 `块名:` + 文本，块间空行，
         缺失块从旧字段回退，逐块剥离内嵌尾行）；否则旧逻辑（prompt 优先 → 六要素拼接，零回归）。"""
-        blocks = data.get("blocks")
-        if tier == "refined" and isinstance(blocks, dict) and any(
-            isinstance(v, str) and v.strip() for v in blocks.values()
-        ):
+        blocks = _clean_blocks(data.get("blocks"))
+        if tier == "refined" and blocks:
             return cls._render_blocks(blocks, data)
-        prompt = str(data.get("prompt") or "").strip()
+        prompt = _strip_fail_check(data.get("prompt")).strip()
         if prompt:
             return prompt
         parts = []
@@ -280,13 +259,10 @@ class BaseVideoStrategy(ABC):
         """骨架渲染实现：块值先剥离内嵌尾行；缺失块按 _BLOCK_FALLBACK 从旧字段补位；空块跳过。"""
         lines: list[str] = []
         for key in _BLOCKS_ORDER:
-            value = blocks.get(key)
-            if isinstance(value, str) and value.strip():
-                value = _strip_embedded_trailer(value)
-            else:
+            value = _clean_block_value(key, blocks.get(key))
+            if not value:
                 fallback = _BLOCK_FALLBACK.get(key)
-                value = fallback(data) if fallback else ""
-            value = str(value or "").strip()
+                value = _clean_block_value(key, fallback(data) if fallback else "")
             if value:
                 lines.append(f"{key}: {value}")
         return "\n\n".join(lines)
@@ -404,10 +380,7 @@ class BaseVideoStrategy(ABC):
         # only./Audio:/No music. 结尾（评审 C1-1 复现洞）
         import re
         last_block = re.split(r"\n\s*\n", text)[-1]
-        if re.search(
-            r"Photoreal\.?\s+NON-IP\.?\s+.*?(?:only\.|Audio:.*|No music\.)\s*$",
-            last_block, flags=re.IGNORECASE | re.DOTALL,
-        ):
+        if TRAILER_TAIL_RE.search(last_block) or DRIFT_TRAILER_RE.search(last_block):
             return text
         return f"{text} {cls.build_tail(meta)}"
 
@@ -451,6 +424,7 @@ class BaseVideoStrategy(ABC):
         data = cls.parse_video_json(raw_output)
         if data is None:
             rendered = str(raw_output or "").strip().strip('"').strip()
+            rendered = _strip_fail_check(rendered)
             return rendered, {}
         rendered = cls.render(data, tier=tier)
         meta = cls.extract_video_meta(raw_output) or {}

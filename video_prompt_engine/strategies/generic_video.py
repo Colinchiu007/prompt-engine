@@ -57,7 +57,11 @@ class GenericVideoStrategy(BaseVideoStrategy):
         lang_note = "Chinese 中文主体 + 英文镜头术语双语" if str(output_language or "en").lower().startswith("zh") else "English"
         lang_section = cls.build_language_section(output_language, tier=tier)
         lens_discipline = cls.build_lens_discipline_section(character_count)
-        keys_line = ", ".join(f'"{k}"' for k in VIDEO_OUTPUT_KEYS)
+        # 评审 W2：refined 层 keys 追加 "blocks"（与 blocks_sample 同源，batch 零回归）
+        keys = list(VIDEO_OUTPUT_KEYS)
+        if tier == "refined":
+            keys.append("blocks")
+        keys_line = ", ".join(f'"{k}"' for k in keys)
         # Round3 C：refined 层 JSON 样例附加 blocks 键（batch 不输出，保持字节级零回归）
         blocks_sample = (
             ',\n  "blocks": {"SCENE NOTE": "scene pickup & current state (required when prev_final_frame provided)", "SPATIAL LAYOUT": "blocking and frame composition", "LIGHTING": "sources, quality, direction", "COLOR": "dominant palette and ratios", "CAMERA": "shot scale, angle, lens, camera motion", "ENVIRONMENT": "setting, props, weather", "CONTINUITY": "cross-scene consistency tokens", "CHARACTERS": "who appears, wardrobe, identity locks", "SKIN": "pore-level realism notes", "ACTING": "performance direction", "STILLNESS LOCK": "elements that must NOT move", "FINAL FRAME": "explicit end state"}'

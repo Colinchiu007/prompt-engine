@@ -12,18 +12,20 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-BLOCKS = (
-    "SCENE NOTE", "SPATIAL LAYOUT", "LIGHTING", "COLOR", "CAMERA",
-    "ENVIRONMENT", "CONTINUITY", "CHARACTERS", "SKIN", "ACTING",
-    "STILLNESS LOCK", "FINAL FRAME",
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from video_prompt_engine.refined_blocks import (  # noqa: E402
+    BLOCK_ORDER as BLOCKS,
+    RENDERED_BLOCK_PATTERN_SOURCE,
+    RENDERED_BLOCK_RE,
 )
+from video_prompt_engine.evaluator import _count_negated_occurrences  # noqa: E402
 
 # 统一块检测正则：行首大写标题+冒号（引擎渲染形态）；🔥 导演族 emoji 变体（语料形态）
 BLOCK_RE = re.compile(r"(?m)^\s*(?:🔥\s*)?([A-Z][A-Z ]{2,30}?)(?:\s*🔥)?\s*:")
 BLOCK_EMOJI_RE = re.compile(r"🔥\s*([A-Z][A-Z ]{2,30}?)\s*🔥")
-
-# 引擎渲染形态判定：行首标题+冒号（覆盖度口径）
-RENDER_BLOCK_RE = re.compile(r"(?m)^([A-Z][A-Z ]{2,30}):\s*")
 
 LOCK_TRIGGERS = {
     "warm_light_leak": {"locks": ["cold", "cool palette", "冷色"], "forbidden": ["warm", "amber", "golden", "暖色"]},
@@ -35,9 +37,6 @@ LOCK_TRIGGERS = {
     "eye_line": {"locks": ["eye-line", "eye line", "视线"], "forbidden": ["looking at camera", "breaking the fourth wall"]},
 }
 
-NEGATION = re.compile(r"(?i)(?:no|not|without|never|avoid|无|不|禁止|切勿)")
-
-
 def iter_prompts(corpus_dir: Path):
     for path in sorted(corpus_dir.glob("*.json")):
         try:
@@ -45,8 +44,18 @@ def iter_prompts(corpus_dir: Path):
         except Exception as e:
             print(f"[skip] {path.name}: {e}", file=sys.stderr)
             continue
-        for item in data.get("items", []):
-            prompt = (item.get("job") or {}).get("params") or {}
+        items = data.get("items", []) if isinstance(data, dict) else []
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            job = item.get("job")
+            if not isinstance(job, dict):
+                continue
+            prompt = job.get("params")
+            if not isinstance(prompt, dict):
+                continue
             text = prompt.get("prompt")
             if isinstance(text, str) and text.strip():
                 yield path.stem, text
@@ -64,8 +73,13 @@ def main() -> int:
     out_path = Path(sys.argv[2]) if len(sys.argv) > 2 else (
         Path(__file__).resolve().parent.parent / "video_prompt_engine" / "knowledge" / "refined_blocks.json"
     )
-    if not corpus_dir.exists():
+    if not corpus_dir.is_dir():
         print(f"corpus dir not found: {corpus_dir}", file=sys.stderr)
+        return 1
+    corpus_root = corpus_dir.resolve()
+    output_target = out_path.resolve()
+    if output_target == corpus_root or corpus_root in output_target.parents:
+        print("output_path must be outside corpus_dir", file=sys.stderr)
         return 1
 
     prompts = list(iter_prompts(corpus_dir))
@@ -73,6 +87,8 @@ def main() -> int:
 
     family_director = 0
     family_inline = 0
+    family_totals = Counter()
+    family_block_freq: dict[str, Counter] = defaultdict(Counter)
     block_freq = Counter()
     block_hits_dist = Counter()
     render_hits_dist = Counter()
@@ -83,12 +99,16 @@ def main() -> int:
     for stem, text in prompts:
         blocks = detect_blocks(text)
         if any(b in blocks for b in ("SCENE NOTE", "STILLNESS LOCK", "CHARACTERS", "ACTING")):
+            family = "director"
             family_director += 1
         else:
+            family = "inline"
             family_inline += 1
+        family_totals[family] += 1
+        family_block_freq[family].update(blocks)
         block_freq.update(blocks)
         block_hits_dist[len(blocks)] += 1
-        render_hits = {m.group(1).strip() for m in RENDER_BLOCK_RE.finditer(text)} & set(BLOCKS)
+        render_hits = {m.group(1).strip() for m in RENDERED_BLOCK_RE.finditer(text)} & set(BLOCKS)
         render_hits_dist[len(render_hits)] += 1
 
         low = text.lower()
@@ -101,14 +121,22 @@ def main() -> int:
                 count = low.count(forbidden.lower())
                 if count:
                     forbidden_pos[name][forbidden] += count
-                    # 否定感知：统计该 forbidden 在否定上下文中的出现次数（前后 16 字符窗口）
-                    for m in re.finditer(re.escape(forbidden), low, flags=re.IGNORECASE):
-                        window = low[max(0, m.start() - 16):m.end()]
-                        if NEGATION.search(window):
-                            forbidden_negation[name][forbidden] += 1
+                    # 与运行时 evaluator 同口径：逐次命中、按各自分句前缀判断否定。
+                    forbidden_negation[name][forbidden] += _count_negated_occurrences(low, forbidden)
 
     total = len(prompts)
-    block_freq_pct = {b: round(block_freq[b] / total * 100, 1) for b in BLOCKS} if total else {}
+    block_freq_pct = {
+        block: round(block_freq[block] / total * 100, 1) if total else 0.0
+        for block in BLOCKS
+    }
+    block_frequency_by_family = {
+        family: {
+            block: round(family_block_freq[family][block] / count * 100, 1)
+            for block in BLOCKS
+        }
+        for family, count in family_totals.items()
+        if count
+    }
     print("\n== block frequency (% of prompts) ==")
     for b in BLOCKS:
         print(f"  {b:16s} {block_freq_pct[b]:5.1f}%")
@@ -130,9 +158,10 @@ def main() -> int:
         "corpus_prompts": total,
         "family": {"director": family_director, "inline": family_inline},
         "blocks": list(BLOCKS),
-        "block_pattern": "^([A-Z][A-Z ]+):\\s*",
+        "block_pattern": RENDERED_BLOCK_PATTERN_SOURCE,
         "block_frequency_pct": block_freq_pct,
-        "coverage": {"min_blocks": 10, "min_ratio": 0.8},
+        "block_frequency_pct_by_family": block_frequency_by_family,
+        "coverage": {"min_ratio": 0.8},
         "enabled_rules": ["dead_center", "exposure_break", "eye_line"],
         "lock_triggers": LOCK_TRIGGERS,
     }

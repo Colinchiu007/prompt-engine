@@ -317,6 +317,27 @@ class TestStrategyPrompts:
             assert "Do NOT append any trailer line" in pb, f"{name} batch section missing"
 
 
+class TestRound3ReviewFixes:
+    def test_retry_hint_tier_aware(self):
+        # 评审 W2：refined 重试提示 keys 含 blocks（与策略样例同源），batch 恒等于 JSON_RETRY_HINT
+        from video_prompt_engine.optimizer import build_json_retry_hint
+        assert '"blocks"' in build_json_retry_hint("refined")
+        assert '"blocks"' not in build_json_retry_hint("batch")
+        assert build_json_retry_hint("batch") == JSON_RETRY_HINT
+
+    def test_trailer_only_output_degrades_not_fails(self):
+        # 评审 W3：LLM 只输出尾行（body 空）→ fit_refined_trailer 抛 ValueError 被调用处捕获，
+        # 截断降级而非整单失败（optimized_prompt 非空、无 error）
+        o = make_optimizer()
+        o._provider = mock_provider(
+            '{"prompt": "Photoreal. NON-IP. 16:9. 15s. SFX only.", "shot": "wide", '
+            '"final_frame": "hero stands", "aspect": "16:9", "duration_hint": 15, "audio": "SFX"}'
+        )
+        r = o.optimize(VideoOptimizeRequest(prompt="hero walks", creative_level=8, max_length=200))
+        assert r.optimized_prompt
+        assert not r.error
+
+
 class Test8013Untouched:
     def test_mirror_has_no_higgsfield_fields(self):
         mirror = Path(__file__).parent.parent / "prompt_engine" / "strategies" / "video" / "generic.py"
@@ -506,6 +527,22 @@ class TestReviewFixes:
             "", "en", tier="refined", max_length=5000,
         )
         assert "excluded_present" not in r4["violations"]
+
+    def test_t8_chinese_absent_marker_preserves_following_prose(self):
+        from video_prompt_engine.evaluator import _strip_reference_markers
+
+        stripped = _strip_reference_markers(
+            "[ABSENT] 贾克斯不在场内，英雄继续前进。",
+            ["贾克斯"],
+        )
+        assert stripped == "不在场内，英雄继续前进。"
+
+        result = evaluate(
+            "[ABSENT] 贾克斯不在场内，英雄继续前进。" * 6,
+            {"excluded_characters": ["贾克斯"], "shots": [], "audio": "SFX"},
+            "", "zh", tier="batch", max_length=1800,
+        )
+        assert "excluded_present" not in result["violations"]
 
     def test_t10_swap_tuple_form_guard(self):
         # 契约规范形态二元组 [from, to] 回流 evaluator 不崩（类型防御），对象形态正常命中

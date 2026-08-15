@@ -15,6 +15,7 @@
 - 构建视频知识库：`python -m video_prompt_engine.cli --build-kb`
 - 端点：`GET /health`、`POST /v1/video/optimize`（支持 output_language/num_candidates/context）、`POST /v1/video/optimize/batch`（≤20，并发 8）、`GET /v1/video/platforms`（已注册策略）、`GET /v1/video/keywords`、`POST /v1/video/classify`、`POST /v1/video/feedback`、`GET /v1/video/cache/stats`
 - 增强能力：SQLite 双级缓存（命中跳过 LLM）、JSON 结构化输出重试（≤2）、输入分类（题材/镜头意图）、多候选择优（evaluator 0-100）、中文输出（output_language=zh）、多平台策略（veo/kling/hailuo/doubao/seedance/generic_video）、RAG 关键词兜底
+- Round3 B/C（2026-08-15）：**跨镜承接**（`prev_final_frame` ≤1000 字符注入承接事实 + 缓存盐 + 承接一致性 -5 advisory）+ **导演分镜块骨架**（`refined_blocks.json` v2 12 块顺序 + 覆盖率 ≥0.8 + 7 条否定感知 lock-gated 规则默认启用 3 条）
 - 视频知识库：`video_prompt_engine/knowledge/`（keywords_video.json 7 维度 + seed_video_prompts.json 140 条结构化种子 + seed_higgsfield_prompts.json 258 条 Higgsfield 公开语料（按 prompt_text 去重后）；few-shot 注入预算 6K 字符/超长截断 5K，重建脚本 `scripts/build_higgsfield_seeds.py`；num_candidates 成本模型见 `docs/HELLGRIND-NUM-CANDIDATES-COST-MODEL.md`）
 - Multi-Publish videogen 集成：设置 `VIDEO_PROMPT_PORT=8020` 启用独立引擎优先，失败/未配置自动回退 8013 domain=video（`video-prompt-engine-contract.js` / `prompt-bridge.js`）
 - 详情见 `01-docs/PRD-video-prompt-engine.md` / `ARCH-video-prompt-engine.md`
