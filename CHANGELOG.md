@@ -1,3 +1,12 @@
+## [未发布] 功能：语料目录规范 + 负样本资产化 + 评估器误伤修复（video-corpus-expansion，2026-08-15）
+
+- **评估器误伤修复（评测器模式校准）**：`missing_audio` 改显式音频需求判定（纯视觉/静态 N/A 不扣分、显式无声仍扣、meta.audio/意图词满足即不扣）；`missing_trailer` 识别控制段等价形态（Duration:/Aspect ratio:/ONE CONTINUOUS SHOT/CUT n/[SHOT/FINAL FRAME/STILLNESS LOCK/SCENE NOTE），不再强制 NON-IP 字面量；长度带双口径 `length_strict`（True=引擎候选口径计分，False=评测用户/语料输入仅提示，checks 保留真实判定）；六要素词表扩充（style 摄影纪实词 + 具体色词 + 中英双语）；镜头字段文本级兜底（纯文本评测不再 58.3 硬顶）
+- **语料目录规范 + 校验门禁**：`scripts/build_corpus_index.py` glob 合并 `knowledge/corpus/**/*.json`（多目录、prompt_text 去重保留首条、必填 id/prompt_text/language/tier 校验、prompt_text≥50 字符、tier 白名单 refined/batch/variant/asset、quality_score 0-10），默认 warning 跳过 + 汇总、`--strict` fail-closed；产物 `corpus_index.json` 由 loader 显式 extra 并入（主文件原位兼容）；`knowledge/corpus/README.md` 文档化扩充流程 + higgsfield 示例
+- **负样本资产化**：`knowledge/seed_failure_samples.json` 14 条批量抽卡层失败样本（曝光/死中心/视线/音频/尾行/时间轴/节奏/缺席角色/互换/跨镜承接/剪影/风格污染/暖色泄漏，带 failure_tags + meta + prev_final_frame）；条目格式扩展 `corpus_type`/`failure_tags`/`applicable_to`/`tier`/`meta`，旧条目按 positive+few-shot 归一零回归
+- **few-shot 负样本排除**：`rag_retriever._few_shot_eligible` 注入前过滤（negative/eval-only 不进参考段，检索路径仍可访问）；向量库 build 排除负样本；`select_best` 透传 `length_strict`
+- **evaluator 负样本校验模式**：`evaluate_negatives(samples)` 按 failure_tags 与 evaluate() 触发违规匹配，输出每类失败模式 {recall, hits, misses, false_positives} + 逐样本漏检/误报明细；gated 未启用规则动态标 covered=False 不污染召回分母；常规评分路径零影响
+- **修复效果复测（258 条 Higgsfield 语料，tier=batch）**：修复前 max=58.3 硬上限 / missing_trailer 48 次 / missing_audio 73 次 → 修复后 max=100、missing_trailer 0 次；length_strict=False mean=95.6 median=100、strict mean=80.0；负样本校验 11 个可判定模式召回 1.0、误报 0
+- **测试**：新增 `tests/test_eval_fixes.py` 17 项 + `tests/test_corpus_expansion.py` 13 项（语料门禁/loader 语义/few-shot 过滤/负样本校验）；全量 855 passed / 3 skipped / 5 web E2E 环境性 errors（需本地 server，与基线一致）
 ## [未发布] 功能：视频引擎 Higgsfield Round3 B/C（跨镜承接 + 导演分镜块骨架，2026-08-15）
 
 - **跨镜承接（Batch B）**：`prev_final_frame`（≤1000 字符）承载上一场景最终画面描述，注入 SCENE Continuity 事实引用段；V4 缓存盐加入 `prev_final_frame` SHA-1 前缀哈希（承接状态变化缓存必然失效）；承接一致性 advisory -5——英文共享实体 ≥40% 且角色名（character_list 白名单）硬命中，中文白名单词重合 ≥60% 或无名单时整句字符重合 ≥0.5；无 `prev_final_frame` 零回归

@@ -31,7 +31,14 @@ class VideoRAGRetriever:
         # 加载种子（关键词兜底用；向量库不存在时也保留种子兜底能力）
         try:
             from video_prompt_engine.knowledge.loader import load_seed_video_prompts
-            seeds = load_seed_video_prompts(self._seed_path(), self._seed_extra_path())
+            extra_paths = [self._seed_extra_path()]
+            for cand in (
+                Path(__file__).resolve().parent / "knowledge" / "corpus_index.json",
+                Path(__file__).resolve().parent / "knowledge" / "seed_failure_samples.json",
+            ):
+                if cand.exists():
+                    extra_paths.append(cand)
+            seeds = load_seed_video_prompts(self._seed_path(), extra_paths)
             self._seed_entries = [
                 {
                     "id": s.id, "title": s.title, "description": s.description,
@@ -39,6 +46,8 @@ class VideoRAGRetriever:
                     "platform": s.platform, "style": s.style,
                     "categories": s.categories, "quality_score": s.quality_score,
                     "source": s.source,
+                    "corpus_type": s.corpus_type, "failure_tags": list(s.failure_tags),
+                    "applicable_to": s.applicable_to, "tier": s.tier,
                 }
                 for s in seeds
             ]
@@ -115,6 +124,19 @@ class VideoRAGRetriever:
         scored.sort(key=lambda x: x[0], reverse=True)
         return [dict(e, score=round(s / max(1, len(zh_chunks) + len(en_words)), 2)) for s, e in scored[:top_k]]
 
+    @staticmethod
+    def _few_shot_eligible(items: list[dict]) -> list[dict]:
+        """few-shot 注入前过滤（video-corpus-expansion 组4）：负样本与 eval-only 条目不注入参考段。
+
+        过滤在 _format_section 之前执行；keyword_fallback/向量检索本身仍可访问全部条目
+        （校验模式等场景需要负样本可达）。旧条目缺字段 → 按 positive + few-shot 归一放行。
+        """
+        return [
+            item for item in items
+            if item.get("corpus_type") != "negative"
+            and item.get("applicable_to", "few-shot") != "eval"
+        ]
+
     def _format_section(self, items: list[dict], budget: int = 6000, per_item_cap: int = 5000) -> str:
         """few-shot 注入段：预算内选择 + 超长条目截断注入（P2.9 语料资产化）。
 
@@ -161,6 +183,7 @@ class VideoRAGRetriever:
         if self._vector_store:
             try:
                 items = self._vector_store.search(query=query, top_k=top_k, platform=platform)
+                items = self._few_shot_eligible(items)
                 if items:
                     return self._format_section(items)
             except Exception as e:
@@ -168,6 +191,7 @@ class VideoRAGRetriever:
         # 向量无命中 → 关键词兜底（匹配平台种子）
         try:
             items = self.keyword_fallback(query, platform, top_k)
+            items = self._few_shot_eligible(items)
             if items:
                 logger.info("video RAG keyword fallback hit %d seed(s) for platform=%s", len(items), platform)
                 return self._format_section(items)

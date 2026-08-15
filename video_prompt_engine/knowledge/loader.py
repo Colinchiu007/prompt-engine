@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
-from prompt_engine_core.knowledge import load_keywords, load_seed_entries
+from prompt_engine_core.knowledge import SeedEntry, load_keywords, load_seed_entries
 
 
 @dataclass
@@ -21,6 +21,12 @@ class VideoPromptEntry:
     categories: list[str] = field(default_factory=list)
     quality_score: int = 5
     source: str = ""
+    # video-corpus-expansion：语料语义标注（旧条目缺失时按 positive+few-shot 归一，零回归）
+    corpus_type: str = "positive"          # positive / negative（仅显式 negative 为负样本）
+    failure_tags: list[str] = field(default_factory=list)  # 对齐 failure_patterns.json pattern 名
+    applicable_to: str = "few-shot"        # few-shot / eval / both
+    tier: str = ""                         # refined / batch / variant / asset
+    meta: dict = field(default_factory=dict)  # 结构化 video 元数据（负样本校验用）
 
 
 def _seed_to_entry(e) -> VideoPromptEntry:
@@ -31,28 +37,76 @@ def _seed_to_entry(e) -> VideoPromptEntry:
     )
 
 
+def _corpus_to_entry(item: dict, fallback_prefix: str, idx: int) -> VideoPromptEntry:
+    """语料索引/负样本条目解析：基础字段复用共享内核 SeedEntry，语义标注由领域层补齐。
+
+    归一规则（与 scripts/build_corpus_index.py 一致）：只有显式 negative 才是负样本；
+    applicable_to 非法值按 few-shot；failure_tags 非 list 转单元素/空。
+    """
+    base = SeedEntry.from_dict(
+        item, fallback_prefix=fallback_prefix, idx=idx, default_platform="generic_video",
+    )
+    ctype = item.get("corpus_type", "positive")
+    applicable = item.get("applicable_to", "few-shot")
+    tags = item.get("failure_tags", [])
+    if not isinstance(tags, list):
+        tags = [str(tags)] if tags else []
+    meta = item.get("meta")
+    return VideoPromptEntry(
+        id=base.id, title=base.title, description=base.description, prompt_text=base.prompt_text,
+        language=base.language, platform=base.platform, style=base.style,
+        categories=list(base.categories), quality_score=base.quality_score, source=base.source,
+        corpus_type=ctype if ctype == "negative" else "positive",
+        failure_tags=[str(t) for t in tags],
+        applicable_to=applicable if applicable in ("few-shot", "eval", "both") else "few-shot",
+        tier=str(item.get("tier") or ""),
+        meta=meta if isinstance(meta, dict) else {},
+    )
+
+
 @lru_cache(maxsize=4)
-def _load_seed_entries_cached(path: str, extra_path: str | None) -> tuple[VideoPromptEntry, ...]:
-    """缓存版种子加载（主文件 + 可选 higgsfield 语料文件合并）。
+def _load_seed_entries_cached(path: str, extra_paths: tuple[str, ...]) -> tuple[VideoPromptEntry, ...]:
+    """缓存版种子加载（主文件 + extra 文件 + 语料索引 + 负样本资产合并）。
 
     语料文件 ~3MB（去重后 258 条），多个 VideoOptimizer 实例共享一次解析结果；
-    extra_path 缺失时静默跳过（旧 checkout 兼容）。
+    extra 文件缺失时静默跳过（旧 checkout 兼容）。缓存键含全部来源路径，
+    新语料文件出现后路径元组变化 → 缓存失效自动重载。
     """
     entries = [_seed_to_entry(e) for e in load_seed_entries(path, fallback_prefix="vseed", default_platform="generic_video")]
-    if extra_path:
-        extra = Path(extra_path)
-        if extra.exists():
+    for i, extra in enumerate(extra_paths):
+        extra_p = Path(extra)
+        if not extra_p.exists():
+            continue
+        # corpus_index/seed_failure_samples 是新格式（含语义标注）；higgsfield 原文件是旧格式
+        if extra_p.name in ("corpus_index.json", "seed_failure_samples.json"):
+            raw = json.loads(extra_p.read_text(encoding="utf-8"))
+            items = raw if isinstance(raw, list) else [raw]
+            entries += [
+                _corpus_to_entry(item, fallback_prefix="corpus" if extra_p.name == "corpus_index.json" else "fail", idx=i)
+                for i, item in enumerate(items) if isinstance(item, dict)
+            ]
+        else:
             entries += [_seed_to_entry(e) for e in load_seed_entries(extra, fallback_prefix="hg", default_platform="generic_video")]
     return tuple(entries)
 
 
-def load_seed_video_prompts(path: Path, extra_path: Path | None = None) -> list[VideoPromptEntry]:
+def load_seed_video_prompts(
+    path: Path, extra_path: Path | list[Path] | tuple[Path, ...] | None = None,
+) -> list[VideoPromptEntry]:
     """加载视频种子（复用共享内核解析骨架，保持 VideoPromptEntry 领域模型）。
 
     平台字段缺失时回退 generic_video（历史行为）；显式写入的 platform 原样保留。
-    extra_path（如 seed_higgsfield_prompts.json）存在时合并加载（P2.9 语料资产化）。
+    extra_path（seed_higgsfield_prompts.json / corpus_index.json / seed_failure_samples.json）
+    存在时合并加载（P2.9 语料资产化 + video-corpus-expansion 组2/3）；可传单路径或路径列表。
+    旧格式 extra 按正样本解析；corpus_index/seed_failure_samples 按新格式（含语义标注）解析。
     """
-    return list(_load_seed_entries_cached(str(path), str(extra_path) if extra_path is not None else None))
+    if extra_path is None:
+        extras: list[str] = []
+    elif isinstance(extra_path, (list, tuple)):
+        extras = [str(x) for x in extra_path]
+    else:
+        extras = [str(extra_path)]
+    return list(_load_seed_entries_cached(str(path), tuple(extras)))
 
 
 def load_keywords_video(path: Path) -> dict[str, list[dict]]:

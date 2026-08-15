@@ -314,6 +314,7 @@ def evaluate(
     max_length: int | None = None,
     prev_final_frame: str | None = None,
     character_list: list | None = None,
+    length_strict: bool = True,
 ) -> dict:
     """返回 {score: 0-100, checks: {...}, tier, violations}。
 
@@ -388,13 +389,27 @@ def evaluate(
             violations["swap_source_present"] = -10
             checks["swap_hits"] = hit
     if tier == "refined" and "NON-IP" not in upper_text:
-        violations["missing_trailer"] = -10
+        # 质量评估 P1-2：真实精修语料以控制段（Duration/Aspect/连续长镜头/分镜标记/终态块）等价表达 trailer
+        # 预期，识别控制段形态即视为有 trailer 预期，不强制 NON-IP 字面量（引擎自产尾行仍为 NON-IP，不受影响）
+        _TRAILER_EQUIV = (
+            "DURATION:", "ASPECT RATIO", "ASPECT:", "ONE CONTINUOUS SHOT",
+            "CUT 1", "CUT 2", "[SHOT", "FINAL FRAME", "STILLNESS LOCK", "SCENE NOTE",
+        )
+        if not any(k in upper_text for k in _TRAILER_EQUIV):
+            violations["missing_trailer"] = -10
     lower_text = text.lower()
-    # 缺 Audio 块：refined 尾行自带 `{audio} only.`（meta.audio 非空即满足）；batch 检查正文音频词（否定词优先）
+    # 缺 Audio 块：refined 尾行自带 `{audio} only.`（meta.audio 非空即满足）；batch 层改为「显式音频需求」判定——
+    # 仅当正文含音频意图词或 meta 显式声明音频时才要求音频词；纯视觉/静态形态默认 N/A 不扣分（质量评估 P1-1 修复）
+    _SILENCE_WORDS = ("silent", "no sound", "无声", "静音", "无音效")
+    _AUDIO_INTENT_WORDS = (
+        "sfx", "sound effects", "sound design", "soundscape", "ambient audio",
+        "audio cue", "diegetic", "music", "score", "dialogue", "vocal",
+        "voiceover", "narration", "音效", "配乐", "声音", "对话", "旁白", "音轨", "音频",
+    )
     audio_field = str((video or {}).get("audio") or "").strip()
     audio_layers = (video or {}).get("audio_layers")
     if tier == "refined" and isinstance(audio_layers, dict):
-        # REQ-3.4 判定表仅 refined 生效（Audio 段真实渲染进尾行）；batch 无尾行，仍走正文音频词检查，
+        # REQ-3.4 判定表仅 refined 生效（Audio 段真实渲染进尾行）；batch 无尾行，走正文音频词检查，
         # 否则 batch 带 audio_layers 而正文无音频词会假阴性（评审 W1）
         has_audio = any(
             bool(str(audio_layers.get(key) or "").strip())
@@ -403,11 +418,13 @@ def evaluate(
     elif tier == "refined":
         has_audio = bool(audio_field) or any(k in lower_text for k in ("sfx", "sound", "audio", "music", "score"))
     else:
-        if any(k in lower_text for k in ("silent", "no sound", "无声", "静音")):
+        if any(k in lower_text for k in _SILENCE_WORDS):
             has_audio = False
+        elif audio_field or any(k in lower_text for k in _AUDIO_INTENT_WORDS):
+            has_audio = True
         else:
-            has_audio = any(k in lower_text for k in ("sfx", "sound", "audio", "music", "score", "音效", "配乐", "声音", "旋律"))
-    if not has_audio:
+            has_audio = None  # 纯视觉/静态形态：无显式音频需求，N/A 不扣分
+    if has_audio is False:
         violations["missing_audio"] = -5
 
     # 6) Round3 Batch A T2 — 确定性 FAIL CHECK（纯结构/数学判定，无 LLM）：
@@ -487,23 +504,29 @@ def evaluate(
     _apply_gated_rules(prompt, tier, violations, checks)
     checks["violations"] = violations
 
-    # 2) 六要素（英文关键词）
+    # 2) 六要素（英文关键词；质量评估 P1-4 扩充——cinematography/documentary/haze/blur 等风格词、具体色词、多语种）
     lower = str(prompt).lower()
     elements = {
-        "subject": any(k in lower for k in ("character", "subject", "hero", "woman", "man", "general", "people", "person", "warrior", "soldier", "horse", "cat", "dog", "人", "将军", "女子", "士兵", "战士", "主角")),
-        "action": any(k in lower for k in ("running", "walking", "riding", "fighting", "motion", "moving", "move", "runs", "rushing", "chasing", "flying", "dancing", "walk", "飞", "奔", "战", "走", "跑", "追", "舞", "骑")),
-        "environment": any(k in lower for k in ("environment", "scene", "background", "landscape", "city", "室", "城", "原野", "景")),
-        "lighting": any(k in lower for k in ("light", "lighting", "sunlight", "golden hour", "光")),
-        "color": any(k in lower for k in ("color", "palette", "hue", "色")),
-        "style": any(k in lower for k in ("style", "cinematic", "epic", "style", "风格")),
+        "subject": any(k in lower for k in ("character", "subject", "hero", "woman", "man", "general", "people", "person", "warrior", "soldier", "horse", "cat", "dog", "robot", "mech", "machine", "police", "crowd", "girl", "boy", "child", "knight", "assassin", "pilot", "人", "将军", "女子", "士兵", "战士", "主角", "机器人", "警察", "人群", "女孩", "男孩", "儿童", "机器")),
+        "action": any(k in lower for k in ("running", "walking", "riding", "fighting", "motion", "moving", "move", "runs", "rushing", "chasing", "flying", "dancing", "walk", "posing", "standing", "sitting", "staring", "strike", "charging", "explode", "explosion", "blast", "aiming", "飞", "奔", "战", "走", "跑", "追", "舞", "骑", "立", "坐", "望", "持", "挥", "攻")),
+        "environment": any(k in lower for k in ("environment", "scene", "background", "landscape", "city", "street", "room", "interior", "exterior", "forest", "desert", "mountain", "sea", "ocean", "snow", "wasteland", "ruins", "station", "warehouse", "室", "城", "原野", "景", "街道", "室内", "森林", "沙漠", "雪地", "废墟", "基地", "车站")),
+        "lighting": any(k in lower for k in ("light", "lighting", "sunlight", "golden hour", "glow", "backlight", "rim light", "moonlight", "neon", "flare", "haze", "gloom", "dark", "bright", "beam", "光", "辉光", "逆光", "月光", "霓虹", "光晕", "光束")),
+        "color": any(k in lower for k in ("color", "palette", "hue", "red", "blue", "green", "gold", "golden", "black", "white", "dark", "monochrome", "sepia", "teal", "orange", "purple", "gray", "grey", "色", "灰", "黑白", "红", "蓝", "绿", "金", "黑", "白")),
+        "style": any(k in lower for k in ("style", "cinematic", "epic", "cinematography", "documentary", "moody", "hazy", "blur", "blurred", "grain", "grainy", "vignette", "contrast", "noir", "cyberpunk", "sci-fi", "fantasy", "realistic", "photoreal", "aesthetic", "风格", "写实", "纪实", "动漫", "赛博", "风格化")),
     }
     checks["elements"] = elements
     checks["elements_score"] = sum(elements.values()) / len(elements)
 
-    # 3) 镜头字段（结构化 video）
-    checks["has_shot"] = bool(video and video.get("shot"))
-    checks["has_camera"] = bool(video and video.get("camera"))
-    checks["has_motion"] = bool(video and video.get("motion_intensity"))
+    # 3) 镜头字段（结构化 video；缺失时文本级兜底——质量评估 P0-1：纯文本评测不再被 58.3 硬顶）
+    _TXT_SHOT = ("shot", "cut", "establishing", "close-up", "closeup", "wide", "overhead",
+                 "tracking", "dolly", "zoom", "pan", "tilt", "slow-motion", "特写", "全景", "俯拍", "跟拍", "推移")
+    _TXT_CAMERA = ("camera", "lens", "angle", "perspective", "viewpoint", "镜头", "机位", "视角", "广角", "长焦")
+    _TXT_MOTION = ("motion", "movement", "moving", "slow-motion", "pan", "tracking", "dolly", "zoom",
+                   "drift", "swirl", "walking", "running", "运动", "慢动作", "推移", "旋转")
+    _has_txt = lambda toks: any(_contains_word(text, t) or t in lower for t in toks)
+    checks["has_shot"] = bool(video and video.get("shot")) or _has_txt(_TXT_SHOT)
+    checks["has_camera"] = bool(video and video.get("camera")) or _has_txt(_TXT_CAMERA)
+    checks["has_motion"] = bool(video and video.get("motion_intensity")) or _has_txt(_TXT_MOTION)
 
     # 4) 保真（source 实体命中，粗略）
     fidelity = 1.0
@@ -514,8 +537,11 @@ def evaluate(
             fidelity = max(0.0, hit / min(8, len(zh_chars)))
     checks["fidelity"] = fidelity
 
+    # 长度带双口径（质量评估 P1-3）：length_strict=True（引擎自产/候选择优）长度计入；
+    # length_strict=False（评测用户/语料输入）长度仅提示不扣分——checks["length"] 仍保留真实判定
+    length_points = 20 if (checks["length"] or not length_strict) else 0
     score = (
-        (checks["length"] * 20)
+        length_points
         + (checks["elements_score"] * 30)
         + (20 if checks["has_shot"] else 0)
         + (15 if checks["has_camera"] else 0)
@@ -539,6 +565,7 @@ def select_best(
     max_length: int | None = None,
     prev_final_frame: str | None = None,
     character_list: list | None = None,
+    length_strict: bool = True,
 ) -> tuple[str, dict, float]:
     """多候选择优：返回 (prompt, video_meta, score)，分数最高者优先。"""
     best: tuple[str, dict, float] | None = None
@@ -546,6 +573,7 @@ def select_best(
         info = evaluate(
             prompt, meta, source_prompt=source_prompt, language=language, tier=tier,
             max_length=max_length, prev_final_frame=prev_final_frame, character_list=character_list,
+            length_strict=length_strict,
         )
         score = float(info["score"])
         if best is None or score > best[2]:
@@ -553,3 +581,133 @@ def select_best(
     if best is None:
         return "", {}, 0.0
     return best
+
+# video-corpus-expansion 组5：failure_patterns.json pattern → evaluate() violations 键 映射
+# （gated rule 仅 refined 层启用，未启用的 rule 对应 tag 标记 covered=False，不污染召回分母）
+_TAG_TO_VIOLATION = {
+    "exposure_break": "exposure_break",
+    "silhouette_break": "silhouette_break",
+    "dead_center_composition": "dead_center",
+    "warm_light_leak": "warm_light_leak",
+    "style_contamination": "style_contamination",
+    "face_skin_detail_fail": "skin_guard",
+    "gaze_camera_fail": "eye_line",
+    "absent_character_appears": "excluded_present",
+    "character_swap": "swap_source_present",
+    "timeline_missing": "timeline_missing",
+    "audio_block_missing": "missing_audio",
+    "missing_audio": "missing_audio",
+    "missing_trailer": "missing_trailer",
+    "timing_break": "timing_break",
+    "continuity_break": "continuity_break",
+    "block_coverage": "block_coverage",
+}
+
+
+def evaluate_negatives(
+    samples: list[dict],
+    tag_to_violation: dict | None = None,
+    **eval_kwargs,
+) -> dict:
+    """负样本校验模式（video-corpus-expansion 组5）：按 failure_tags 与 evaluate() 触发违规匹配。
+
+    每条样本：{prompt_text, failure_tags, language?, tier?, meta?, prev_final_frame?, character_list?}。
+    输出每类失败模式 {recall, hits, misses, false_positives}：
+    - hits：样本预期该 tag 且 evaluate 触发对应违规键
+    - misses：样本预期该 tag 但未触发（漏检）
+    - false_positives：样本触发了违规键但该样本预期 tags 均不映射它（误报事件，按样本×键去重）
+    - covered=False：tag 无违规键映射（如 gated 未启用的规则），recall=None，不进召回分母
+
+    常规评分路径零影响：独立入口，不改 evaluate/select_best 内部行为。
+    """
+    mapping = dict(tag_to_violation or _TAG_TO_VIOLATION)
+    reverse: dict[str, list[str]] = {}
+    for tag, vkey in mapping.items():
+        reverse.setdefault(vkey, []).append(tag)
+    # gated 规则动态覆盖：lock_triggers 中存在但未启用的规则，其 tag 不可判定 → covered=False
+    rules = _gated_rules()
+    gated_enabled = rules.get("enabled") or set()
+    disabled_gated = (set((rules.get("triggers") or {}).keys()) - gated_enabled)
+    uncovered_tags = {t for t, v in mapping.items() if v in disabled_gated}
+
+    stats: dict[str, dict] = {}
+    details: list[dict] = []
+    total_fp = 0
+    for sample in samples:
+        text = str(sample.get("prompt_text") or "")
+        if not text:
+            continue
+        sid = str(sample.get("id") or "?")
+        expected = {str(t) for t in (sample.get("failure_tags") or [])}
+        meta = sample.get("meta") if isinstance(sample.get("meta"), dict) else {}
+        info = evaluate(
+            text,
+            meta,
+            source_prompt=str(sample.get("source_prompt") or ""),
+            language=str(sample.get("language") or "en"),
+            tier=sample.get("tier"),
+            prev_final_frame=sample.get("prev_final_frame"),
+            character_list=sample.get("character_list"),
+            **eval_kwargs,
+        )
+        actual = set(info["violations"].keys())
+        expected_vkeys = {mapping[t] for t in expected if t in mapping}
+        # 仅统计可判定（covered）的漏检；未启用 gated 规则的 tag 由 uncovered_tags 单独报告
+        missed = sorted(
+            t for t in expected
+            if t in mapping and t not in uncovered_tags and mapping[t] not in actual
+        )
+        fps = sorted(v for v in actual if v not in expected_vkeys)
+        total_fp += len(fps)
+
+        for tag in expected:
+            st = stats.setdefault(
+                tag, {"hits": 0, "misses": 0, "false_positives": 0, "covered": tag in mapping and tag not in uncovered_tags}
+            )
+            if tag in mapping and tag not in uncovered_tags:
+                if mapping[tag] in actual:
+                    st["hits"] += 1
+                else:
+                    st["misses"] += 1
+        # FP 事件归属到映射该违规键的 tag（该 tag 存在即累计；无归属不影响 totals）
+        for vkey in fps:
+            for tag in reverse.get(vkey, []):
+                if tag in stats:
+                    stats[tag]["false_positives"] += 1
+        details.append({
+            "id": sid,
+            "tags": sorted(expected),
+            "triggered": sorted(actual),
+            "missed": missed,
+            "false_positives": fps,
+        })
+
+    patterns = {}
+    for tag, st in sorted(stats.items()):
+        denom = st["hits"] + st["misses"]
+        patterns[tag] = {
+            "recall": round(st["hits"] / denom, 3) if st["covered"] and denom else None,
+            "hits": st["hits"],
+            "misses": st["misses"],
+            "false_positives": st["false_positives"],
+            "covered": st["covered"],
+            "violation_key": mapping.get(tag),
+        }
+    covered = [p for p in patterns.values() if p["covered"]]
+    uncovered = [tag for tag, p in patterns.items() if not p["covered"]]
+    uncovered += sorted(t for t in uncovered_tags if t not in stats)
+    return {
+        "patterns": patterns,
+        "totals": {
+            "samples": len(samples),
+            "evaluated": len(details),
+            "recall": round(
+                sum(p["hits"] for p in covered) / max(1, sum(p["hits"] + p["misses"] for p in covered)), 3
+            ) if covered else None,
+            "hits": sum(p["hits"] for p in covered),
+            "misses": sum(p["misses"] for p in covered),
+            "false_positives": total_fp,
+            "uncovered_tags": uncovered,
+        },
+        "details": details,
+    }
