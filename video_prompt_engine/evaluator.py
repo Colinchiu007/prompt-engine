@@ -5,6 +5,7 @@ import re
 from difflib import SequenceMatcher
 
 from video_prompt_engine.refined_blocks import clean_blocks, rendered_block_names
+from prompt_engine_core.knowledge import load_element_keywords
 
 # Round3 Batch C：lock-gated 规则资产缓存（refined_blocks.json，缺失/损坏回退空表 → 规则不启用零误报）
 _GATED_RULES_CACHE: dict = {}
@@ -182,6 +183,34 @@ def _extract_continuity_tokens(text: str) -> list[str]:
     return result
 
 
+def _stem_en(token: str) -> str:
+    """轻量英文词干（仅保真命中用，保守优先：只做低风险归并，防不同词根撞干）。
+
+    复数 -s/-es（es 仅 sibilant 词尾）、双写辅音的 -ing/-ed 归并；
+    e-dropping（stare→stared）、不规则词与长度 ≤3 词不归并——宁可假阴性，
+    不做 stares→star / hated→hat 类撞干（评审复验 W3-新）。
+    """
+    t = str(token or "").lower()
+    if len(t) <= 3:
+        return t
+    if t.endswith(("sses", "shes", "ches", "xes", "zes")):
+        t = t[:-2]
+    elif t.endswith("s") and not t.endswith("ss") and not t.endswith("us"):
+        t = t[:-1]
+    for suffix in ("ing", "ed"):
+        if t.endswith(suffix) and len(t) - len(suffix) >= 4:
+            stem = t[:-len(suffix)]
+            if len(stem) >= 4 and stem[-1] == stem[-2]:
+                t = stem[:-1]
+            break
+    return t
+
+
+def _en_stems(text: str) -> set[str]:
+    """文本全部英文 token 的词干集合（保真词形归一命中用）。"""
+    return {_stem_en(t) for t in re.findall(r"[a-z][a-z0-9'\-]{1,}", str(text or "").lower())}
+
+
 def _check_continuity(prompt: str, prev_final_frame: str, character_list: list) -> tuple[bool, dict]:
     """跨镜承接保真（Round3 Batch B，评审修订版）。
 
@@ -295,12 +324,16 @@ def _apply_gated_rules(prompt: str, tier: str, violations: dict, checks: dict) -
 def detect_tier(prompt: str, video: dict | None, explicit_tier: str | None = None) -> str:
     """tier 判定：explicit（optimizer 按 creative_level≥7 传入 refined，否则 batch）优先；无 explicit 时 auto-detect 兜底。
 
-    自动判据：shots 非空 / prompt 含 NON-IP 或 FINAL FRAME（refined 输出特征）。
+    自动判据：shots 非空 / prompt 含 NON-IP 或 FINAL FRAME（refined 输出特征）；
+    P0-1 长度兜底：无引擎标记且 >833 词 → refined（真实语料多无标记，旧判据 70/258 误分层）。
+    语言限制（W11）：count_words 按空格切分，无空格中文不走长度兜底（中文精修通常带标记或显式 tier）。
     """
-    if explicit_tier in ("refined", "batch"):
+    if explicit_tier in ("refined", "batch", "asset", "variant"):
         return explicit_tier
     upper = str(prompt or "").upper()
     if (video and video.get("shots")) or "NON-IP" in upper or "FINAL FRAME" in upper:
+        return "refined"
+    if count_words(prompt) > 833:
         return "refined"
     return "batch"
 
@@ -315,6 +348,7 @@ def evaluate(
     prev_final_frame: str | None = None,
     character_list: list | None = None,
     length_strict: bool = True,
+    enable_advice: bool = True,
 ) -> dict:
     """返回 {score: 0-100, checks: {...}, tier, violations}。
 
@@ -329,28 +363,57 @@ def evaluate(
     tier = detect_tier(prompt, video, explicit_tier=tier)
     checks["tier"] = tier
 
-    # 1) 长度层级（batch/refined 分开，refined 上界与 max_length 联动避免死代码）
+    # 1) 长度层级（batch/refined/asset/variant 分带；P2-1 asset/variant 语料形态层）
     words = count_words(prompt)
+    measure = len(str(prompt)) if language == "zh" else words
+    # form 形态标签：显式 tier=asset/variant，或短卡（<100 词/字）推断为 asset；其余 regular
+    # （评审复验 W1-新：中文无空格 count_words≈1，必须用 measure（zh=字符数）判定，否则整语言误判 asset）
+    if tier in ("asset", "variant"):
+        form = tier
+    elif measure < 100:
+        form = "asset"
+    else:
+        form = "regular"
+    checks["form"] = form
     if language == "zh":
         if tier == "refined":
-            length_ok = 500 <= len(str(prompt)) <= (max_length or 5000)
+            lo, hi = 500, (max_length or 5000)
+        elif tier == "asset":
+            lo, hi = 40, 1900
+        elif tier == "variant":
+            lo, hi = 80, 2000
         else:
-            length_ok = 120 <= len(str(prompt)) <= 2000
+            lo, hi = 120, 2000
     else:
         if tier == "refined":
             # DEEP P0-1：精修层 500-5,000 词（词数刻度）。max_length 为字符裁剪预算（optimizer 先裁后评），
-            # 不参与 refined 上界判据——此前 upper=max(500, budget//5)=1000 词把 1000+ 词模板硬扣。
-            # 下界保持自适应（评审 C1）：小预算（如 1800 字符 ≈360 词）下固定 500 词会误杀裁后结果，
-            # min(500, max(150, budget//6)) 防区间坍缩（与旧 W4 下界语义一致）
-            lower = min(500, max(150, (max_length or 5000) // 6))
-            length_ok = lower <= words <= 5000
+            # 不参与 refined 上界判据。下界保持自适应（评审 C1）：min(500, max(150, budget//6)) 防区间坍缩
+            lo = min(500, max(150, (max_length or 5000) // 6))
+            hi = 5000
+        elif tier == "asset":
+            lo, hi = 20, 950
+        elif tier == "variant":
+            hi = min(max(400, (max_length or 1800) // 6), 833)
+            lo, hi = 50, hi
         else:
-            # W4：batch 上界与 max_length 联动（默认 1800 → 400 零回归；大预算下消除 401+ 词死区）
-            # W3 封顶 833（=5000//6）：le 上浮到 20000 后不随预算静默扩到 3333（batch 定位短小精炼，150-300 词）
-            upper = min(max(400, (max_length or 1800) // 6), 833)
-            length_ok = 100 <= words <= upper
+            # W4：batch 上界与 max_length 联动（默认 1800 → 400 零回归）；W3 封顶 833
+            hi = min(max(400, (max_length or 1800) // 6), 833)
+            lo, hi = 100, hi
+    length_ok = lo <= measure <= hi
     checks["length"] = length_ok
     checks["words"] = words
+    checks["length_band"] = [lo, hi]
+    # P1-2 长度梯度：length_strict=False（评测口径）按接近度 0-20；True（引擎候选口径）0/20 二值
+    if length_strict:
+        length_points = 20 if length_ok else 0
+    else:
+        bandwidth = max(1, hi - lo)
+        if length_ok:
+            length_points = 20.0
+        else:
+            dist = min(abs(measure - lo), abs(measure - hi))
+            length_points = round(20.0 * max(0.0, 1.0 - dist / bandwidth), 1)
+    checks["length_points"] = length_points
 
     # 5) Higgsfield violations（词边界/整名匹配，字段为空时 N/A 不误扣；[ABSENT]/<<<>>> 标记区段先剥离防自罚分）
     text = str(prompt)
@@ -504,42 +567,50 @@ def evaluate(
     _apply_gated_rules(prompt, tier, violations, checks)
     checks["violations"] = violations
 
-    # 2) 六要素（英文关键词；质量评估 P1-4 扩充——cinematography/documentary/haze/blur 等风格词、具体色词、多语种）
+    # 2) 六要素（关键词资产 prompt_engine_core/knowledge/element_keywords.json，P1-4 外置；
+    #    en/zh/ru 任一语言命中即算——P2-2 多语种；部分命中 score=min(1, 命中词数/3)——P1-1 区分度）
     lower = str(prompt).lower()
-    elements = {
-        "subject": any(k in lower for k in ("character", "subject", "hero", "woman", "man", "general", "people", "person", "warrior", "soldier", "horse", "cat", "dog", "robot", "mech", "machine", "police", "crowd", "girl", "boy", "child", "knight", "assassin", "pilot", "人", "将军", "女子", "士兵", "战士", "主角", "机器人", "警察", "人群", "女孩", "男孩", "儿童", "机器")),
-        "action": any(k in lower for k in ("running", "walking", "riding", "fighting", "motion", "moving", "move", "runs", "rushing", "chasing", "flying", "dancing", "walk", "posing", "standing", "sitting", "staring", "strike", "charging", "explode", "explosion", "blast", "aiming", "飞", "奔", "战", "走", "跑", "追", "舞", "骑", "立", "坐", "望", "持", "挥", "攻")),
-        "environment": any(k in lower for k in ("environment", "scene", "background", "landscape", "city", "street", "room", "interior", "exterior", "forest", "desert", "mountain", "sea", "ocean", "snow", "wasteland", "ruins", "station", "warehouse", "室", "城", "原野", "景", "街道", "室内", "森林", "沙漠", "雪地", "废墟", "基地", "车站")),
-        "lighting": any(k in lower for k in ("light", "lighting", "sunlight", "golden hour", "glow", "backlight", "rim light", "moonlight", "neon", "flare", "haze", "gloom", "dark", "bright", "beam", "光", "辉光", "逆光", "月光", "霓虹", "光晕", "光束")),
-        "color": any(k in lower for k in ("color", "palette", "hue", "red", "blue", "green", "gold", "golden", "black", "white", "dark", "monochrome", "sepia", "teal", "orange", "purple", "gray", "grey", "色", "灰", "黑白", "红", "蓝", "绿", "金", "黑", "白")),
-        "style": any(k in lower for k in ("style", "cinematic", "epic", "cinematography", "documentary", "moody", "hazy", "blur", "blurred", "grain", "grainy", "vignette", "contrast", "noir", "cyberpunk", "sci-fi", "fantasy", "realistic", "photoreal", "aesthetic", "风格", "写实", "纪实", "动漫", "赛博", "风格化")),
-    }
+    elements_detail: dict = {}
+    element_keywords, _kw_from_asset = load_element_keywords()
+    for _elem, _langs in element_keywords.items():
+        _toks = list(dict.fromkeys(w for _v in _langs.values() for w in _v))
+        _hits = sorted({t for t in _toks if t in lower})
+        elements_detail[_elem] = {
+            "hit": bool(_hits), "words": _hits[:8], "score": round(min(1.0, len(_hits) / 3.0), 3),
+        }
+    elements = {k: v["hit"] for k, v in elements_detail.items()}
     checks["elements"] = elements
-    checks["elements_score"] = sum(elements.values()) / len(elements)
+    checks["elements_detail"] = elements_detail
+    checks["elements_score"] = round(sum(v["score"] for v in elements_detail.values()) / len(elements_detail), 3)
 
     # 3) 镜头字段（结构化 video；缺失时文本级兜底——质量评估 P0-1：纯文本评测不再被 58.3 硬顶）
     _TXT_SHOT = ("shot", "cut", "establishing", "close-up", "closeup", "wide", "overhead",
                  "tracking", "dolly", "zoom", "pan", "tilt", "slow-motion", "特写", "全景", "俯拍", "跟拍", "推移")
     _TXT_CAMERA = ("camera", "lens", "angle", "perspective", "viewpoint", "镜头", "机位", "视角", "广角", "长焦")
-    _TXT_MOTION = ("motion", "movement", "moving", "slow-motion", "pan", "tracking", "dolly", "zoom",
-                   "drift", "swirl", "walking", "running", "运动", "慢动作", "推移", "旋转")
-    _has_txt = lambda toks: any(_contains_word(text, t) or t in lower for t in toks)
+    # P0-4：运镜词表只保留镜头运动词（主体运动 walking/running/moving 不再计运镜）
+    _TXT_MOTION = ("slow-motion", "pan", "tilt", "tracking", "dolly", "zoom", "crane", "handheld",
+                   "drift", "swirl", "whip", "运镜", "摇镜", "推镜", "拉镜", "跟拍", "推移", "旋转", "慢动作")
+    _has_txt = lambda toks: any(_contains_word(text, t) for t in toks)  # W4：词边界，子串兜底会误击 pandemic/companion(pan)
     checks["has_shot"] = bool(video and video.get("shot")) or _has_txt(_TXT_SHOT)
     checks["has_camera"] = bool(video and video.get("camera")) or _has_txt(_TXT_CAMERA)
     checks["has_motion"] = bool(video and video.get("motion_intensity")) or _has_txt(_TXT_MOTION)
 
-    # 4) 保真（source 实体命中，粗略）
+    # 4) 保真（source 实体命中：中文 2-gram；英文实体 token 词边界命中——P0-3 英文保真补盲区）
     fidelity = 1.0
     if source_prompt:
         zh_chars = re.findall(r"[\u4e00-\u9fff]{2,}", source_prompt)
         if zh_chars:
             hit = sum(1 for c in zh_chars[:8] if c in str(prompt))
             fidelity = max(0.0, hit / min(8, len(zh_chars)))
+        else:
+            tokens = _extract_continuity_tokens(source_prompt)
+            if tokens:
+                # W3：词形归一（robot→robots/run→runs）——全词边界对复数/时态假阴性，保真路径轻量容忍
+                prompt_stems = _en_stems(prompt)
+                hits = [t for t in tokens if _contains_word(prompt, t) or _stem_en(t) in prompt_stems]
+                fidelity = round(len(hits) / len(tokens), 3)
     checks["fidelity"] = fidelity
 
-    # 长度带双口径（质量评估 P1-3）：length_strict=True（引擎自产/候选择优）长度计入；
-    # length_strict=False（评测用户/语料输入）长度仅提示不扣分——checks["length"] 仍保留真实判定
-    length_points = 20 if (checks["length"] or not length_strict) else 0
     score = (
         length_points
         + (checks["elements_score"] * 30)
@@ -554,7 +625,71 @@ def evaluate(
         "checks": checks,
         "tier": tier,
         "violations": violations,
+        "advice": _build_advice(prompt, checks, violations, language) if enable_advice else [],
     }
+
+
+# P2-3：可解释建议（纯规则，中英双语按 language；enable_advice=False 关闭）——违规键 → (zh, en) 文案
+_ADVICE_VIOLATION_TEXT = {
+    "excluded_present": ("正文出现了禁止角色", "excluded character appears in body"),
+    "swap_source_present": ("检测到需替换的角色源名", "swap source character name detected"),
+    "missing_trailer": ("精修层缺少尾行/控制段（NON-IP 或 Duration/Cut 标记）", "refined prompt missing trailer/control block (NON-IP or Duration/Cut marker)"),
+    "missing_audio": ("缺少音频描述（silent/无音效或显式音频意图）", "missing audio description (silent or explicit audio intent)"),
+    "timeline_missing": ("多镜头未使用 [SHOT N]/[HARD CUT] 切分标记", "multi-shot prompt missing [SHOT N]/[HARD CUT] markers"),
+    "timing_break": ("beats 时间超出 shot 时长容差", "beat timing exceeds shot duration tolerance"),
+    "continuity_break": ("跨镜承接实体丢失", "continuity entities lost from previous frame"),
+    "block_coverage": ("精修块覆盖不足", "refined block coverage below threshold"),
+    "exposure_break": ("曝光一致性被破坏", "exposure consistency broken"),
+    "silhouette_break": ("剪影一致性被破坏", "silhouette consistency broken"),
+    "dead_center": ("主体被居中构图", "dead-center composition"),
+    "warm_light_leak": ("出现暖光漏光", "warm light leak detected"),
+    "style_contamination": ("风格污染", "style contamination"),
+    "skin_guard": ("面部/皮肤细节失守", "face/skin detail guard failed"),
+    "eye_line": ("视线未对镜头", "gaze not toward camera"),
+}
+
+# P2-3 补充：六要素中文标签（zh advice 可读性）
+_ELEMENT_ZH_LABELS = {
+    "subject": "主体", "action": "动作", "environment": "环境",
+    "lighting": "光线", "color": "色彩", "style": "风格",
+}
+
+
+def _build_advice(prompt: str, checks: dict, violations: dict, language: str) -> list[str]:
+    """纯规则建议生成：长度带外 + 缺失要素 + 镜头维度 + 违规逐条映射（zh 按 language 参数）。"""
+    zh = str(language or "").lower().startswith("zh")
+    advice: list[str] = []
+
+    if not checks.get("length"):
+        band = checks.get("length_band") or []
+        words = checks.get("words") or 0
+        measure = len(str(prompt)) if zh else words
+        if len(band) == 2:
+            lo, hi = band
+            if zh:
+                advice.append(f"长度 {measure} 字，建议带 {lo}-{hi}")
+            else:
+                advice.append(f"length {measure} words is outside suggested band {lo}-{hi}")
+
+    for elem, detail in (checks.get("elements_detail") or {}).items():
+        if not detail.get("score"):
+            label = _ELEMENT_ZH_LABELS.get(elem, elem)
+            advice.append(f"缺少要素：{label}" if zh else f"missing element: {label}")
+
+    if not checks.get("has_shot"):
+        advice.append("未检测到镜头/景别描述" if zh else "no shot/framing description detected")
+    if not checks.get("has_camera"):
+        advice.append("未检测到机位/视角描述" if zh else "no camera angle/viewpoint description detected")
+    if not checks.get("has_motion"):
+        advice.append("未检测到运镜描述" if zh else "no camera motion description detected")
+
+    for key in (violations or {}):
+        text = _ADVICE_VIOLATION_TEXT.get(key)
+        if text:
+            advice.append(text[0] if zh else text[1])
+        else:
+            advice.append(f"违反规则：{key}" if zh else f"rule violation: {key}")
+    return advice
 
 
 def select_best(
@@ -567,8 +702,9 @@ def select_best(
     character_list: list | None = None,
     length_strict: bool = True,
 ) -> tuple[str, dict, float]:
-    """多候选择优：返回 (prompt, video_meta, score)，分数最高者优先。"""
-    best: tuple[str, dict, float] | None = None
+    """多候选择优：返回 (prompt, video_meta, score)，分数最高者优先；
+    同分时违规数少者胜（P1-3 tie-break），仍同分取先出现者（稳定）。"""
+    best: tuple[str, dict, float, int] | None = None
     for prompt, meta in candidates:
         info = evaluate(
             prompt, meta, source_prompt=source_prompt, language=language, tier=tier,
@@ -576,11 +712,12 @@ def select_best(
             length_strict=length_strict,
         )
         score = float(info["score"])
-        if best is None or score > best[2]:
-            best = (prompt, meta, score)
+        n_violations = len(info.get("violations") or {})
+        if best is None or score > best[2] or (score == best[2] and n_violations < best[3]):
+            best = (prompt, meta, score, n_violations)
     if best is None:
         return "", {}, 0.0
-    return best
+    return best[0], best[1], best[2]
 
 # video-corpus-expansion 组5：failure_patterns.json pattern → evaluate() violations 键 映射
 # （gated rule 仅 refined 层启用，未启用的 rule 对应 tag 标记 covered=False，不污染召回分母）
@@ -674,6 +811,7 @@ def evaluate_negatives(
             for tag in reverse.get(vkey, []):
                 if tag in stats:
                     stats[tag]["false_positives"] += 1
+                    break  # P1-5：样本×违规键只归属一次（多 tag 同键不重复累计；共享键的 tag 间归属为聚合性，totals 可靠）
         details.append({
             "id": sid,
             "tags": sorted(expected),

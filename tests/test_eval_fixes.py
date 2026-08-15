@@ -71,19 +71,23 @@ _RICH_SHORT = (
 
 
 class TestLengthStrictDualMode:
-    def test_strict_false_length_no_score_penalty(self):
+    # P0-P2 梯度设计（design.md §4）：length_strict=False 评测口径长度带外按接近度得部分分
+    # （20 × max(0, 1 - dist/bandwidth)），不再是旧契约的全额 20 或恒差 20/1.2。
+    def test_strict_false_length_partial_gradient(self):
         r = evaluate(_RICH_SHORT, {}, "", "en", tier="batch", length_strict=False)
         assert r["checks"]["length"] is False          # 真实判定保留（信息展示）
         assert "length" not in r["violations"]         # 长度不计违规
-        assert r["score"] >= 80                        # 六要素/镜头字段命中，长度不拉低总分
+        assert 0 < r["checks"]["length_points"] < 20   # 带外仍有部分长度分（梯度）
+        assert r["score"] >= 60                        # 六要素/镜头字段命中，长度不拉低总分
 
     def test_strict_true_length_penalty(self):
-        lenient = evaluate(_RICH_SHORT, {}, "", "en", tier="batch", length_strict=False)["score"]
+        lenient = evaluate(_RICH_SHORT, {}, "", "en", tier="batch", length_strict=False)
         strict = evaluate(_RICH_SHORT, {}, "", "en", tier="batch", length_strict=True)
         assert strict["checks"]["length"] is False     # 真实判定仍保留
-        assert strict["score"] < lenient               # 严格口径必须更低
-        # 差距 = 长度 20 分 / 1.2 归一化 ≈ 16.7
-        assert abs(lenient - strict["score"] - 20 / 1.2) < 1.0
+        assert strict["score"] < lenient["score"]      # 严格口径必须更低
+        # 差距 = lenient 的梯度长度分 / 1.2（严格口径 0 分）
+        expected_gap = lenient["checks"]["length_points"] / 1.2
+        assert abs((lenient["score"] - strict["score"]) - expected_gap) < 0.1  # score 保留 1 位小数
 
     def test_select_best_accepts_length_strict(self):
         cands = [("a short one", {}), ("A slow-motion tracking shot with lens flare. " * 8, {})]

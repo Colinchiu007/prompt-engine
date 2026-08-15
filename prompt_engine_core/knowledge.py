@@ -66,6 +66,326 @@ def load_keywords(path: str | Path) -> dict[str, list[dict]]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+_ELEMENT_KEYWORDS_CACHE: dict | None = None
+
+# 回退默认（与 element_keywords.json 资产逐词一致，构建期由 tests/test_evaluator_p0p2.py 一致性用例保证不漂移；资产缺失/损坏时零回归）
+_ELEMENT_KEYWORDS_FALLBACK: dict =     {
+      "subject": {
+        "en": [
+          "character",
+          "subject",
+          "hero",
+          "woman",
+          "man",
+          "general",
+          "people",
+          "person",
+          "warrior",
+          "soldier",
+          "horse",
+          "cat",
+          "dog",
+          "robot",
+          "mech",
+          "machine",
+          "police",
+          "crowd",
+          "girl",
+          "boy",
+          "child",
+          "knight",
+          "assassin",
+          "pilot"
+        ],
+        "zh": [
+          "人",
+          "将军",
+          "女子",
+          "士兵",
+          "战士",
+          "主角",
+          "机器人",
+          "警察",
+          "人群",
+          "女孩",
+          "男孩",
+          "儿童",
+          "机器"
+        ],
+        "ru": [
+          "персонаж",
+          "герой",
+          "человек",
+          "солдат",
+          "воин",
+          "робот",
+          "девушка",
+          "мальчик",
+          "ребёнок",
+          "толпа"
+        ]
+      },
+      "action": {
+        "en": [
+          "running",
+          "walking",
+          "riding",
+          "fighting",
+          "motion",
+          "moving",
+          "move",
+          "runs",
+          "rushing",
+          "chasing",
+          "flying",
+          "dancing",
+          "walk",
+          "posing",
+          "standing",
+          "sitting",
+          "staring",
+          "strike",
+          "charging",
+          "explode",
+          "explosion",
+          "blast",
+          "aiming"
+        ],
+        "zh": [
+          "飞",
+          "奔",
+          "战",
+          "走",
+          "跑",
+          "追",
+          "舞",
+          "骑",
+          "立",
+          "坐",
+          "望",
+          "持",
+          "挥",
+          "攻"
+        ],
+        "ru": [
+          "бежит",
+          "бег",
+          "движение",
+          "идёт",
+          "летит",
+          "бой",
+          "сражается",
+          "стоит",
+          "сидит",
+          "взрыв"
+        ]
+      },
+      "environment": {
+        "en": [
+          "environment",
+          "scene",
+          "background",
+          "landscape",
+          "city",
+          "street",
+          "room",
+          "interior",
+          "exterior",
+          "forest",
+          "desert",
+          "mountain",
+          "sea",
+          "ocean",
+          "snow",
+          "wasteland",
+          "ruins",
+          "station",
+          "warehouse"
+        ],
+        "zh": [
+          "室",
+          "城",
+          "原野",
+          "景",
+          "街道",
+          "室内",
+          "森林",
+          "沙漠",
+          "雪地",
+          "废墟",
+          "基地",
+          "车站"
+        ],
+        "ru": [
+          "город",
+          "улица",
+          "комната",
+          "лес",
+          "пустыня",
+          "горы",
+          "море",
+          "снег",
+          "развалины",
+          "станция"
+        ]
+      },
+      "lighting": {
+        "en": [
+          "light",
+          "lighting",
+          "sunlight",
+          "golden hour",
+          "glow",
+          "backlight",
+          "rim light",
+          "moonlight",
+          "neon",
+          "flare",
+          "haze",
+          "gloom",
+          "dark",
+          "bright",
+          "beam"
+        ],
+        "zh": [
+          "光",
+          "辉光",
+          "逆光",
+          "月光",
+          "霓虹",
+          "光晕",
+          "光束"
+        ],
+        "ru": [
+          "свет",
+          "освещение",
+          "неон",
+          "блик",
+          "лунный",
+          "закат",
+          "тень",
+          "свечение"
+        ]
+      },
+      "color": {
+        "en": [
+          "color",
+          "palette",
+          "hue",
+          "red",
+          "blue",
+          "green",
+          "gold",
+          "golden",
+          "black",
+          "white",
+          "dark",
+          "monochrome",
+          "sepia",
+          "teal",
+          "orange",
+          "purple",
+          "gray",
+          "grey"
+        ],
+        "zh": [
+          "色",
+          "灰",
+          "黑白",
+          "红",
+          "蓝",
+          "绿",
+          "金",
+          "黑",
+          "白"
+        ],
+        "ru": [
+          "цвет",
+          "красный",
+          "синий",
+          "зелёный",
+          "золотой",
+          "чёрный",
+          "белый",
+          "палитра"
+        ]
+      },
+      "style": {
+        "en": [
+          "style",
+          "cinematic",
+          "epic",
+          "cinematography",
+          "documentary",
+          "moody",
+          "hazy",
+          "blur",
+          "blurred",
+          "grain",
+          "grainy",
+          "vignette",
+          "contrast",
+          "noir",
+          "cyberpunk",
+          "sci-fi",
+          "fantasy",
+          "realistic",
+          "photoreal",
+          "aesthetic"
+        ],
+        "zh": [
+          "风格",
+          "写实",
+          "纪实",
+          "动漫",
+          "赛博",
+          "风格化"
+        ],
+        "ru": [
+          "стиль",
+          "кинематографичный",
+          "реалистичный",
+          "нуар",
+          "нео-нуар",
+          "эстетика",
+          "документальный"
+        ]
+      }
+    }
+
+
+
+def load_element_keywords(path: str | Path | None = None) -> tuple[dict, bool]:
+    """加载六要素关键词资产 {element: {lang: [words]}}（视频/图片评估器共享）。
+
+    返回 (keywords, from_asset)。资产缺失/损坏/结构非法 → 回退内置默认（from_asset=False），
+    保证任何环境下评估器行为可用；结果模块级缓存。
+    """
+    global _ELEMENT_KEYWORDS_CACHE
+    if path is None and _ELEMENT_KEYWORDS_CACHE is not None:
+        return _ELEMENT_KEYWORDS_CACHE, True
+    target = Path(path) if path is not None else Path(__file__).resolve().parent / "knowledge" / "element_keywords.json"
+    try:
+        if target.exists():
+            data = json.loads(target.read_text(encoding="utf-8"))
+            elements = data.get("elements") or {}
+            _REQUIRED_ELEMENTS = ("subject", "action", "environment", "lighting", "color", "style")
+            if all(
+                isinstance(elements.get(k), dict)
+                and {"en", "zh", "ru"} <= set(elements[k])
+                and all(isinstance(elements[k][lang], list) and elements[k][lang] for lang in ("en", "zh", "ru"))
+                for k in _REQUIRED_ELEMENTS
+            ):
+                if path is None:
+                    _ELEMENT_KEYWORDS_CACHE = elements
+                return elements, True
+    except Exception:
+        pass
+    if path is None:
+        _ELEMENT_KEYWORDS_CACHE = _ELEMENT_KEYWORDS_FALLBACK
+    return _ELEMENT_KEYWORDS_FALLBACK, False
+
+
 def build_index(seed_path: str | Path, persist_dir: str | Path, data_file: str = "index.json") -> int:
     """种子 → TF-IDF 索引（清空重建）。返回条目数。"""
     store = PromptVectorStore(persist_dir, data_file=data_file)

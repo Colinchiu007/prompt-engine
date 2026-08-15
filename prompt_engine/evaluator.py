@@ -3,6 +3,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
+from prompt_engine_core.knowledge import load_element_keywords
 from enum import Enum
 from typing import Optional
 
@@ -167,18 +168,6 @@ def evaluate(
 # 避免与上方 LLM 对比评估 evaluate() 冲突。未来可收敛共享内核（单独 change）。
 # ─────────────────────────────────────────────────────────────────────────────
 
-# 六要素词典（与视频引擎同款；图片静态构图同样适用）
-_ELEMENT_KEYWORDS = {
-    "subject": ("character", "subject", "hero", "woman", "man", "general", "people", "person",
-                "warrior", "soldier", "horse", "cat", "dog", "人", "将军", "女子", "士兵", "战士", "主角"),
-    "action": ("running", "walking", "riding", "fighting", "motion", "moving", "move", "runs",
-               "rushing", "chasing", "flying", "dancing", "walk", "飞", "奔", "战", "走", "跑", "追", "舞", "骑"),
-    "environment": ("environment", "scene", "background", "landscape", "city", "室", "城", "原野", "景"),
-    "lighting": ("light", "lighting", "sunlight", "golden hour", "光"),
-    "color": ("color", "palette", "hue", "色"),
-    "style": ("style", "cinematic", "epic", "风格"),
-}
-
 
 def count_words(text: str) -> int:
     """词数统计（与视频引擎语义一致）。"""
@@ -287,9 +276,10 @@ def evaluate_quality(
             checks["swap_hits"] = hit
     checks["violations"] = violations
 
-    # 3) 六要素
+    # 3) 六要素（与视频引擎共享 prompt_engine_core/knowledge/element_keywords.json；任一语言命中即算）
     lower = str(prompt).lower()
-    elements = {k: any(w in lower for w in v) for k, v in _ELEMENT_KEYWORDS.items()}
+    element_keywords, _kw_from_asset = load_element_keywords()
+    elements = {k: any(w in lower for _lst in v.values() for w in _lst) for k, v in element_keywords.items()}
     checks["elements"] = elements
     checks["elements_score"] = sum(elements.values()) / len(elements)
 

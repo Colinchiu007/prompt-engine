@@ -44,3 +44,8 @@ prompt-engine = "prompt_engine.cli:main"
 [tool.setuptools.packages.find]
 include = ["prompt_engine*", "video_prompt_engine*", "prompt_engine_core*"]
 
+[tool.setuptools.package-data]
+prompt_engine = ["knowledge/*.json"]
+prompt_engine_core = ["knowledge/*.json"]
+video_prompt_engine = ["knowledge/*.json", "knowledge/corpus/**/*.json"]
+

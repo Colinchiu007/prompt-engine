@@ -284,3 +284,45 @@ Multi-Publish videogen SHALL 支持配置切换至独立视频引擎（8020）�
 #### Scenario: 重复检测
 - **WHEN** 新语料 prompt_text 与既有条目重复
 - **THEN** 按确定性规则保留一条并记录去重数（与 Higgsfield 语料去重语义一致）
+### Requirement: 评估器 P0-P2 优化（tier/form/保真/运镜/区分度/词表资产）
+视频引擎 evaluator SHALL 支持：tier 白名单含 asset/variant 且 auto 判定增加 >833 词→refined 长度兜底；`checks["form"]` 形态标签（<100 词推断 asset）；长度带按 tier 分带（batch/refined/asset/variant，en 词数 / zh 字符），`length_strict=False` 评测口径按接近度梯度给 0-20 分、True 引擎候选口径 0/20 二值；英文保真用实体 token 词边界命中率（无实体→1.0 不扣分）；运镜词表只保留镜头运动词（walking/running/moving 不计运镜）；六要素支持部分命中（score=min(1, 命中词数/3)）并保留布尔 `elements` 兼容键；六要素关键词 SHALL 外置为共享资产 `prompt_engine_core/knowledge/element_keywords.json`（en/zh/ru，缺失/损坏回退内置默认），视频与图片评估器共用；`select_best` 同分时违规数少者胜；`evaluate_negatives` FP 按样本×违规键去重归属；`evaluate()` 返回纯规则 `advice`（中英双语，可关闭）。
+
+#### Scenario: 纯文本长片不再误分层
+- **WHEN** 输入 900 词无引擎标记的纯文本
+- **THEN** auto tier 判为 refined，长度按 500-5000 词带判定
+
+#### Scenario: 短资产卡形态
+- **WHEN** 输入 <100 词文本且未显式指定 tier
+- **THEN** checks["form"]=asset（形态标签），长度带仍按 auto tier（batch）判定；显式 tier=asset 才启用 20-950 词带
+
+#### Scenario: 评测口径长度梯度
+- **WHEN** length_strict=False 且长度带外
+- **THEN** 长度分按接近度 0-20 部分给分，违规列表不含长度
+
+#### Scenario: 主体运动不认运镜
+- **WHEN** 正文仅含 walking/running/moving 等主体运动词
+- **THEN** has_motion=False；含 pan/dolly/crane/运镜 等镜头运动词才为 True
+
+#### Scenario: 词表资产共享
+- **WHEN** 图片与视频评估器加载六要素关键词
+- **THEN** 均来自 element_keywords.json（任一语言命中即算），图片引擎自动获得扩充词
+
+#### Scenario: 建议输出
+- **WHEN** evaluate() 带 enable_advice=True
+- **THEN** 返回 advice 列表（长度/要素/镜头/违规逐条，zh 或 en），enable_advice=False 时为空列表
+
+### Requirement: 确定性评测端点与 golden set
+视频引擎 REST SHALL 提供 `POST /v1/video/evaluate`：1-20 条纯文本逐条确定性评分（无 LLM），支持可选 `compare` 逐条 before/after 双路对比（score_delta + by_criterion 判据 delta（长度/六要素/镜头/保真/违规））、显式 tier/language/max_length/length_strict/detail；prompts 每条非空、compare 长度不一致返回 422。评测器校准 SHALL 提供 golden set 资产（`knowledge/golden_set.json`，含人工分/理由/来源）与 `scripts/eval_golden_set.py`（MAE/RMSE/Pearson r + 逐条对比，退出码 0）；golden 资产不进入 few-shot 注入。
+
+#### Scenario: 双路对比
+- **WHEN** 提交 prompts 与等长 compare 数组
+- **THEN** 每条返回 score_before/score_delta/by_criterion（六要素/镜头/保真/违规 delta）
+
+#### Scenario: 参数校验
+- **WHEN** prompts 含空条目、超过 20 条或 compare 长度不匹配
+- **THEN** 返回 422
+
+#### Scenario: golden set 校准
+- **WHEN** 运行 scripts/eval_golden_set.py
+- **THEN** 输出评估器分 vs 人工分 MAE/RMSE/Pearson r 与逐条对比表，退出码 0
+

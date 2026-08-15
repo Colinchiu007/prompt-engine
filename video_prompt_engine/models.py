@@ -6,7 +6,7 @@ context 白名单、批量契约（≤20）。
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -187,3 +187,16 @@ class VideoClassifyRequest(BaseModel):
     """输入分类请求（题材/镜头意图检测，用于自动选策略与关键词维度）。"""
 
     prompt: str = Field(..., min_length=1, max_length=2000, description="原始输入提示词/文案")
+
+
+class VideoEvaluateRequest(BaseModel):
+    """确定性评分评测请求（P2-4）：1-20 条纯文本；compare 可选逐条 before/after 双路对比。"""
+    prompts: list[str] = Field(..., min_length=1, max_length=20, description="待评提示词 1-20 条（每条非空）")
+    compare: Optional[list[str]] = Field(default=None, description="对照原文（长度与 prompts 一致时逐条算 score_delta）")
+    tier: Optional[Literal["batch", "refined", "asset", "variant"]] = Field(
+        default=None, description="显式 tier：batch/refined/asset/variant（缺省 auto 判定）"
+    )
+    language: Literal["en", "zh", "ru"] = Field(default="en", description="en/zh/ru")
+    max_length: Optional[int] = Field(default=None, ge=200, le=20000, description="长度带预算（缺省按 tier 默认）")
+    length_strict: bool = Field(default=False, description="True=引擎候选口径 0/20 二值；False=评测口径接近度梯度")
+    detail: bool = Field(default=True, description="True 返回 advice；False 关闭 advice 减少载荷")

@@ -1,0 +1,12 @@
+{
+  "id": "evaluator-p0-p2-optimization",
+  "title": "评估器 P0-P2 优化（detect_tier 兜底 / evaluate 端点 / 保真运镜 / 区分度 / 词表资产化 / 形态多语种）",
+  "status": "in_progress",
+  "complexity": "L",
+  "risk": "medium",
+  "domain": "prompt-engine",
+  "currentPhase": "planning",
+  "nextAction": "实施 P0（TDD）",
+  "createdAt": "2026-08-15T23:00:00Z",
+  "branch": "codex/evaluator-p0-p2-optimization"
+}

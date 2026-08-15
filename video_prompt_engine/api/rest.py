@@ -8,6 +8,7 @@
 - GET  /v1/video/keywords                视频关键词词典（按维度）
 - POST /v1/video/classify                输入题材/镜头意图检测
 - POST /v1/video/feedback                好/坏反馈 → 种子库沉淀
+- POST /v1/video/evaluate              确定性评分评测（1-20 条，可选双路对比）
 - GET  /v1/video/cache/stats             双级缓存统计
 """
 from __future__ import annotations
@@ -16,11 +17,12 @@ from fastapi import FastAPI, HTTPException
 
 from video_prompt_engine.models import (
     VideoOptimizeRequest, VideoBatchOptimizeRequest,
-    VideoFeedbackRequest, VideoClassifyRequest,
+    VideoFeedbackRequest, VideoClassifyRequest, VideoEvaluateRequest,
 )
 from video_prompt_engine.optimizer import VideoOptimizer
 from video_prompt_engine.strategies import list_strategies
 from video_prompt_engine.classifier import classify
+from video_prompt_engine.evaluator import evaluate as evaluate_prompt
 
 app = FastAPI(title="Video Prompt Engine", version="0.2.0")
 _optimizer: VideoOptimizer | None = None
@@ -100,3 +102,80 @@ def video_feedback(request: VideoFeedbackRequest):
 @app.get("/v1/video/cache/stats", response_model=dict)
 def cache_stats():
     return get_optimizer().cache_stats()
+
+
+def _compare_criteria(before: dict, after: dict) -> dict:
+    """双路对比按判据的 delta：六要素/镜头维度/保真/违规扣分（仅输出有变化的判据）。"""
+    b, a = before["checks"], after["checks"]
+    delta: dict = {}
+    for key, label in (
+        ("length_points", "length"), ("elements_score", "elements"), ("has_shot", "shot"),
+        ("has_camera", "camera"), ("has_motion", "motion"), ("fidelity", "fidelity"),
+    ):
+        bv, av = b.get(key), a.get(key)
+        if isinstance(bv, bool):
+            diff = (1 if av else 0) - (1 if bv else 0)
+        elif isinstance(bv, (int, float)) and isinstance(av, (int, float)):
+            diff = round(av - bv, 3)
+        else:
+            continue
+        if diff:
+            delta[label] = f"{diff:+}"
+    b_penalty = sum((before.get("violations") or {}).values())
+    a_penalty = sum((after.get("violations") or {}).values())
+    if a_penalty != b_penalty:
+        # 扣分总额差：正值=修复后少扣（正收益），与其余判据"正值=变好"同号（violations_penalty）
+        delta["violations_penalty"] = f"{a_penalty - b_penalty:+}"
+    return delta
+
+
+@app.post("/v1/video/evaluate", response_model=dict)
+def video_evaluate(request: VideoEvaluateRequest):
+    """确定性评分评测（无 LLM）：逐条 evaluate() + 可选 compare 双路对比。
+
+    评测口径默认 length_strict=False（长度不判失败，仅梯度提示）；detail=False 时 advice 关闭。
+    """
+    prompts = [p.strip() for p in request.prompts]
+    if any(not p for p in prompts):
+        raise HTTPException(status_code=422, detail="prompts 每条不允许为空")
+    compares: list[str] | None = None
+    if request.compare is not None:
+        if len(request.compare) != len(prompts):
+            raise HTTPException(
+                status_code=422,
+                detail=f"compare 长度 {len(request.compare)} 与 prompts 长度 {len(prompts)} 不一致",
+            )
+        compares = [c.strip() for c in request.compare]
+
+    results = []
+    for i, prompt in enumerate(prompts):
+        info = evaluate_prompt(
+            prompt, {}, source_prompt="", language=request.language,
+            tier=request.tier, max_length=request.max_length,
+            length_strict=request.length_strict, enable_advice=request.detail,
+        )
+        item: dict = {
+            "index": i,
+            "score": info["score"],
+            "tier": info["tier"],
+            "form": info["checks"].get("form"),
+            "checks": info["checks"],
+            "violations": info["violations"],
+        }
+        if request.detail:
+            item["advice"] = info["advice"]
+        if compares is not None:
+            before = evaluate_prompt(
+                compares[i], {}, source_prompt="", language=request.language,
+                tier=request.tier, max_length=request.max_length,
+                length_strict=request.length_strict, enable_advice=False,
+            )
+            item["compare"] = {
+                # score_delta 是归一后总分差（含 /1.2），与 by_criterion 的原始判据差不对账（口径说明）
+                "score_before": before["score"],
+                "score_delta": round(info["score"] - before["score"], 1),
+                "by_criterion": _compare_criteria(before, info),
+            }
+        results.append(item)
+    # evaluator 版本标识：确定性规则评分器（v0.10 起），与 app version 无对应关系
+    return {"results": results, "meta": {"count": len(results), "evaluator": "v0.10-deterministic"}}
