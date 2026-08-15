@@ -1,0 +1,309 @@
+[
+  {
+    "id": "fail-001",
+    "title": "曝光违反（低照度锁被高调光破坏）",
+    "description": "批量抽卡层失败样本：声明 LOW-KEY 锁定后出现 bright daylight，gated exposure_break 应触发",
+    "prompt_text": "LOW-KEY scene locked. SCENE NOTE: the hall stays in near darkness with a single cold rim. CUT 1 - wide shot of the chamber, then bright daylight floods the hall from the roof vents. CUT 2 - profile close-up, faces fully lit. FINAL FRAME: cold palette restored.",
+    "language": "en",
+    "tier": "refined",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "exposure_break"
+    ],
+    "meta": {
+      "audio": "sfx"
+    }
+  },
+  {
+    "id": "fail-002",
+    "title": "死中心构图",
+    "description": "声明 rule-of-thirds 铁律后主体仍居中，gated dead_center 应触发",
+    "prompt_text": "UNIVERSAL COMPOSITION RULE: rule of thirds, off-center, asymmetric. CUT 1 - the hero walks in from the left, then stands exactly dead center of the frame. CUT 2 - static wide, subject pinned in the middle. FINAL FRAME: silhouette hold.",
+    "language": "en",
+    "tier": "refined",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "dead_center_composition"
+    ],
+    "meta": {
+      "audio": "music"
+    }
+  },
+  {
+    "id": "fail-003",
+    "title": "视线/镜头感失败",
+    "description": "声明 eye-line 表演要求后角色直视镜头，gated eye_line 应触发",
+    "prompt_text": "Acting note: keep a strict eye-line away from camera, never break the fourth wall. CUT 1 - the prisoner stares directly at the camera, looking at camera with wide eyes. CUT 2 - profile two-shot, eye contact locked. FINAL FRAME: slow push-in hold.",
+    "language": "en",
+    "tier": "refined",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "gaze_camera_fail"
+    ],
+    "meta": {
+      "audio": "sfx"
+    }
+  },
+  {
+    "id": "fail-004",
+    "title": "显式无声却缺音频块（batch）",
+    "description": "正文显式声明无声，missing_audio 应触发",
+    "prompt_text": "A silent alley at midnight, no sound at all. A stray cat moves between the trash bins, the whole scene stays perfectly quiet, no wind, no footsteps, no distant traffic, nothing but the stillness of the empty street stretching into the dark.",
+    "language": "en",
+    "tier": "batch",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "audio_block_missing"
+    ]
+  },
+  {
+    "id": "fail-005",
+    "title": "refined 层缺 Audio 块",
+    "description": "精修输出无音频词且 meta 未声明音频，missing_audio 应触发",
+    "prompt_text": "DURATION: 8s. ASPECT RATIO: 16:9. ONE CONTINUOUS SHOT - the dust settles across the warehouse floor, motes drifting through the beam, the frame holds until the final stillness lock. FINAL FRAME: grain settles, palette locked.",
+    "language": "en",
+    "tier": "refined",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "audio_block_missing"
+    ]
+  },
+  {
+    "id": "fail-006",
+    "title": "精修层缺 trailer 尾行",
+    "description": "精修输出无控制段/无 NON-IP，missing_trailer 应触发",
+    "prompt_text": "The vault door grinds open and the hero steps in, dust swirling around the boots, sfx of heavy hinges and distant drip echoing through the chamber, the light from the corridor cutting a long wedge across the floor as the door closes behind him.",
+    "language": "en",
+    "tier": "refined",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "missing_trailer"
+    ]
+  },
+  {
+    "id": "fail-007",
+    "title": "多切提示词缺时间轴锚点",
+    "description": "shots≥2 但正文无 [SHOT N]/[HARD CUT] 标记，timeline_missing 应触发",
+    "prompt_text": "DURATION: 8s. sfx of wind over the ridge. Two cuts: first the wide formation on the ridge, then the close-up of the commander. Both beats carry action but the script never marks the cut points, no shot headers, no hard cut tokens, the timeline is implied only by the scene description flow.",
+    "language": "en",
+    "tier": "refined",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "timeline_missing"
+    ],
+    "meta": {
+      "shots": [
+        {
+          "id": "s1",
+          "duration": 5,
+          "beats": [
+            {
+              "time": "0-4"
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "duration": 6,
+          "beats": [
+            {
+              "time": "0-5"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "fail-008",
+    "title": "beats 超时（节奏违反）",
+    "description": "beats 时间端点超出 shot.duration+2s 容差，timing_break 应触发",
+    "prompt_text": "[SHOT 1] - wide establishing, the squad crosses the bridge, beats carry the full march. [SHOT 2] - close-up, the lead stops and turns. FINAL FRAME: hold on the empty bridge. DURATION: 10s. ONE CONTINUOUS SHOT style pacing.",
+    "language": "en",
+    "tier": "refined",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "timing_break"
+    ],
+    "meta": {
+      "audio": "sfx",
+      "shots": [
+        {
+          "id": "s1",
+          "duration": 5,
+          "beats": [
+            {
+              "time": "0-4"
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "duration": 6,
+          "beats": [
+            {
+              "time": "0-9"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "fail-009",
+    "title": "缺席角色出现在画面",
+    "description": "excluded_characters 声明缺席但正文出现角色名，excluded_present 应触发",
+    "prompt_text": "The funeral procession moves through the snow, the widow leads, the priest follows, and Jax stands at the gate watching, his coat dusted white, the camera holding his face for a long beat before cutting to the grave site.",
+    "language": "en",
+    "tier": "batch",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "absent_character_appears"
+    ],
+    "meta": {
+      "excluded_characters": [
+        "Jax"
+      ]
+    }
+  },
+  {
+    "id": "fail-010",
+    "title": "角色互换（防替换违规）",
+    "description": "no_swap_pairs 声明 A/B 不可互换但正文出现 A 侧角色，swap_source_present 应触发",
+    "prompt_text": "Roko approaches the fallen Jax across the battlefield, the hero arriving is always Roko, never the other way around, the camera tracking the approach from the side until Roko kneels and reaches out with the bloody palm.",
+    "language": "en",
+    "tier": "batch",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "character_swap"
+    ],
+    "meta": {
+      "no_swap_pairs": [
+        [
+          "Roko",
+          "Jax"
+        ]
+      ]
+    }
+  },
+  {
+    "id": "fail-011",
+    "title": "跨镜承接断裂",
+    "description": "prev_final_frame 实体在下一镜丢失，continuity_break 应触发",
+    "prompt_text": "CUT 2 - the courtyard empties, the torchlight gutters, a stranger walks in from the gate and stops at the well, dust settling on the stones, the frame holds until the flicker dies and the courtyard sinks back into darkness.",
+    "language": "en",
+    "tier": "refined",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "continuity_break"
+    ],
+    "prev_final_frame": "CUT 1 - the hero Kael holds the torch at the well, Kael turns and walks toward the gate.",
+    "character_list": [
+      "Kael"
+    ],
+    "meta": {
+      "audio": "sfx"
+    }
+  },
+  {
+    "id": "fail-012",
+    "title": "剪影/轮廓光违反（gated 未启用，仅资产）",
+    "description": "silhouette lock 被 well-lit face 破坏；该 gated rule 当前未启用，evaluate 不判定 → covered=False",
+    "prompt_text": "SILHOUETTE note: characters MUST read as DARK SILHOUETTES with only a thin cool rim. CUT 1 - the guard turns, his face fully visible, well-lit face with clear facial detail. CUT 2 - the hallway snaps back to rim light. FINAL FRAME: cool palette hold.",
+    "language": "en",
+    "tier": "refined",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "silhouette_break"
+    ],
+    "meta": {
+      "audio": "sfx"
+    }
+  },
+  {
+    "id": "fail-013",
+    "title": "风格污染（gated 未启用，仅资产）",
+    "description": "hyper-realistic lock 出现 anime 风格词；该 gated rule 当前未启用 → covered=False",
+    "prompt_text": "SCENE NOTE: live-action lock. HYPER-REALISTIC photorealistic detail on every surface, pores and fabric threads visible, yet the crowd renders with anime shading and cartoon eyes, the whole frame flirting with 3d render gloss, breaking the live-action lock.",
+    "language": "en",
+    "tier": "refined",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "style_contamination"
+    ],
+    "meta": {
+      "audio": "dialogue"
+    }
+  },
+  {
+    "id": "fail-014",
+    "title": "暖色光泄漏（gated 未启用，仅资产）",
+    "description": "cold palette lock 出现 warm 词；该 gated rule 当前未启用 → covered=False",
+    "prompt_text": "COLD palette locked for the night sequence, cool palette and zero warm intrusion. CUT 1 - the alley stays blue, then a lantern flares amber, golden light washing the wall, warm tones bleeding into every shadow until the lock is broken.",
+    "language": "en",
+    "tier": "refined",
+    "platform": "generic_video",
+    "quality_score": 2,
+    "source": "seed_failure_samples",
+    "corpus_type": "negative",
+    "applicable_to": "eval",
+    "failure_tags": [
+      "warm_light_leak"
+    ],
+    "meta": {
+      "audio": "sfx"
+    }
+  }
+]

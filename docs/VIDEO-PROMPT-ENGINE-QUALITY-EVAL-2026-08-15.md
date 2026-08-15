@@ -140,6 +140,39 @@ tier 自动判定：refined 101 / batch 157
 - 本次暴露的是**"评测器模式"的缺陷**：把面向引擎自产输出的公式直接用于真实世界纯文本评分时，
   存在 3 处系统性误伤（音频/尾行/长度带）与 1 个硬上限。修复成本低（均为判据/词表级改动），收益直接。
 
+## 8. 修复后复测（2026-08-15，video-corpus-expansion）
+
+> 针对第 4 节问题诊断逐项修复后复测；修复代码：`video_prompt_engine/evaluator.py`（P0-1/P1-1/P1-2/P1-3/P1-4 全部落地）+ 语料/负样本资产化。
+
+### 8.1 修复对照（258 条 Higgsfield 语料，tier=batch 口径）
+
+| 指标 | 修复前 | 修复后 |
+|---|---|---|
+| max 分 | 58.3（评分公式硬上限） | **100**（P0-1 镜头字段文本兜底生效） |
+| mean（length_strict=False 评测口径） | 43.7 | **95.6**（median=100） |
+| mean（length_strict=True 引擎候选口径） | — | 80.0 |
+| missing_trailer 触发 | 48 次 | **0 次**（P1-2 控制段等价识别） |
+| missing_audio 触发 | 73 次 | 47 次（P1-1 显式音频需求：剩余均为语料显式声明无声/意图词不满足） |
+| score>=90（评测口径） | 0 | 231/258（90%） |
+
+### 8.2 负样本校验模式（evaluate_negatives）
+
+新增 `knowledge/seed_failure_samples.json` 14 条失败样本（曝光/死中心/视线/音频/尾行/时间轴/节奏/缺席角色/互换/跨镜承接/剪影/风格污染/暖色泄漏），
+按 failure_tags 与 evaluate() 触发违规匹配：**11 个可判定模式召回 1.0、漏检 0、误报 0**；
+4 个 gated 未启用规则（silhouette_break/style_contamination/warm_light_leak/skin_guard）动态标 covered=False，资产保留、规则启用后自动进入召回统计。
+
+### 8.3 语料资产化与扩充机制
+
+- `scripts/build_corpus_index.py`：glob 合并 `knowledge/corpus/**/*.json` + prompt_text 去重 + 必填/tier/长度/质量分校验，`--strict` fail-closed；产物 `corpus_index.json` 由 loader 显式 extra 并入。
+- 条目格式扩展 `corpus_type`/`failure_tags`/`applicable_to`/`tier`/`meta`：旧条目按 positive+few-shot 归一，零回归（347 条旧条目默认值断言通过）。
+- few-shot 注入排除 negative/eval-only 条目（`rag_retriever._few_shot_eligible`），检索路径仍可访问负样本。
+- 评估器修复与负样本资产已由 `tests/test_eval_fixes.py`（17 项）+ `tests/test_corpus_expansion.py`（13 项）锚定。
+
+### 8.4 剩余边界（诚实记录）
+
+- 俄语等多语种六要素仍受词表限制（仅 en/zh）；语料族级形态（asset/variant）仍未建模独立 tier。
+- 长度带双口径是评测器校准手段，引擎自产输出（length_strict=True）仍按现行带计分。
+- 本报告为确定性评分器 + 语料统计结论；真实 LLM 优化链路与图/视频模型渲染仍需外部凭据验收。
 ## 7. 复现命令
 
 ```bash

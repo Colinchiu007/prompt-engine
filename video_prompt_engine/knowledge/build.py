@@ -21,7 +21,13 @@ def build_knowledge_base(
         persist_dir = Path(__file__).parent.parent.parent / persist_dir
 
     extra = Path(extra_seed_path)
-    prompts = load_seed_video_prompts(Path(seed_path), extra if extra.exists() else None)
+    extra_paths: list[Path] = [extra] if extra.exists() else []
+    for cand in (Path(__file__).parent / "corpus_index.json", Path(__file__).parent / "seed_failure_samples.json"):
+        if cand.exists():
+            extra_paths.append(cand)
+    prompts = load_seed_video_prompts(Path(seed_path), extra_paths)
+    # video-corpus-expansion 组4：负样本不进向量索引（few-shot 注入不需要；检索语义由注入前过滤兜底）
+    prompts = [p for p in prompts if p.corpus_type != "negative"]
     store = PromptVectorStore(persist_dir)
     store.clear()
     store.add_prompts(prompts)
