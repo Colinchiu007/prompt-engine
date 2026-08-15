@@ -1,3 +1,8 @@
+## [未发布] 文档：PRD §13 评估机制补档（2026-08-15）
+
+- `docs/PRD.md` v0.9.4：§13.2.9 新增「语料目录规范 + 负样本资产化 + 评估器误伤修复」；§13.3 资产表补 corpus 目录/负样本/corpus_index；
+  §13.4 从「已知限制」更新为「修复后复测结果 + 评估方法论 + 负样本校验 + 剩余边界」；§13.6 规格条目 21 → 25
+
 ## [未发布] 功能：语料目录规范 + 负样本资产化 + 评估器误伤修复（video-corpus-expansion，2026-08-15）
 
 - **评估器误伤修复（评测器模式校准）**：`missing_audio` 改显式音频需求判定（纯视觉/静态 N/A 不扣分、显式无声仍扣、meta.audio/意图词满足即不扣）；`missing_trailer` 识别控制段等价形态（Duration:/Aspect ratio:/ONE CONTINUOUS SHOT/CUT n/[SHOT/FINAL FRAME/STILLNESS LOCK/SCENE NOTE），不再强制 NON-IP 字面量；长度带双口径 `length_strict`（True=引擎候选口径计分，False=评测用户/语料输入仅提示，checks 保留真实判定）；六要素词表扩充（style 摄影纪实词 + 具体色词 + 中英双语）；镜头字段文本级兜底（纯文本评测不再 58.3 硬顶）
