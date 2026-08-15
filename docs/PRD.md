@@ -2,6 +2,8 @@
 
 > 项目 011 / 图片生成提示词优化引擎
 > 状态：已交付 | 迭代周期：s1-s5 + P0-P4 + F1-F12
+> 注：本文档主章节覆盖图片引擎；视频提示词优化引擎（v0.10+ 独立演进）见 §13，
+> 完整规格见 openspec/specs/video-prompt-engine/spec.md。
 
 ---
 
@@ -621,3 +623,113 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 - compare-tab.js 加载与组件注册名匹配。
 
 **前端交付验证标准（bug-reflection 2026-08-11 沉淀）**：涉及 UI 变更的交付必须用真实浏览器渲染验证（渲染 → 切换每个页签 → 断言内容），curl 静态资源 200 仅证明文件存在，不能证明渲染正确。
+
+---
+
+## 十三、视频提示词优化引擎（v0.10+ 独立演进）
+
+> **背景**：自 v0.10 起，视频提示词优化能力从图片引擎中完全拆分为独立包/服务，并持续吸收开源项目
+> （Higgsfield《Hell Grind》、awesome-video-prompts、seedance2-skill 等）的机制与方法。本文档为产品级摘要，
+> 逐条实现细节见 `openspec/specs/video-prompt-engine/spec.md` 与 `CHANGELOG.md`。
+
+### 13.1 定位与边界
+
+- **独立服务**：`video_prompt_engine/` 独立 Python 包，独立 REST 服务（端口 8020），不 import 图片引擎领域层；
+  仅依赖共享内核 `prompt_engine_core`（llm 超时重试 / 原子写 / 注册器 / 向量检索等机械件）。
+- **目标用户**：AI 视频创作者、短视频团队、自媒体运营（Veo / Seedance / Kling / Hailuo / Doubao / Runway 等）。
+- **与图片引擎关系**：能力对等但领域分离；共享内核保证机械件一致（原子写、超时重试、向量检索），
+  图片/视频领域层（策略、知识库、缓存 key、评估器）各自独立；图片引擎已在 #45 完成能力对齐
+  （多候选择优 / 违规扣分 / tier 层级）。
+
+### 13.2 能力清单（按迭代落地）
+
+#### 13.2.1 独立引擎基础（v0.10.0）
+- 结构化视频输出：shot / camera / motion_intensity / scene_transition / continuity_token / duration_hint，越界收敛、缺失给默认。
+- 策略注册表（@register）：generic_video（六要素 + Fact-Fidelity）、seedance（@引用/多模态约束），未知平台回退 generic_video。
+- 视频关键词库（复用 7 个开源仓库），按维度（镜头/运镜/光影/色彩/风格/场景/动作）中英关键词 + few-shot 种子。
+
+#### 13.2.2 全面增强（video-prompt-engine-enhancement）
+- 知识库扩充至 100+ 种子 + 平台分层；RAG 向量检索 + 关键词命中兜底（命中平台种子 top_k）。
+- 双级缓存（内存 + SQLite），key=platform|prompt|creative_level|max_length|language + style + 组件哈希。
+- JSON 结构化输出失败自动重试（≤2 次，携带"只输出严格 JSON"提示）；`<think>` 推理块剥离。
+- 多候选择优（num_candidates>1 → evaluator 评分取最优）+ 反馈闭环（好/坏反馈沉淀入种子库）。
+- 多平台专项策略：veo / kling / hailuo / doubao（运镜/时长/风格/中文差异）。
+- 批量契约：单批 ≤20 条、有界并发 8、顺序一致、逐条非空、fail-closed。
+- context 白名单注入（synopsis/character/setting/character_list/full_text）+ 敏感键拦截。
+- 输出语言按目标平台路由：国产视频模型（minimax/seedance/kling/hailuo/doubao 等）→ zh，
+  国外模型（veo/runway/sora 等）→ en，避免中文提示词发给 Veo/Runway 的错配。
+
+#### 13.2.3 Higgsfield P0：8020 机制 + lens discipline（#34/#37）
+- 精修层长度判据改为词数刻度 **500–5,000 词**；`max_length` 上浮至 20,000 字符（容纳真实导演分镜单，语料中位约 4,500 词）。
+- lens discipline 规则：character lock / STRICT block / final frame / plausible negative。
+- 违规扣分体系（evaluator）：缺席角色 -10 / swap 被替换 -10 / refined 缺尾行 -10 / 缺 Audio 块 -5 /
+  时间轴缺失 -5 / timing_break -5 / continuity_break -5 / block_coverage -5 / lock-gated 规则 -5。
+- 引用协议标记（`[ABSENT]` / `<<<...>>>`）先剥离防自罚分，同句真实出现仍命中。
+
+#### 13.2.4 DEEP P1：导演风格 / 失败模式 / 角色资产（#38）
+- 导演风格词典（17 位：Lubezki / Deakins / Vinterberg / Villeneuve / 王家卫 / 黑泽明 / 张艺谋 等），
+  style 命中导演名 → 注入 `## Director Style Reference` 块。
+- 失败模式规则库（12 条：曝光/剪影/死中心构图/暖色泄漏/风格污染/皮肤细节/视线镜头感/缺席角色/防替换/时间轴/音频块/节奏），
+  反馈采集累计 `failure_stats.json`。
+- 角色描述符资产库（8 张 Assets 卡：战斗机器人/幸存者/霓虹侦探/义体战士/武侠女侠/老人/蒙面掠夺者/儿童主角），
+  context 命中 → `## Character Reference Library` 块。
+
+#### 13.2.5 DEEP P2：语料资产化 / 抽卡成本模型 / 向量性能（#42）
+- 《Hell Grind》公开语料资产化：`seed_higgsfield_prompts.json` 258 条（590 条原始 → 去重），
+  层级标签 tier:refined/batch/variant/asset；loader 合并加载，few-shot 注入受预算约束（默认 6K 字符，超长截断注入）。
+- 抽卡成本模型：Higgsfield 63:1 分层漏斗 → batch 层 3~5 候选 / refined 层 1~2 候选（见 HELLGRIND-NUM-CANDIDATES-COST-MODEL.md）。
+- 向量检索预计算索引（v2）替代逐查询全库重算，O(n²) → 毫秒级；index.json 版本化 + 陈旧索引启动告警。
+
+#### 13.2.6 共享内核（#40）
+- 新建 `prompt_engine_core`：llm（超时/重试/动态 max_tokens）/ atomic（tmp+os.replace+进程锁）/ registry / config / text / api / knowledge / vector_store。
+- 图片/视频引擎机械件统一走 core，领域层保持独立；净删重复代码约 200 行，行为零回归。
+
+#### 13.2.7 图片引擎 Higgsfield 对齐（#45）
+- 图片侧新增 `evaluate_quality` / `detect_tier` / `select_best`（确定性启发式评分，0-100，无 LLM）。
+- 违规扣分子集：excluded_present -10 / swap_source_present -10；引用协议标记剥离。
+- tier 长度波段（图片适配）：batch en 30-500 词 / refined en 60-2000 词，`creative_level>=7 → refined`。
+- 双向约束字段：`excluded_characters` / `no_swap_pairs`（可选，缺省零行为变化）。
+
+#### 13.2.8 Round3 B/C：跨镜承接 + 导演分镜块骨架（#48）
+- **跨镜承接（continuity_check）**：`prev_final_frame`（≤1000 字符）承载上一镜终态 → 注入 SCENE Continuity 事实引用段；
+  V4 缓存盐加入终态 SHA-1 前缀哈希（承接状态变化缓存必然失效）；
+  英文共享实体命中 ≥40% + 终态实际出现角色名硬命中；中文白名单词重合 ≥60% 或最长公共子串覆盖率 ≥0.5。
+- **导演分镜块骨架（refined_blocks v2）**：590 条语料统计 12 块顺序（SCENE NOTE → SPATIAL LAYOUT → LIGHTING → COLOR →
+  CAMERA → ENVIRONMENT → CONTINUITY → CHARACTERS → SKIN → ACTING → STILLNESS LOCK → FINAL FRAME）+ 块频率；
+  `blocks` 12 键白名单（每键 ≤4000 字符）；12 块顺序渲染 + 尾行安全归一（中段 "Photoreal NON-IP aesthetic" 字面量不误删 FINAL FRAME）。
+- **否定感知 gated 规则**：block_coverage -5（渲染串块标记命中率 <0.8 扣分）；lock-trigger 规则默认启用
+  dead_center / exposure_break / eye_line 三条，仅当 lock 词真实（非否定）出现时检测 forbidden；
+  资产缺失/损坏回退空表 → 规则不启用零误报。
+
+### 13.3 知识库与语料资产
+
+| 资产 | 内容 | 用途 |
+|------|------|------|
+| seed_video_prompts.json | 平台分层种子（100+） | RAG few-shot + 关键词兜底 |
+| seed_higgsfield_prompts.json | 《Hell Grind》258 条真实精修语料 | 高质量参考示例注入（预算约束） |
+| keywords_video.json | 视频关键词词典（7 仓库复用） | 输入增强 / 关键词查询接口 |
+| director_styles.json | 17 位导演/摄影指导风格 | Director Style Reference 注入 |
+| failure_patterns.json | 12 条失败模式规则 | evaluator 扣分 + 反馈采集 |
+| character_descriptors.json | 8 张角色资产卡 | Character Reference Library 注入 |
+| refined_blocks.json | 12 块导演分镜块骨架 v2 | refined 渲染结构 + block_coverage |
+
+### 13.4 评估与择优机制（evaluator）
+
+- 评分公式：长度 20 + 六要素 30 + 镜头字段 50 + 源保真 20，叠加违规扣分，0-100。
+- 多候选择优：`select_best` 按评分降序取最优，`candidates` 降序返回。
+- 已知限制（2026-08-15 质量评估报告）：纯文本评测形态下镜头字段 50 分不可得 → 硬上限 58.3；
+  auto-tier 判据对非引擎格式文本误分层；missing_audio/missing_trailer 对真实语料存在误伤。
+  优化建议见 `docs/VIDEO-PROMPT-ENGINE-QUALITY-EVAL-2026-08-15.md` §5。
+
+### 13.5 依赖开源项目
+
+| 项目 | 用途 |
+|------|------|
+| Higgsfield《Hell Grind》 | 258 条精修语料 + 63:1 分层漏斗机制 + 导演分镜块统计 |
+| awesome-video-prompts / awesome-seedance(-2) / seedance2-skill / drama-skills / img-prompt | 视频关键词库（7 仓库复用） |
+
+### 13.6 参考文档
+
+- 规格：`openspec/specs/video-prompt-engine/spec.md`（21 条需求）与 `openspec/specs/image-prompt-quality/spec.md`
+- 实现细节：`CHANGELOG.md`；成本模型：`docs/HELLGRIND-NUM-CANDIDATES-COST-MODEL.md`
+- 质量评估：`docs/VIDEO-PROMPT-ENGINE-QUALITY-EVAL-2026-08-15.md`
