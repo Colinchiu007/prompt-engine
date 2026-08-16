@@ -10,6 +10,7 @@ import hashlib
 import logging
 import os
 import sqlite3
+import threading
 import time
 from pathlib import Path
 from typing import Optional
@@ -44,6 +45,9 @@ class SqlitePromptCache:
         self._db_path = db_path or str(_DEFAULT_DB_PATH)
         self._ttl_hours = ttl_hours
         self._write_count = 0
+        # 单连接 + 多线程（批量/并发请求）必须串行化 sqlite 访问；RLock 允许
+        # set() 内部调用 vacuum() 重入。
+        self._lock = threading.RLock()
         self._conn: Optional[sqlite3.Connection] = None
         self._init()
 
@@ -55,6 +59,10 @@ class SqlitePromptCache:
                 os.makedirs(db_dir, exist_ok=True)
 
             self._conn = sqlite3.connect(self._db_path, check_same_thread=False)
+            # 多连接并发写同一 db 文件（每请求独立 Optimizer→CacheManager）需要 WAL +
+            # busy_timeout，否则并发 set 触发 `database is locked`（幂等，持久化到文件）。
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA busy_timeout=5000")
             self._conn.row_factory = sqlite3.Row
             self._conn.execute("""
                 CREATE TABLE IF NOT EXISTS prompt_cache (
@@ -145,26 +153,27 @@ class SqlitePromptCache:
         cutoff = time.time() - self._ttl_hours * 3600
 
         try:
-            row = self._conn.execute(
-                "SELECT result_json FROM prompt_cache WHERE cache_key = ? AND created_at > ?",
-                (key, cutoff)
-            ).fetchone()
+            with self._lock:
+                row = self._conn.execute(
+                    "SELECT result_json FROM prompt_cache WHERE cache_key = ? AND created_at > ?",
+                    (key, cutoff)
+                ).fetchone()
 
-            if row:
-                # 更新命中次数
-                self._conn.execute(
-                    "UPDATE prompt_cache SET hit_count = hit_count + 1 WHERE cache_key = ?",
-                    (key,)
-                )
-                self._conn.commit()
+                if row:
+                    # 更新命中次数
+                    self._conn.execute(
+                        "UPDATE prompt_cache SET hit_count = hit_count + 1 WHERE cache_key = ?",
+                        (key,)
+                    )
+                    self._conn.commit()
 
-                result = OptimizeResult.model_validate_json(row["result_json"])
-                # 缓存命中时重置指标
-                result.tokens_used = 0
-                result.duration_ms = 0
-                return result
+                    result = OptimizeResult.model_validate_json(row["result_json"])
+                    # 缓存命中时重置指标
+                    result.tokens_used = 0
+                    result.duration_ms = 0
+                    return result
 
-            return None
+                return None
         except Exception as e:
             logger.warning("SqlitePromptCache.get failed: %s", e)
             return None
@@ -184,21 +193,22 @@ class SqlitePromptCache:
                            context=context, style=style, language=language, provider=provider)
 
         try:
-            self._conn.execute("""
-                INSERT OR REPLACE INTO prompt_cache
-                    (cache_key, prompt, platform, creative_level, max_length,
-                     negative_prompt, num_candidates, result_json, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                key, prompt, platform, creative_level, max_length,
-                negative_prompt, num_candidates,
-                result.model_dump_json(), time.time()
-            ))
-            self._conn.commit()
+            with self._lock:
+                self._conn.execute("""
+                    INSERT OR REPLACE INTO prompt_cache
+                        (cache_key, prompt, platform, creative_level, max_length,
+                         negative_prompt, num_candidates, result_json, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    key, prompt, platform, creative_level, max_length,
+                    negative_prompt, num_candidates,
+                    result.model_dump_json(), time.time()
+                ))
+                self._conn.commit()
 
-            self._write_count += 1
-            if self._write_count % 100 == 0:
-                self.vacuum()
+                self._write_count += 1
+                if self._write_count % 100 == 0:
+                    self.vacuum()
         except Exception as e:
             logger.warning("SqlitePromptCache.set failed: %s", e)
 
@@ -207,14 +217,15 @@ class SqlitePromptCache:
         if not self._check_ready():
             return
         try:
-            cutoff = time.time() - self._ttl_hours * 3600
-            deleted = self._conn.execute(
-                "DELETE FROM prompt_cache WHERE created_at < ?", (cutoff,)
-            ).rowcount
-            if deleted:
-                self._conn.execute("VACUUM")
-                self._conn.commit()
-                logger.info("SqlitePromptCache vacuum: deleted %d expired entries", deleted)
+            with self._lock:
+                cutoff = time.time() - self._ttl_hours * 3600
+                deleted = self._conn.execute(
+                    "DELETE FROM prompt_cache WHERE created_at < ?", (cutoff,)
+                ).rowcount
+                if deleted:
+                    self._conn.execute("VACUUM")
+                    self._conn.commit()
+                    logger.info("SqlitePromptCache vacuum: deleted %d expired entries", deleted)
         except Exception as e:
             logger.warning("SqlitePromptCache.vacuum failed: %s", e)
 
@@ -224,13 +235,14 @@ class SqlitePromptCache:
             return {"entries": 0, "total_hits": 0, "storage": "sqlite(offline)", "ttl_hours": self._ttl_hours}
 
         try:
-            total = self._conn.execute("SELECT COUNT(*) FROM prompt_cache").fetchone()[0]
-            hit_total = self._conn.execute(
-                "SELECT COALESCE(SUM(hit_count), 0) FROM prompt_cache"
-            ).fetchone()[0]
-            oldest = self._conn.execute(
-                "SELECT MIN(created_at) FROM prompt_cache"
-            ).fetchone()[0]
+            with self._lock:
+                total = self._conn.execute("SELECT COUNT(*) FROM prompt_cache").fetchone()[0]
+                hit_total = self._conn.execute(
+                    "SELECT COALESCE(SUM(hit_count), 0) FROM prompt_cache"
+                ).fetchone()[0]
+                oldest = self._conn.execute(
+                    "SELECT MIN(created_at) FROM prompt_cache"
+                ).fetchone()[0]
             return {
                 "entries": total,
                 "total_hits": hit_total,
@@ -253,6 +265,23 @@ class SqlitePromptCache:
 
     def __del__(self):
         self.close()
+
+    def __repr__(self):
+        return f"<SqlitePromptCache {self._db_path} ready={self._check_ready()}>"
+
+
+# 进程级共享实例：rest/mcp 每请求 new Optimizer→CacheManager，若各自持有独立 sqlite
+# 连接，并发访问同一 db 文件会触发 `database is locked`（VACUUM/DELETE 写竞争）。
+# 共享单一连接 + RLock 串行化后，批量/并发请求安全复用同一持久缓存。
+_SHARED_PROMPT_CACHE: Optional["SqlitePromptCache"] = None
+
+
+def get_shared_prompt_cache() -> "SqlitePromptCache":
+    """返回进程级共享 SqlitePromptCache 实例（惰性创建，永不关闭）。"""
+    global _SHARED_PROMPT_CACHE
+    if _SHARED_PROMPT_CACHE is None:
+        _SHARED_PROMPT_CACHE = SqlitePromptCache()
+    return _SHARED_PROMPT_CACHE
 
 
 class MemoryPromptCache:
