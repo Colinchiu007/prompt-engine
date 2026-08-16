@@ -1,12 +1,11 @@
 """AI Router OpenAI 兼容接入契约测试。"""
 
-import asyncio
 import os
 import sys
 import tempfile
 import types
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import yaml
 
@@ -126,34 +125,3 @@ def test_ai_router_provider_passes_auto_model_to_openai(monkeypatch):
     assert provider.model_name == "auto"
     assert result == ("ok", 3)
     assert fake_client.chat.completions.create.call_args.kwargs["model"] == "auto"
-
-
-def test_key_router_can_create_ai_router_provider(monkeypatch):
-    """KeyRouter 应能在没有 OpsCenter 密钥时使用网关项目密钥。"""
-    _ensure_openai_module(monkeypatch)
-    from prompt_engine.key_router import KeyRouter
-
-    router = KeyRouter()
-    router._config = {
-        "llm": {
-            "ai_router": {
-                "api_key": "project-test-key",
-                "base_url": "https://router.example/v1",
-                "model": "auto",
-            }
-        }
-    }
-
-    async def create_provider():
-        with patch(
-            "prompt_engine.key_router.fetch_official_keys",
-            new=AsyncMock(return_value=[]),
-        ):
-            return await router.get_provider("ai_router", user_tier=1)
-
-    provider = asyncio.run(create_provider())
-
-    assert provider._key_source == "config"
-    assert provider.model_name == "auto"
-    assert provider.config["api_key"] == "project-test-key"
-    assert provider.config["base_url"] == "https://router.example/v1"

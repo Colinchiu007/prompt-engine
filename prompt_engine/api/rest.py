@@ -24,7 +24,7 @@ from prompt_engine import storyboard  # noqa: F401 — storyboard strategies aut
 app = FastAPI(
     title="Prompt Engine API",
     description="图片生成提示词优化引擎 - REST API",
-    version="0.19.0",
+    version="0.20.0",
 )
 
 
@@ -84,6 +84,33 @@ def _normalize_optimize_request(request: OptimizeRequest) -> OptimizeRequest:
     return request
 
 
+def _provider_identity(llm) -> str:
+    """BYOK provider 身份（并入缓存键，防跨调用方串 model/key_source 元数据）。"""
+    if llm is None:
+        return ""
+    return f"{llm.provider}|{llm.model}|{llm.base_url or ''}"
+
+
+def _build_provider_for_request(request: OptimizeRequest):
+    """BYOK fail-closed：需要调 LLM 的请求必须携带 llm，缺失/非法返回 422。
+
+    模板直出路径（图片 creative_level<=3）免 LLM，允许不携带。
+    """
+    from prompt_engine.optimizer import requires_llm
+    if not requires_llm(request):
+        return None
+    if request.llm is None:
+        raise HTTPException(
+            status_code=422,
+            detail="llm 必填：调用方需传入自己的模型绑定（provider/model/api_key），引擎不再使用服务端 key 兜底",
+        )
+    try:
+        from prompt_engine.llm.base import BaseLLMProvider
+        return BaseLLMProvider.from_llm_object(request.llm.model_dump())
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
 @lru_cache
 def get_optimizer():
     """线程安全的单例 — lru_cache 保证只构造一次"""
@@ -98,32 +125,17 @@ async def optimize(request: OptimizeRequest):
     _validate_prompt(request.prompt)
     request = _normalize_optimize_request(request)
     try:
+        provider = _build_provider_for_request(request)
         optimizer = get_optimizer()
         # to_thread：optimize 内部包含 LLM 网络调用，直接同步执行会阻塞事件循环，
         # 使 /health 等轻量接口在优化期间无法响应（Bridge watchdog 会误判 unhealthy 并重启，打断在途请求）。
-        result = await asyncio.to_thread(optimizer.optimize, request)
-
-        # If user context provided, use KeyRouter for dynamic provider selection
-        if request.user_tier > 0:
-            from prompt_engine.key_router import KeyRouter
-            router = KeyRouter()
-            provider_type = optimizer._provider.__class__.__name__.lower().replace("provider", "")
-            # Map class name to provider key
-            provider_map = {
-                "openai": "openai_compat", "openaicompat": "openai_compat",
-                "deepseek": "deepseek", "xfyun": "xfyun",
-                "minimax": "minimax", "gemini": "gemini",
-            }
-            provider_key = provider_map.get(provider_type, "deepseek")
-            dynamic_provider = await router.get_provider(
-                provider_key, user_tier=request.user_tier, user_own_key=request.user_own_key
-            )
-            # Re-run optimize with dynamic provider
-            result = await asyncio.to_thread(optimizer.optimize_with_key_router, request, dynamic_provider)
-            result.key_source = dynamic_provider._key_source
-            return result
-
+        result = await asyncio.to_thread(optimizer.optimize, request, provider, _provider_identity(request.llm))
+        if provider is not None:
+            result.key_source = "caller"
+        result.caller = request.caller
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         return OptimizeResult(
             optimized_prompt=request.prompt,
@@ -138,16 +150,22 @@ async def batch_optimize(request: BatchOptimizeRequest):
     """批量优化多条提示词（最多 20 条，有界并发执行）"""
     import asyncio
     optimizer = get_optimizer()
+    normalized = [_normalize_optimize_request(r) for r in request.requests]
+    providers = [_build_provider_for_request(r) for r in normalized]
     # 有界并发：批量上限放大到 20 后，避免一次性对 LLM 发起全量并发请求（每条内部是 LLM 网络调用），
     # 以 8 为并发闸；gather 保证结果顺序与请求顺序一致。
     _BATCH_CONCURRENCY = 8
     semaphore = asyncio.Semaphore(_BATCH_CONCURRENCY)
 
-    async def run_one(req: OptimizeRequest) -> OptimizeResult:
+    async def run_one(req: OptimizeRequest, prov) -> OptimizeResult:
         async with semaphore:
-            return await asyncio.to_thread(optimizer.optimize, req)
+            result = await asyncio.to_thread(optimizer.optimize, req, prov, _provider_identity(req.llm))
+            if prov is not None:
+                result.key_source = "caller"
+            result.caller = req.caller
+            return result
 
-    results = await asyncio.gather(*[run_one(_normalize_optimize_request(r)) for r in request.requests])
+    results = await asyncio.gather(*[run_one(r, p) for r, p in zip(normalized, providers)])
     return results
 
 
@@ -178,7 +196,7 @@ async def list_platforms(domain: str | None = Query(default=None)):
 @app.get("/health")
 async def health_check():
     """健康检查"""
-    return {"status": "ok", "version": "0.4.0"}
+    return {"status": "ok", "version": "0.20.0"}
 
 
 @app.post("/v1/rewrite", response_model=OptimizeResult)

@@ -157,6 +157,18 @@ class AutoStyleRequest(BaseModel):
     max_categories: int = Field(default=5, ge=1, le=10, description="最多返回几个风格类别")
 
 
+class LLMBind(BaseModel):
+    """调用方自带的 LLM 绑定（BYOK）——哪个产品调用引擎，就用哪个产品自己配置的模型/Key。
+
+    字段来自调用方（如桌面版「模型设置」），引擎不再使用服务端 config.yaml / OpsCenter key 兜底。
+    api_key 只用于构建 provider，绝不写入日志。
+    """
+    provider: str = Field(..., min_length=1, max_length=64, description="引擎 provider 注册名：openai_compat / ai_router / sensenova / xfyun / gemini / minimax / deepseek")
+    model: str = Field(..., min_length=1, max_length=128, description="模型名（调用方配置，如 deepseek-v4-flash）")
+    base_url: Optional[str] = Field(default=None, max_length=256, description="OpenAI 兼容 base_url；sensenova 缺省 https://token.sensenova.cn/v1")
+    api_key: str = Field(..., min_length=1, max_length=512, description="调用方自己的 API Key（不落日志）")
+
+
 class OptimizeRequest(BaseModel):
     """优化请求"""
     prompt: str = Field(..., min_length=1, max_length=2000, description="原始提示词")
@@ -165,8 +177,10 @@ class OptimizeRequest(BaseModel):
     style: Optional[StyleType] = Field(default=None, description="艺术风格")
     creative_level: int = Field(default=5, ge=1, le=10, description="创意程度 1-10")
     max_length: int = Field(default=500, ge=50, le=2000, description="优化结果最大字符数")
-    user_tier: int = Field(default=0, ge=0, le=3, description="用户会员等级 0=未指定 1=免费 2=标准 3=专业")
-    user_own_key: Optional[str] = Field(default=None, description="用户自带的 API Key（优先级最高）")
+    user_tier: int = Field(default=0, ge=0, le=3, description="已弃用（BYOK）：服务端 Key 路由不再使用，保留字段仅为 schema 兼容")
+    user_own_key: Optional[str] = Field(default=None, description="已弃用（BYOK）：服务端 Key 路由不再使用，保留字段仅为 schema 兼容")
+    llm: Optional[LLMBind] = Field(default=None, description="BYOK：调用方模型的 LLM 绑定。需要调用 LLM 的请求（图片 creative_level>3 或 video 域）必填，缺失返回 422 fail-closed")
+    caller: Optional[str] = Field(default=None, max_length=64, description="产品标识（如 multi-publish-desktop），透传回结果")
     negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词，避免的元素")
     num_candidates: int = Field(default=1, ge=1, le=5, description="候选版本数量，用于 A/B 测试")
     auto_detect_style: bool = Field(
@@ -212,7 +226,8 @@ class OptimizeResult(BaseModel):
     tokens_used: int = Field(default=0, description="消耗的 token 数")
     duration_ms: float = Field(default=0.0, description="优化耗时（毫秒）")
     candidates: list[str] = Field(default_factory=list, description="多候选版本（A/B 测试时返回）")
-    key_source: str = Field(default="config", description="Key 来源: user/official/config")
+    key_source: str = Field(default="config", description="Key 来源: caller（llm 对象路径）/ config（兼容缺省，仅模板直出等免 LLM 路径）")
+    caller: Optional[str] = Field(default=None, description="产品标识透传（来自请求 caller）")
     error: Optional[str] = Field(default=None, description="出错时的错误信息")
     detected_categories: Optional[StyleCategoryResult] = Field(
         default=None,

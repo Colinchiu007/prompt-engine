@@ -217,6 +217,7 @@ class TestCacheStatsEndpoint:
                 "prompt": "cache test prompt for stats",
                 "platform": "generic",
                 "creative_level": 7,
+                "llm": {"provider": "openai_compat", "model": "gpt-4o", "api_key": "test-key"},
             })
             assert resp.status_code == 200
         resp = client.get("/v1/cache/stats")

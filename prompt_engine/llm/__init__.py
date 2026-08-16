@@ -29,6 +29,7 @@ def create_provider(name: str, **kwargs) -> BaseLLMProvider:
 from prompt_engine.llm.openai_compat import OpenAICompatProvider
 _PROVIDERS["openai_compat"] = OpenAICompatProvider
 _PROVIDERS["ai_router"] = OpenAICompatProvider
+_PROVIDERS["sensenova"] = OpenAICompatProvider
 
 from prompt_engine.llm.xfyun import XfyunProvider
 _PROVIDERS["xfyun"] = XfyunProvider

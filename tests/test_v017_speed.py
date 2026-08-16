@@ -22,7 +22,8 @@ class TestSpeedOptimization:
         from prompt_engine.api.rest import app
         client = TestClient(app)
         resp = client.post("/v1/optimize", json={
-            "prompt": "a cat", "platform": "midjourney", "max_length": 150
+            "prompt": "a cat", "platform": "midjourney", "max_length": 150,
+            "llm": {"provider": "openai_compat", "model": "gpt-4o", "api_key": "test-key"},
         })
-        # 应通过验证（不 400），即使 502（无 LLM key）
+        # 应通过验证（不 400），即使 502（无可用 LLM key）或 200（error 兜底）
         assert resp.status_code in (200, 502, 400), f"Got {resp.status_code}"

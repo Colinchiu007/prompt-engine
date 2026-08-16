@@ -7,6 +7,18 @@
 
 📖 完整使用指南见 [docs/MANUAL.md](docs/MANUAL.md)
 
+## BYOK LLM 绑定（v0.20.0）
+
+调用方（如 Multi-Publish 桌面版）在优化请求中直接携带自己配置的 LLM 绑定：
+
+```json
+{"prompt": "...", "creative_level": 5, "llm": {"provider": "sensenova", "model": "deepseek-v4-flash", "base_url": "https://token.sensenova.cn/v1", "api_key": "sk-..."}, "caller": "multi-publish-desktop"}
+```
+
+- 需调 LLM 的请求（图片 `creative_level>3` 或 `domain=video`）**必须**携带 `llm`，否则 HTTP 422 fail-closed。
+- 图片 `creative_level<=3` 走模板直出，无需 `llm`。
+- 引擎不再使用服务端 config.yaml / OpsCenter key 兜底；LLM 路径 `key_source="caller"`，`caller` 透传到结果。
+
 ## 独立视频提示词优化引擎（video_prompt_engine）
 
 与图片提示词引擎**完全分离**的独立视频引擎（端口 8020，独立知识库/策略/模型/配置，不 import `prompt_engine.*`）。
