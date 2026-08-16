@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from prompt_engine.cache import SqlitePromptCache, MemoryPromptCache
+from prompt_engine.cache import SqlitePromptCache, MemoryPromptCache, get_shared_prompt_cache
 from prompt_engine.models import OptimizeResult
 
 logger = logging.getLogger(__name__)
@@ -94,7 +94,9 @@ class CacheManager:
     """双级缓存管理器：L1 内存（MemoryPromptCache）+ L2 SQLite（SqlitePromptCache）"""
 
     def __init__(self):
-        self._sqlite_cache = SqlitePromptCache()
+        # 进程级共享 SQLite 缓存（单连接 + RLock 串行化），避免每请求独立连接
+        # 并发写同一 db 文件触发 `database is locked`（每请求 new Optimizer 场景）。
+        self._sqlite_cache = get_shared_prompt_cache()
         self._mem_cache = MemoryPromptCache()
 
     def make_key(

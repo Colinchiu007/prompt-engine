@@ -81,6 +81,64 @@ class TestSqliteCacheBasic:
         finally:
             cache2.close()
 
+    def test_concurrent_get_set_no_sqlite_misuse(self):
+        """并发读写同一 sqlite 连接不得触发 bad parameter or other API misuse（批量场景回归）"""
+        import threading
+
+        errors = []
+
+        def worker(i):
+            try:
+                result = self._make_result(f"concurrent {i}")
+                self.cache.set(f"prompt-{i}", "midjourney", 7, 500, "", 1, result)
+                got = self.cache.get(f"prompt-{i}", "midjourney", 7, 500, "", 1)
+                if got is None or got.optimized_prompt != f"concurrent {i}":
+                    errors.append(f"readback mismatch for {i}")
+                # 未写入的 key 也不应抛异常
+                self.cache.get(f"prompt-{i}-missing", "midjourney", 7, 500, "", 1)
+                self.cache.stats()
+            except Exception as e:
+                errors.append(f"{i}: {e!r}")
+
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(16)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert errors == [], errors
+        assert self.cache.stats()["entries"] == 16
+
+    def test_shared_cache_concurrent_safe(self):
+        """进程级共享缓存（单连接 + RLock）多线程并发读写不得 database is locked"""
+        import threading
+
+        import prompt_engine.cache as cache_mod
+        from prompt_engine.cache_manager import CacheManager
+
+        # 单例契约：多次获取同一实例（避免每请求独立连接）
+        assert cache_mod.get_shared_prompt_cache() is cache_mod.get_shared_prompt_cache()
+
+        errors = []
+
+        def worker(i):
+            try:
+                cm = CacheManager()
+                cm.set(f"shared-{i}", "midjourney", 7, 500, "", 1, self._make_result(f"shared {i}"))
+                got = cm.get(f"shared-{i}", "midjourney", 7, 500, "", 1)
+                if got is None or got.optimized_prompt != f"shared {i}":
+                    errors.append(f"readback mismatch for {i}")
+            except Exception as e:
+                errors.append(f"{i}: {e!r}")
+
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(12)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert errors == [], errors
+
 
 class TestSqliteCacheTTL:
     """TTL 过期清理"""
