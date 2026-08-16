@@ -1,3 +1,10 @@
+## [未发布] 变更：视频提示词 max_length 上限 20000 → 40000（video-maxlength-40000，2026-08-16）
+
+- **`VideoOptimizeRequest.max_length` 校验上界 20000 → 40000**：精修层/显式顶格路径（对齐 Multi-Publish 契约层 `videoMaxLengthMax=40000`），容纳更长导演分镜单；批量默认 1800、`ge=200` 不变。
+- **feedback `result_prompt` 上限同步 40000**：沿用 5000→20000 同步先例，精修层长结果可回传种子库/质量降级闭环（评审 W2 口径）。
+- **注释同步**：llm 两处「≤20000 字符」→ 40000；max_tokens 默认 cap 16384 与 `llm.max_tokens_cap` 逻辑不动（40000 理论 80000 仍被 cap 压回，防上游 400）。
+- **测试**：models 边界 20000/20001 → 40000/40001（max_length + feedback 两处）；全量回归零变化（评估器/批量上界 833/refined 词数刻度不随上界改变）。
+
 ## [未发布] 功能：调用方 BYOK llm 绑定 + 移除服务端 key 兜底（byok-llm-object，2026-08-16）
 
 - **BYOK 契约**：`/v1/optimize`、`/v1/optimize/batch` 支持调用方自带的 `llm` 对象（provider/model/base_url/api_key）+ 可选 `caller` 产品标识；需调 LLM 的请求（图片 creative_level>3 / video 域）缺 `llm` 即 HTTP 422 fail-closed；图片 creative_level≤3 模板直出保持免 LLM。
