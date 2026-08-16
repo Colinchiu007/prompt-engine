@@ -1,0 +1,13 @@
+{
+  "id": "prompt-engine-byok-llm",
+  "title": "提示词引擎 BYOK：llm 对象 + caller + 取消 config/OpsCenter key 兜底（B 完整版）",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "high",
+  "domain": "prompt-engine",
+  "currentPhase": "completed",
+  "nextAction": "已合并/归档（由质量节拍交付阶段执行）",
+  "createdAt": "2026-08-16T12:00:00Z",
+  "branch": "codex/byok-llm-object",
+  "openspecChange": "byok-llm-object"
+}

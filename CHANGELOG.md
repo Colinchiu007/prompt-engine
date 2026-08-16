@@ -1,3 +1,10 @@
+## [未发布] 功能：调用方 BYOK llm 绑定 + 移除服务端 key 兜底（byok-llm-object，2026-08-16）
+
+- **BYOK 契约**：`/v1/optimize`、`/v1/optimize/batch` 支持调用方自带的 `llm` 对象（provider/model/base_url/api_key）+ 可选 `caller` 产品标识；需调 LLM 的请求（图片 creative_level>3 / video 域）缺 `llm` 即 HTTP 422 fail-closed；图片 creative_level≤3 模板直出保持免 LLM。
+- **移除服务端兜底**：删除 `key_router.py` / `ops_client.py`（config.yaml 兜底 key + OpsCenter 官方 Key 路径）与 `optimize_with_key_router` 死调用；`Optimizer.__init__` config provider 构造容错（无 key 部署可启动）。
+- **缓存隔离修复**：缓存键并入 provider 身份（provider|model|base_url），修复 `make_key` provider 追加死代码（原 return 在 provider 后缀之前）与 SQLite L2 漏传 provider 的双级缓存键不一致。
+- **版本 0.19.0 → 0.20.0**；新增 `tests/test_llm_object.py`（LLMBind 契约/422 fail-closed/caller 透传/key_source/缓存 provider 隔离），全量测试 975 passed / 3 skipped / 1 warning。
+
 ## [未发布] 文档：PRD §13 评估机制补档（2026-08-15）
 
 - `docs/PRD.md` v0.9.4：§13.2.9 新增「语料目录规范 + 负样本资产化 + 评估器误伤修复」；§13.3 资产表补 corpus 目录/负样本/corpus_index；

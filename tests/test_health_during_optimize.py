@@ -20,7 +20,7 @@ class SlowOptimizer:
         self._provider = type("P", (), {"model_name": "slow"})()
         self._provider._key_source = "test"
 
-    def optimize(self, request):
+    def optimize(self, request, provider=None, provider_id=""):
         time.sleep(2)
         from prompt_engine.models import OptimizeResult
         return OptimizeResult(
@@ -29,10 +29,6 @@ class SlowOptimizer:
             style=request.style,
             model_used="slow",
         )
-
-    def optimize_with_key_router(self, request, provider):
-        return self.optimize(request)
-
 
 @pytest.mark.asyncio
 async def test_health_responsive_while_optimize_in_flight(monkeypatch):
@@ -43,7 +39,10 @@ async def test_health_responsive_while_optimize_in_flight(monkeypatch):
         health_task = asyncio.create_task(client.get("/health"))
         await asyncio.sleep(0.2)  # 让 optimize 先开始阻塞旧实现
         opt_task = asyncio.create_task(
-            client.post("/v1/optimize", json={"prompt": "a cat", "platform": "generic", "style": "realistic"})
+            client.post("/v1/optimize", json={
+                "prompt": "a cat", "platform": "generic", "style": "realistic",
+                "llm": {"provider": "openai_compat", "model": "gpt-4o", "api_key": "test-key"},
+            })
         )
         health = await health_task
         health_latency = time.time() - t0
@@ -62,8 +61,14 @@ async def test_concurrent_optimizes_run_in_parallel(monkeypatch):
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         t0 = time.time()
         results = await asyncio.gather(
-            client.post("/v1/optimize", json={"prompt": "a cat", "platform": "generic", "style": "realistic"}),
-            client.post("/v1/optimize", json={"prompt": "a dog", "platform": "generic", "style": "realistic"}),
+            client.post("/v1/optimize", json={
+                "prompt": "a cat", "platform": "generic", "style": "realistic",
+                "llm": {"provider": "openai_compat", "model": "gpt-4o", "api_key": "test-key"},
+            }),
+            client.post("/v1/optimize", json={
+                "prompt": "a dog", "platform": "generic", "style": "realistic",
+                "llm": {"provider": "openai_compat", "model": "gpt-4o", "api_key": "test-key"},
+            }),
         )
         elapsed = time.time() - t0
         assert all(r.status_code == 200 for r in results)

@@ -185,6 +185,7 @@ class TestVideoOptimizeEndpoint:
             "domain": "video",
             "platform": "generic_video",
             "creative_level": 5,
+            "llm": {"provider": "openai_compat", "model": "gpt-4o", "api_key": "test-key"},
         })
         assert resp.status_code == 200, resp.text
         data = resp.json()
@@ -207,8 +208,10 @@ class TestVideoOptimizeEndpoint:
         client = self._client_with_mocked_llm(monkeypatch)
         resp = client.post("/v1/optimize/batch", json={
             "requests": [
-                {"prompt": "scene one", "domain": "video", "platform": "generic_video", "creative_level": 5},
-                {"prompt": "scene two", "domain": "video", "platform": "generic_video", "creative_level": 5},
+                {"prompt": "scene one", "domain": "video", "platform": "generic_video", "creative_level": 5,
+                 "llm": {"provider": "openai_compat", "model": "gpt-4o", "api_key": "test-key"}},
+                {"prompt": "scene two", "domain": "video", "platform": "generic_video", "creative_level": 5,
+                 "llm": {"provider": "openai_compat", "model": "gpt-4o", "api_key": "test-key"}},
             ]
         })
         assert resp.status_code == 200, resp.text

@@ -1,6 +1,7 @@
 """Optimizer — 核心编排器（支持 RAG few-shot 注入）"""
 import logging
 import re
+import threading
 import time
 from pathlib import Path
 from typing import Optional
@@ -39,6 +40,15 @@ from prompt_engine.prompt_builder import PromptBuilder
 logger = logging.getLogger(__name__)
 
 
+def requires_llm(request: OptimizeRequest) -> bool:
+    """判断请求是否必须调用 LLM（用于 rest 边界 BYOK fail-closed）。
+
+    与 optimize() 内模板直出分支同源：图片 creative_level<=3 走模板免 LLM；
+    video 域依赖 LLM 结构化输出。rest 层据此在 llm 缺失时返回 422。
+    """
+    return request.domain == DomainType.VIDEO or request.creative_level > 3
+
+
 class Optimizer:
     """提示词优化引擎核心编排器
 
@@ -52,12 +62,20 @@ class Optimizer:
 
     def __init__(self, config: Optional[dict] = None):
         self.config = config or load_config()
-        self._provider = BaseLLMProvider.from_config(self.config)
+        # BYOK：config provider 仅作为 rewrite/reverse 等非 optimize 端点的缺省。
+        # 无 key 部署下构造失败不阻断启动（失败置 None，调用处返回可操作错误）。
+        self._provider = None
+        try:
+            self._provider = BaseLLMProvider.from_config(self.config)
+        except Exception as e:
+            logger.warning("config LLM provider 初始化失败（BYOK 部署可忽略，优化路径由请求 llm 对象驱动）: %s", e)
         self._cat_classifier = StyleCategoryClassifier()
         self._cache = CacheManager()
-        self._llm_caller = LLMCaller(self._provider)
+        self._llm_caller = LLMCaller(self._provider) if self._provider else None
         self._rag = RAGRetriever(self.config)
         self._prompt_builder = PromptBuilder()
+        # 线程本地：per-request BYOK provider（batch 并发时各线程独立，不污染单例）
+        self._local = threading.local()
 
     # ── 向后兼容属性 ────────────────────────────────────────────
 
@@ -88,8 +106,11 @@ class Optimizer:
     # ── LLM 调用 ────────────────────────────────────────────────
 
     def _call_llm(self, system_prompt: str, user_prompt: str, variant: int = 0) -> tuple[str, int]:
-        """调用 LLM"""
-        return self._llm_caller.call(system_prompt, user_prompt, variant)
+        """调用 LLM（BYOK：优先使用当前请求线程绑定的 llm_caller）"""
+        caller = getattr(self._local, "llm_caller", None) or self._llm_caller
+        if caller is None:
+            raise RuntimeError("未配置 LLM provider：请通过请求 llm 对象传入调用方模型绑定（BYOK）")
+        return caller.call(system_prompt, user_prompt, variant)
 
     def _call_vision_llm(self, system_prompt: str, image_url: str, detail: str = "auto") -> tuple[str, int]:
         """调用视觉 LLM 分析图片"""
@@ -100,29 +121,32 @@ class Optimizer:
     def _cache_key(self, prompt: str, platform: str, creative_level: int,
                    max_length: int, negative_prompt: str, num_candidates: int,
                    excluded_characters=None, no_swap_pairs=None,
-                   context=None, style=None, language: str = "en") -> str:
+                   context=None, style=None, language: str = "en",
+                   provider: str = "") -> str:
         return self._cache.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
                                     excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-                                    context=context, style=style, language=language)
+                                    context=context, style=style, language=language, provider=provider)
 
     def _cache_get(self, prompt: str, platform: str, creative_level: int,
                    max_length: int, negative_prompt: str, num_candidates: int,
                    excluded_characters=None, no_swap_pairs=None,
-                   context=None, style=None, language: str = "en") -> Optional[OptimizeResult]:
+                   context=None, style=None, language: str = "en",
+                   provider: str = "") -> Optional[OptimizeResult]:
         """双级缓存读取：L1 内存 → L2 SQLite（预热 L1）"""
         return self._cache.get(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
                                excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-                               context=context, style=style, language=language)
+                               context=context, style=style, language=language, provider=provider)
 
     def _cache_set(self, prompt: str, platform: str, creative_level: int,
                    max_length: int, negative_prompt: str, num_candidates: int,
                    result: OptimizeResult,
                    excluded_characters=None, no_swap_pairs=None,
-                   context=None, style=None, language: str = "en"):
+                   context=None, style=None, language: str = "en",
+                   provider: str = ""):
         """写入双级缓存"""
         self._cache.set(prompt, platform, creative_level, max_length, negative_prompt, num_candidates, result,
                         excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-                        context=context, style=style, language=language)
+                        context=context, style=style, language=language, provider=provider)
 
     # ── 核心编排方法 ───────────────────────────────────────────
 
@@ -138,9 +162,16 @@ class Optimizer:
         for key in unknown:
             logging.getLogger("prompt_engine.optimizer").warning("unknown context key ignored: %s", key)
 
-    def optimize(self, request: OptimizeRequest) -> OptimizeResult:
-        """单条提示词优化主流程"""
+    def optimize(self, request: OptimizeRequest, provider: Optional[BaseLLMProvider] = None,
+                provider_id: str = "") -> OptimizeResult:
+        """单条提示词优化主流程
+
+        BYOK：provider 为调用方经 llm 对象构建的 provider（rest 层传入）；缺省回退 config 单例。
+        provider_id 非空时并入缓存键（provider|model 身份），避免跨调用方共享缓存串模型元数据。
+        """
         start_time = time.time()
+        effective_provider = provider or self._provider
+        _bound_caller = False
         try:
             # ✨ 双级缓存检查（SQLite + 内存）— Round3 T1：key 全组件化（约束/context/style/语言），防串号
             cache_language = "zh" if re.search(r"[一-鿿]", request.prompt) else "en"
@@ -154,6 +185,7 @@ class Optimizer:
                 context=request.context,
                 style=cache_style,
                 language=cache_language,
+                provider=provider_id,
             )
             if cached:
                 logger.info("Cache hit: %s @ %s", request.prompt[:50], request.platform.value)
@@ -164,6 +196,13 @@ class Optimizer:
                 logger.info("Template render: creative_level=%d, %s @ %s",
                             request.creative_level, request.prompt[:50], request.platform.value)
                 return self._render_from_template(request)
+
+            if effective_provider is None:
+                raise RuntimeError("未配置 LLM provider：请通过请求 llm 对象传入调用方模型绑定（BYOK，引擎不再使用服务端 key 兜底）")
+
+            # BYOK per-request caller：绑定到当前线程，_call_llm 优先使用；finally 清理防跨请求串用
+            self._local.llm_caller = LLMCaller(effective_provider)
+            _bound_caller = True
 
             detected_result: Optional[StyleCategoryResult] = None
 
@@ -297,7 +336,7 @@ class Optimizer:
                 optimized_prompt=optimized_prompt,
                 platform=request.platform,
                 style=effective_style if effective_style != request.style else request.style,
-                model_used=self._provider.model_name,
+                model_used=effective_provider.model_name,
                 tokens_used=total_tokens,
                 duration_ms=round(elapsed, 1),
                 candidates=ordered_candidates if num > 1 else [],
@@ -314,6 +353,7 @@ class Optimizer:
                 context=request.context,
                 style=cache_style,
                 language=cache_language,
+                provider=provider_id,
             )
             return result
 
@@ -324,11 +364,17 @@ class Optimizer:
                 optimized_prompt=request.prompt,
                 platform=request.platform,
                 style=request.style,
-                model_used=self._provider.model_name,
+                model_used=effective_provider.model_name if effective_provider else "",
                 tokens_used=0,
                 duration_ms=round(elapsed, 1),
                 error=str(e),
             )
+        finally:
+            if _bound_caller:
+                try:
+                    delattr(self._local, "llm_caller")
+                except AttributeError:
+                    pass
 
     def rewrite(self, request: OptimizeRequest) -> OptimizeResult:
         """Prompt 扩写：将简短提示词扩展为详细图像生成描述（灵感来自 Infinity 项目）"""
@@ -550,4 +596,3 @@ class Optimizer:
     def _do_optimize_sync(self, request: OptimizeRequest) -> OptimizeResult:
         """同步执行优化（供 _call_llm_with_timeout 调用）"""
         return self.optimize(request)
-

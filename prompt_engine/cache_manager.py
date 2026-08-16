@@ -102,11 +102,12 @@ class CacheManager:
         max_length: int, negative_prompt: str, num_candidates: int,
         excluded_characters=None, no_swap_pairs=None,
         context=None, style=None, language: str = "en",
+        provider: str = "",
     ) -> str:
         return SqlitePromptCache.make_key(
             prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
             excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-            context=context, style=style, language=language,
+            context=context, style=style, language=language, provider=provider,
         )
 
     def get(
@@ -114,11 +115,12 @@ class CacheManager:
         max_length: int, negative_prompt: str, num_candidates: int,
         excluded_characters=None, no_swap_pairs=None,
         context=None, style=None, language: str = "en",
+        provider: str = "",
     ) -> Optional[OptimizeResult]:
         """双级缓存读取：L1 内存 → L2 SQLite（预热 L1）"""
         key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
                             excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-                            context=context, style=style, language=language)
+                            context=context, style=style, language=language, provider=provider)
         # L1
         cached = self._mem_cache.get(key)
         if cached:
@@ -126,7 +128,7 @@ class CacheManager:
         # L2
         cached = self._sqlite_cache.get(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
                                         excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-                                        context=context, style=style, language=language)
+                                        context=context, style=style, language=language, provider=provider)
         if cached:
             self._mem_cache.set(key, cached)  # 预热 L1
             return cached
@@ -138,15 +140,16 @@ class CacheManager:
         result: OptimizeResult,
         excluded_characters=None, no_swap_pairs=None,
         context=None, style=None, language: str = "en",
+        provider: str = "",
     ) -> None:
         """写入双级缓存"""
         key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
                             excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-                            context=context, style=style, language=language)
+                            context=context, style=style, language=language, provider=provider)
         self._mem_cache.set(key, result)
         self._sqlite_cache.set(prompt, platform, creative_level, max_length, negative_prompt, num_candidates, result,
                                excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-                               context=context, style=style, language=language)
+                               context=context, style=style, language=language, provider=provider)
         # 同时写入旧版 dict 缓存（兼容 fuzzy_match_prompt）
         _PromptCache[(prompt.strip().lower(), platform, creative_level, max_length, negative_prompt, num_candidates)] = result
 
