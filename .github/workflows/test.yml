@@ -35,6 +35,12 @@ jobs:
         run: |
           pytest tests/ -q --tb=short --ignore=tests/test_web_e2e.py --ignore=tests/test_qa_comprehensive.py --ignore=tests/test_infinity_features.py --ignore=tests/test_v010_engineering.py
 
+      - name: Corpus 258 sentinel gate
+        # Round3 P0-3：独立 step（258×evaluate ≈1 分钟，进 5 分钟 pytest job 会顶爆超时）
+        run: |
+          python scripts/eval_corpus_258.py
+        timeout-minutes: 10
+
       - name: Health check
         run: |
           nohup python -m uvicorn prompt_engine.api.rest:app --port 8000 --host 127.0.0.1 &

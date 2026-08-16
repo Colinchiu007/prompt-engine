@@ -353,3 +353,26 @@ Multi-Publish videogen SHALL 支持配置切换至独立视频引擎（8020）�
 - **WHEN** 运行 scripts/eval_golden_set.py 与 258 语料复测
 - **THEN** golden MAE≤18 且 Pearson r≥0.90；258 mean 跌幅 ≤2.0 且 ≥90 占比跌幅 ≤5pp
 
+### Requirement: 评估器 round3（zh/ru 长度兜底/CJK 合成词词表/258 哨兵门禁/正则缓存/镜头分型 instrumentation/无 source 缩放封顶）
+视频引擎 evaluator SHALL 支持：`detect_tier` 语言感知长度兜底（`language` 参数默认 en 向后兼容；zh/ru 按字符刻度 `len(prompt)>2000 → refined`，与 zh/ru batch 带上界联动，length_fallback/tier_auto/trailer_waiver 三处同步，缺失时 3000 字中文转 refined 不产生 missing_trailer 误伤）；refined 层音频意图词覆盖 zh/ru（音效/配乐/对话/旁白/音乐/背景音乐… + звук/музыка/речь/голос/диалог/эффект）；zh 六要素词表 v3（去全部单字补合成词，subject 保留「人」为刻意例外，资产 version 3 随 `_asset_fingerprint` 自动反映）；镜头/机位/运动分型 instrumentation（`checks.shot_types/camera_types/motion_types` + `*_count`，保守词表禁裸 still/wide/extreme/摇，运镜型归 motion 不归 shot，否定感知 no/without/never 与 无/不/没有 前缀，零分数影响）；`_WORD_BOUNDARY_RE`/`_CYRILLIC_BOUNDARY_RE`/`_TYPE_NEGATION_RE` lru_cache(2048) 正则缓存（键仅 token、线程安全、maxsize 防跨镜承接/角色名等动态 token 无界膨胀，淘汰后重编译正确性不变）；无 source 缩放封顶 `score = min(score, 90 + 7*elements_score)`（≤97，100 保留给「source 保真已验证」独占空间，有 source 不封顶，elements_score 双重使用于 docstring 注明）；258 语料哨兵门禁 `scripts/eval_corpus_258.py`（固定路径读种子文件并断言 total==258，三路语言判定 CJK→zh/西里尔→ru/else en，`--json`，退出码 0/1/2，CI 独立 step timeout 10 分钟，门禁 mean≥88.0/ge90≥190/lt60≤30/missing_audio≤40 先宽后紧）；`evaluator_version` 升 v0.12-deterministic。
+
+#### Scenario: zh/ru 字符刻度长度兜底
+- **WHEN** 无引擎标记中文 2500 字且 language=zh（或俄语 2500 字 language=ru）
+- **THEN** detect_tier 判 refined、tier_auto=length、missing_trailer 豁免；1900 字仍判 batch；en 默认路径词数兜底行为不变
+
+#### Scenario: CJK 合成词词表
+- **WHEN** 正文含 角色/曝光/时光/金属/绝望/战术/中景/远景
+- **THEN** color/lighting/color/color/action/action/environment/environment 均不命中；红色/奔跑/室内/灯光/将军 仍命中；subject「人」例外保留（四个人）
+
+#### Scenario: 镜头分型 instrumentation
+- **WHEN** 正文含 "Wide close-up of a man"、"no rotation, camera static"、"slow pan with zoom"
+- **THEN** shot_types=[wide,closeup]/count 2；motion_types 不含 rotate（否定感知）而含 pan/zoom；has_shot 等既有布尔计分不变（零分数影响）
+
+#### Scenario: 无 source 缩放封顶
+- **WHEN** 无 source 且六要素全中（elements_score=1.0）
+- **THEN** score≤97（实测 hg-scene_74-020 恰落 97.0）；elements_score=0.833 → ≤95.8；带 source 且保真 1.0 样本仍可到 100；短卡地板（43.1/44.4/55.6/39.7）不塌
+
+#### Scenario: 258 哨兵门禁（重定基）
+- **WHEN** CI 运行 python scripts/eval_corpus_258.py
+- **THEN** n==258 且 mean≥88.0/ge90≥190/lt60≤30/missing_audio≤40；round3 重定基值 mean=91.0/ge90=216/ge80=225/lt60=20/missing_audio=20（mean -1.3 为缩放封顶设计意图）
+

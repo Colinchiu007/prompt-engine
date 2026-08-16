@@ -89,7 +89,9 @@
 - 注入：`## 输入题材/镜头意图检测（仅供参考，不得改变事实）` + 题材/镜头意图/建议维度；**不改变事实**（Fact-Fidelity 优先）。
 
 ### 3.7 评估与反馈
-- `evaluator.py`：score = 长度(20) + 六要素(30) + shot(20) + camera(15) + motion(15) + 保真(20)，0-100；zh 长度按字符（batch 120-2000 / refined 500-5000），en 按词（batch 100-400 / refined 500-max(500, max_length//5)）。
+- `evaluator.py`（v0.12-deterministic，2026-08-16）：score = 长度(20) + 六要素(30) + shot(20) + camera(15) + motion(15) + 保真(20)，0-100；zh 长度按字符（batch 120-2000 / refined 500-5000），en 按词（batch 100-400 / refined 500-max(500, max_length//5)）。
+- **round2 能力（v0.11）**：跨语言保真门控（zh↔en 要素守恒+镜头结构+长度比）；中文名字边界（长名覆盖守卫）；违规分级量化 `checks.violations_detail`；`evaluator_version`+`assets` sha256 指纹（rest.py meta 同源）；`_batch_hi` 阈值单一来源（400-833 联动 + 长度兜底豁免 missing_trailer）；六要素拉丁词词边界；RU 词表补齐；空输入显式 0 分契约；`select_best(detail=True)` 4 元组 + tie-break 总惩罚量；advice 按惩罚降序。
+- **round3 能力（v0.12）**：zh/ru 字符刻度长度兜底（`detect_tier(language=...)`，>2000 字符 → refined，与 zh/ru batch 带上界联动，trailer 豁免三处同步）；refined 音频意图词覆盖 zh/ru（中文长精修不再恒 -5）；zh 六要素词表 v3（去单字补合成词，subject 保留「人」例外，资产 version 3）；镜头/机位/运动分型 instrumentation（`checks.shot_types/camera_types/motion_types` + count，否定感知，零分数影响——分数梯度留给 round4 数据驱动）；正则 lru_cache(2048)（258 复测提速）；**无 source 缩放封顶 `min(score, 90+7*elements_score)`**（100 保留给保真已验证；golden MAE 15.77→14.85、r 0.920；短卡地板不塌）；258 语料哨兵门禁 `scripts/eval_corpus_258.py`（CI 独立 step）。
 - 多候选择优：`select_best` 返回最高分候选；`candidates` 按分降序。
 - `feedback.py`：`POST /v1/video/feedback`，prompt_text/result_prompt 空值 422；好评 → 结果提示词入反馈种子文件（quality_score=9，id 时间戳防撞）；坏评 → 匹配源提示词质量分 -1（最低 1）。**落盘路径为可写数据目录**（默认 `video_prompt_cache/feedback_seed.json`，`VIDEO_FEEDBACK_PATH` 覆盖），避免写入 wheel 包内只读的 `knowledge/seed_video_prompts.json`；进程内锁 + 原子写（临时文件 + replace）防并发丢失更新。
 
@@ -184,3 +186,5 @@
 ## 7. 版本历史
 - v1.0（2026-08-12）：初版（独立引擎 + 视频关键词库 + 分离边界）。
 - v2.0（2026-08-12）：全面增强（140 种子/双级缓存/JSON 重试/四平台策略/输入分类/评估反馈/中文输出/videogen 集成）。
+- v2.1（2026-08-16，评估器 round2）：跨语言保真/中文名字边界/违规量化/版本指纹/阈值联动/golden 门禁（MAE≤18、r≥0.90）。
+- v2.2（2026-08-16，评估器 round3）：zh/ru 长度兜底/CJK 词表 v3/258 哨兵门禁/正则缓存/镜头分型 instrumentation/无 source 缩放封顶（golden MAE 14.85、r 0.920、258 重定基 91.0/216/20/20）。
