@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 
 from video_prompt_engine.evaluator import (
-    evaluate, detect_tier, _EVALUATOR_VERSION,
-    _WORD_BOUNDARY_RE, _TYPE_NEGATION_RE,
+    evaluate, detect_tier, detect_lang, _EVALUATOR_VERSION,
+    _WORD_BOUNDARY_RE,
     _SHOT_TYPE_WORDS, _MOT_TYPE_WORDS, _collect_types,
 )
 from scripts.eval_corpus_258 import compute_metrics, check_gate, detect_lang
@@ -49,22 +49,30 @@ class TestZhRuLengthFallback:
 # ─────────────────────────── 组2：CJK 合成词词表 v3（P0-2） ───────────────────────────
 
 class TestCjkVocabV3:
-    def test_vocab_version_3(self):
+    def test_vocab_version_4(self):
         kw, _ = load_element_keywords()
         path = Path(__file__).resolve().parent.parent / "prompt_engine_core" / "knowledge" / "element_keywords.json"
         data = json.loads(path.read_text(encoding="utf-8"))
-        assert data["version"] == 3
+        assert data["version"] == 4  # v4：评审 W2 补 zh 动作高频形态（走着/跑来/挥手…）
         assert "人物" in kw["subject"]["zh"]
         assert "奔跑" in kw["action"]["zh"]
+        assert "走着" in kw["action"]["zh"]
 
     def test_single_char_mis_hits_removed(self):
-        # 角色/曝光/时光/金属/绝望/战术 均为单字误击案例，v3 后必须零命中
-        r = evaluate("角色在曝光时光里看着金属战术背包", {}, "", "zh", tier="batch")
+        # 角色/曝光/时光/金属/战术 均为单字误击案例，v3 去单字后必须零命中
+        r = evaluate("角色在曝光时光里的金属战术背包", {}, "", "zh", tier="batch")
         d = r["checks"]["elements_detail"]
         assert d["color"]["hit"] is False       # 色 → 角色
         assert d["lighting"]["hit"] is False    # 光 → 曝光/时光
-        assert d["action"]["hit"] is False      # 战 → 战术 / 望 → 绝望
+        assert d["action"]["hit"] is False      # 战 → 战术（单字误击）
         assert d["environment"]["hit"] is False
+
+    def test_action_inflected_forms_recalled(self):
+        # 评审 W2：v4 补高频动作形态（走着/跑来/挥手…），子串命中恢复召回
+        r = evaluate("将军走着，小孩跑来，挥手告别", {}, "", "zh", tier="batch")
+        d = r["checks"]["elements_detail"]
+        assert d["action"]["hit"] is True
+        assert d["action"]["words"] == ["走着", "跑来", "挥手"]
 
     def test_scene_words_not_environment(self):
         r = evaluate("中景与远景切换", {}, "", "zh", tier="batch")
@@ -135,10 +143,13 @@ class TestRegexCache:
         assert info.hits > 0
         assert info.currsize <= 2048
 
-    def test_negation_re_cached(self):
-        _TYPE_NEGATION_RE.cache_clear()
-        evaluate("no rotation, camera static", {})
-        assert _TYPE_NEGATION_RE.cache_info().currsize <= 2048
+    def test_word_boundary_cache_bounded_after_multiple_evaluations(self):
+        # 评审 W1：_TYPE_NEGATION_RE 已删除（分句否定复用 _occurrence_is_negated），
+        # 缓存有界性由 _WORD_BOUNDARY_RE 覆盖（动态 token 场景不无界膨胀）
+        _WORD_BOUNDARY_RE.cache_clear()
+        for i in range(50):
+            evaluate(f"token_{i} moves and fights, no camera pan", {}, "", "en")
+        assert _WORD_BOUNDARY_RE.cache_info().currsize <= 2048
 
 
 # ─────────────────────────── 组5：镜头分型 instrumentation（P1-2） ───────────────────────────
@@ -159,6 +170,21 @@ class TestShotTypeInstrumentation:
         r = evaluate("no rotation, camera static", {}, "", "en")
         assert r["checks"]["motion_types"] == []          # no rotation 否定感知
         assert r["checks"]["camera_types"] == ["cam_position"]
+
+    def test_motion_negation_clause_scoped(self):
+        # 评审 W1：否定按分句全出现语义——前半正向不得被后半否定整体抑制
+        r = evaluate("tracking shot, but no tracking in the second half", {}, "", "en")
+        assert "tracking" in r["checks"]["shot_types"]
+        assert "track" in r["checks"]["motion_types"]
+        r2 = evaluate("no rotation, camera static", {}, "", "en")
+        assert r2["checks"]["motion_types"] == []
+
+    def test_zh_negation_clause_scoped(self):
+        # 评审 W1：中文混合语境同样按分句判定（"不要摇镜，但前半有正向"）
+        r = evaluate("先缓慢推近，不要摇镜", {}, "", "zh")
+        assert "zoom" in r["checks"]["motion_types"]
+        r2 = evaluate("不要摇镜", {}, "", "zh")
+        assert "pan" not in r2["checks"]["motion_types"]
 
     def test_motion_types_positive(self):
         r = evaluate("slow pan with zoom and crane", {}, "", "en")
@@ -207,13 +233,16 @@ class TestNoSourceCap:
         assert r["score"] <= 97.0
 
     def test_scaled_cap_below_97(self):
-        # elements_score=0.833 → ceiling = 90 + 7*0.833 = 95.8
+        # 评审 I2：五要素满分 + 一要素缺失 → elements_score=5/6，主公式恰好触达 ceiling
+        # （raw = (20+25+20+15+15+20)/1.2 = 95.83 == 90+7*(5/6)），断言封顶真实绑定
         r = evaluate(
-            "a man in a forest with red and blue colors, cinematic style, wide shot, camera pan, slow motion",
+            "a man with a woman and a boy, walking and running and dancing, "
+            "in a forest in a city on a street, with bright light and glow and moonlight, "
+            "red and blue and black colors, wide shot, camera pan, slow motion",
             {}, "", "en", tier="asset", length_strict=False,
         )
-        cap = 90 + 7 * r["checks"]["elements_score"]
-        assert r["score"] <= cap + 1e-9
+        assert r["checks"]["elements_score"] == pytest.approx(5 / 6, abs=0.01)
+        assert r["score"] == pytest.approx(90 + 7 * (5 / 6), abs=0.1)
 
     def test_with_source_can_reach_100(self):
         src = _full_elements_prompt()
@@ -221,14 +250,68 @@ class TestNoSourceCap:
         assert r["checks"]["fidelity"] == 1.0
         assert r["score"] == 100.0
 
-    def test_short_card_not_artificially_lowered(self):
-        # 短卡（低要素覆盖）floor：无 source 封顶不得把低分样本进一步压低
-        r = evaluate("cat", {}, "", "en", tier="asset", length_strict=False)
-        assert r["score"] >= 0
-        assert r["score"] <= 90 + 7 * r["checks"]["elements_score"] + 1e-9
+    def test_short_card_floor_snapshots(self):
+        # 评审 I3：短卡地板快照（P2-1 核心保证）——无 source 缩放封顶不得压低低分短卡；
+        # 口径与 scripts/eval_golden_set.py 一致（样本声明 tier/language，length_strict=False），
+        # 实测 2026-08-16 v0.12：43.1/44.4/55.6/39.7
+        expected = {
+            "hg-credits-013": 43.1,
+            "hg-scene_cinema_bomb-003": 44.4,
+            "hg-assets-020": 55.6,
+            "hg-credits-016": 39.7,
+        }
+        gpath = Path(__file__).resolve().parent.parent / "video_prompt_engine" / "knowledge" / "golden_set.json"
+        samples = {s["id"]: s for s in json.loads(gpath.read_text(encoding="utf-8"))["samples"]}
+        for sid, floor in expected.items():
+            s = samples[sid]
+            r = evaluate(
+                s["prompt_text"], {}, source_prompt="",
+                language=s.get("language", "en"), tier=s.get("tier"), length_strict=False,
+            )
+            assert r["score"] == pytest.approx(floor, abs=0.15), f"{sid} floor collapsed: {r['score']} != {floor}"
 
 
-# ─────────────────────────── 组7：版本指纹 ───────────────────────────
+# ─────────────────────────── 组7：评审修复回归（W1/W3/W4/W5） ───────────────────────────
+
+class TestReviewFixes:
+    def test_refined_dialogue_audio_intent(self):
+        # 评审 W3：refined/batch 音频意图词统一单表——en dialogue/voiceover/narration 不再误扣
+        for prompt in (
+            "A cinematic shot with dialogue",
+            "A slow scene with voiceover narration",
+        ):
+            r = evaluate(prompt, {}, "", "en", tier="refined")
+            assert "missing_audio" not in r["violations"], prompt
+        # zh 音频意图词（round3 P0-1 延续）与 ru 主格词同样生效
+        assert "missing_audio" not in evaluate("安静的镜头，只有风声", {}, "", "zh", tier="refined")["violations"]
+        assert "missing_audio" not in evaluate("Тихая сцена, музыка и голос", {}, "", "ru", tier="refined")["violations"]
+
+    def test_language_normalized_case_and_variant(self):
+        # 评审 W5：language 入口归一化（zh-CN→zh、ZH→zh），长度兜底与分带口径一致
+        assert detect_tier("中" * 2500, {}, language="zh-CN") == "refined"
+        assert detect_tier("中" * 2500, {}, language="ZH") == "refined"
+        r = evaluate("中" * 2500, {}, "", "zh-CN")
+        assert r["tier"] == "refined"
+        assert r["checks"]["length_band"] == [500, 5000]   # refined zh 分带
+        rb = evaluate("中" * 1000, {}, "", "zh-CN")
+        assert rb["tier"] == "batch"
+        assert rb["checks"]["length_band"] == [120, 2000]  # batch zh 分带（W6 常量）
+
+    def test_api_language_auto_detect(self):
+        # 评审 W4：/v1/video/evaluate 未显式传 language 时按正文自动判定（与哨兵同一 detect_lang）
+        assert detect_lang("中文提示词") == "zh"
+        assert detect_lang("русский сценарий") == "ru"
+        assert detect_lang("english prompt") == "en"
+
+    def test_char_batch_hi_single_source(self):
+        # 评审 W6：zh/ru batch 上界单一来源——1900 字仍在带内、2001 字兜底 refined
+        assert detect_tier("中" * 1900, {}, language="zh") == "batch"
+        assert detect_tier("中" * 2001, {}, language="zh") == "refined"
+        r = evaluate("中" * 1900, {}, "", "zh")
+        assert r["checks"]["length_band"][1] == 2000
+
+
+# ─────────────────────────── 组8：版本指纹 ───────────────────────────
 
 class TestVersionBump:
     def test_version_v012(self):

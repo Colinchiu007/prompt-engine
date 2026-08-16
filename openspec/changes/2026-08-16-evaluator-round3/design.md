@@ -57,9 +57,9 @@ def _CYRILLIC_BOUNDARY_RE(token): ...
 ## 5. 镜头 instrumentation（P1-2）
 
 - `checks["shot_types"]/["camera_types"]/["motion_types"]` + `_count`；仅输出不改分。
-- 分型词表（保守）：wide（wide/establishing/panoramic/aerial/全景/远景）、medium（medium/mid/中景）、closeup（close-up/macro/insert/特写/近景/微距）、overhead（overhead/top-down/aerial/俯拍/航拍）、lowangle（low-angle/worm's eye/仰拍/低机位）、tracking（tracking/dolly/follow/跟拍/推移）、static（static shot/locked-off/固定机位/静止镜头）；禁用裸 still/wide/extreme/摇。
-- 运镜型（pan/tilt/tracking/zoom/crane/handheld/slomo/rotate/drift）归 motion_types。
-- 否定感知：`no rotation` 不计 motion；`no camera move` 类先行处理。
+- 分型词表（保守）：wide（wide/establishing/panoramic/aerial/全景/远景）、medium（medium/mid-shot/mid shot/中景）、closeup（close-up/macro/insert/特写/近景/微距）、overhead（overhead/top-down/bird's eye/俯拍/航拍）、lowangle（low-angle/worm's eye/仰拍/低机位）、tracking（tracking/dolly/follow shot/跟拍/推移）、static（static shot/static camera/locked-off/固定机位/静止镜头）；禁用裸 still/extreme/摇（评审 I5：裸 wide/aerial 保留为景别核心词，文档措辞与实现同步）；cam_position 不含裸 view（评审 I4：「a beautiful view of the city」假阳性）。
+- 运镜型（pan/tilt/tracking/zoom/crane/handheld/slomo/rotate/drift）归 motion_types；tracking/dolly/跟拍/推移 为景别-运镜双属特例（评审 I6）。
+- 否定感知（评审 W1）：按分句全出现语义——复用 `_occurrence_is_negated`（与 `_negated` 一致），「tracking shot, but no tracking in the second half」前半正向不误抑；拉丁/CJK 通用（无/不/没有/禁止/切勿/避免 均覆盖）。
 - 与 video meta 字段（video.shot/camera/motion_intensity）合并输出（meta 有值直接并入 types）。
 - 分数梯度 0/20/20 备选（只惩罚「说 shot 无景别」）——golden 零影响，但本轮默认不启用。
 
@@ -80,4 +80,16 @@ return {"score": round(max(0, min(100, score)), 1), ...}
 
 ## 版本与指纹
 
-- `_EVALUATOR_VERSION = "v0.12-deterministic"`；词表 version 3 随 `_asset_fingerprint` 自动反映；rest.py meta 复用常量。
+- `_EVALUATOR_VERSION = "v0.12-deterministic"`；词表 version 4 随 `_asset_fingerprint` 自动反映；rest.py meta 复用常量。
+
+## 评审修复（Round3 Review 2026-08-16，C1+W1-W6+I 系列）
+
+- **C1 CI 超时结构**：`test.yml` job 级 `timeout-minutes 5→15`（哨兵 step 10 分钟上限不再被 job 罩死）。
+- **W1 否定分句化**：`_TYPE_NEGATION_RE` 删除，`_type_token_negated` 复用 `_occurrence_is_negated` 全出现分句语义。
+- **W2 zh 动作形态**：v3→v4 补 走着/走起/走来/跑去/跑来/挥手/望着/坐着/看着/站住/站定（JSON + knowledge.py fallback 同步）。
+- **W3 音频词单表**：refined 分支复用 `_AUDIO_INTENT_WORDS`（补 en dialogue/voiceover/narration/vocal + zh 环境声/雨声/风声/枪声 + ru 词）。
+- **W4 API 语言自动判定**：`VideoEvaluateRequest.language` 默认 None；`/v1/video/evaluate` 逐条 `detect_lang` 自动判定（共享 util，与哨兵同口径）。
+- **W5 language 归一化**：`evaluate()`/`detect_tier()` 入口 `str(language or "en").lower()[:2]`，zh-CN/EN 统一口径。
+- **W6 阈值单一来源**：`_CHAR_BATCH_HI = 2000` 常量（detect_tier / length_fallback / batch 分带三处共用）。
+- I1 哨兵输入损坏返回 2；I2/I3 封顶/地板测试改为真实绑定断言（score==cap、4 条短卡地板快照）；I4 cam_position 去裸 view；I5/I6 文档措辞同步；I7 Impact 补充图片引擎共享影响；I8/I9 注释与换行。
+- 回归证据：全量 947→（评审后复跑）通过；golden MAE 14.85 / r 0.920 与 258 四指标（91.0/216/225/20/20）均与重定基值一致（零回归）。

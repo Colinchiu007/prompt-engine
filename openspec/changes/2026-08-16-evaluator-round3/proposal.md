@@ -15,8 +15,8 @@
 
 ### P0（接入前必做）
 - **P0-1 zh/ru 字符刻度长度兜底（联动）**：`detect_tier` 增 `language="en"` 参数（向后兼容默认）；zh/ru 路径 `len(prompt) > 2000 → refined`（与 zh/ru batch 带上界 2000 联动，evaluator.py:686，杜绝重蹈 500-833 双亏区）；`length_fallback`/`tier_auto="length"`/`trailer_waiver` 三处同步并入（evaluator.py:653-662）。**耦合修**：refined 层 missing_audio 判定补 zh 音频意图词（音效/环境声/雨声/配乐/旁白/对话/音乐）与 ru 音频词（звук/музыка/речь/голос/диалог）。
-- **P0-2 CJK 单字词表 v3（去单字 + 合成词扩充）**：zh 六要素去全部单字，subject 保留「人」为刻意例外；action/environment/lighting/color 补合成词表（见 design.md 完整清单：奔跑/战斗/行走/站立/凝视/室内/城市/背景/光线/阳光/红色/金色/黑色…）；`element_keywords.json` version 2→3（`_asset_fingerprint` 自动感知）。实测 elements_score 0.778→0.722（max -1.4 分），损失全为误击剔除；golden 与 258 en/ru 样本零影响。
-- **P0-3 258 哨兵脚本入库 + CI 独立 step**：新增 `scripts/eval_corpus_258.py`——固定路径读 `seed_higgsfield_prompts.json`（断言 total==258）、**三路语言判定**（CJK→zh / Cyrillic→ru / else en）、输出 n/mean/median/≥90/≥80/<60/missing_audio、`--json`、退出码 0/1/2；`.github/workflows/test.yml` 独立 step（`timeout-minutes: 10`，不进 5 分钟 pytest job）。首版门禁先宽后紧：mean≥88.0 / ge90≥190 / lt60≤30 / missing_audio≤40（round3 落地重定基后再收紧）。
+- **P0-2 CJK 单字词表 v3→v4（去单字 + 合成词扩充 + 动作形态补全）**：zh 六要素去全部单字，subject 保留「人」为刻意例外；action/environment/lighting/color 补合成词表（见 design.md 完整清单：奔跑/战斗/行走/站立/凝视/室内/城市/背景/光线/阳光/红色/金色/黑色…）；`element_keywords.json` version 2→3→4（评审 W2 补高频动作形态 走着/走起/走来/跑去/跑来/挥手/望着/坐着/看着/站住/站定，JSON 与 knowledge.py fallback 同步；`_asset_fingerprint` 自动感知）。实测 v3 基线 elements_score 0.778→0.722（max -1.4 分），损失全为误击剔除；golden 与 258 四指标在 v4 复测零回归。
+- **P0-3 258 哨兵脚本入库 + CI 独立 step**：新增 `scripts/eval_corpus_258.py`——固定路径读 `seed_higgsfield_prompts.json`（断言 total==258）、**三路语言判定**（复用 evaluator 共享 `detect_lang`：CJK→zh / Cyrillic→ru / else en）、输出 n/mean/median/≥90/≥80/<60/missing_audio、`--json`、退出码 0/1/2（输入损坏返回 2）；`.github/workflows/test.yml` 独立 step（`timeout-minutes: 10`；评审 C1 将 job 级超时 5→15 分钟，step 上限不再被 job 罩死）。首版门禁先宽后紧：mean≥88.0 / ge90≥190 / lt60≤30 / missing_audio≤40（round3 落地重定基后再收紧）。
 
 ### P1（区分度与工程化）
 - **P1-1 正则缓存**：`functools.lru_cache(maxsize=2048)` 包两个工厂函数；缓存键仅 token（str），hashable + 线程安全；maxsize 设上限防动态 token（跨镜承接/角色名）无界膨胀。零分数影响，258 复测 bit-identical。
@@ -36,8 +36,9 @@
 
 ## Impact
 
-- 文件：`video_prompt_engine/evaluator.py`、`prompt_engine_core/knowledge/element_keywords.json`、新增 `scripts/eval_corpus_258.py`、`.github/workflows/test.yml`、新增 `tests/test_evaluator_p0p2_round3.py`、`openspec/specs/video-prompt-engine/spec.md`
-- 测试：round3 用例（zh 长度兜底 4 项 + 单字反例 5 项 + 哨兵注入回归 2 项 + 正则缓存 2 项 + 镜头分型 3 项 + 封顶快照 3 项 ≈ 20-25 项）+ 全量回归（938 基线）+ golden 复测 + 258 复测双门禁
-- 兼容性：`detect_tier` 新增 language 参数（默认 en 向后兼容）；`checks` 增 shot/camera/motion_types 增量字段；`elements_score` 双重使用（主公式 + ceiling 缩放）在 docstring 注明；violations/score 顶层结构不变
+- 文件：`video_prompt_engine/evaluator.py`、`video_prompt_engine/models.py`（language 缺省自动判定）、`video_prompt_engine/api/rest.py`（逐条 detect_lang）、`prompt_engine_core/knowledge/element_keywords.json` + `prompt_engine_core/knowledge.py`（fallback 同步）、新增 `scripts/eval_corpus_258.py`、`.github/workflows/test.yml`（job 超时 15 分钟）、新增 `tests/test_evaluator_p0p2_round3.py`、`openspec/specs/video-prompt-engine/spec.md`
+- 测试：round3 用例（zh 长度兜底 + 单字反例 + 动作形态召回 + 哨兵注入回归 + 正则缓存 + 镜头分型 + 分句否定 + 封顶/地板快照 + 评审修复回归 ≈ 40 项）+ 全量回归（947 基线）+ golden 复测 + 258 复测双门禁
+- 兼容性：`detect_tier` 新增 language 参数（默认 en 向后兼容，入口归一化 zh-CN→zh）；`checks` 增 shot/camera/motion_types 增量字段；`elements_score` 双重使用（主公式 + ceiling 缩放）在 docstring 注明；`/v1/video/evaluate` 未传 language 时行为由「默认 en」变更为「按正文自动判定」（仅对含 CJK/西里尔的请求生效，显式传 language 不受影响）；violations/score 顶层结构不变
+- 共享资产跨界（评审 I7）：`element_keywords.json` 同时被图片引擎消费（`prompt_engine/evaluator.py:282`），zh 词表 v3 去单字 + v4 动作形态扩充会静默改变图片引擎中文要素分（消误击 + 提召回）；全量测试已含图片侧用例无回归，图片侧 golden 建议后续独立复核
 - 评分分布变化面：zh 样本 -0.03（P0-2）/ +0.1（P0-1）；无 source 样本 mean -1.7~-2.7（P2-1，重定基）；en/ru 零影响（P0-1/2）；258 哨兵门槛先宽后紧
 - 实施批次：A（4/3/5 instrumentation，零分数影响）→ B（2/1，分数微调）→ C（6，封顶重定基）；跨项验收 = 258 四指标（重定基）与 golden（MAE≤15.77 且封顶样本两两可分）双绿；`evaluator_version` v0.11→v0.12

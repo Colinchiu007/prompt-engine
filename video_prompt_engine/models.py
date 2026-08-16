@@ -196,7 +196,9 @@ class VideoEvaluateRequest(BaseModel):
     tier: Optional[Literal["batch", "refined", "asset", "variant"]] = Field(
         default=None, description="显式 tier：batch/refined/asset/variant（缺省 auto 判定）"
     )
-    language: Literal["en", "zh", "ru"] = Field(default="en", description="en/zh/ru")
+    language: Optional[Literal["en", "zh", "ru"]] = Field(
+        default=None, description="en/zh/ru；缺省按正文自动判定（CJK→zh / 西里尔→ru / else en，评审 W4）"
+    )
     max_length: Optional[int] = Field(default=None, ge=200, le=20000, description="长度带预算（缺省按 tier 默认）")
     length_strict: bool = Field(default=False, description="True=引擎候选口径 0/20 二值；False=评测口径接近度梯度")
     detail: bool = Field(default=True, description="True 返回 advice；False 关闭 advice 减少载荷")

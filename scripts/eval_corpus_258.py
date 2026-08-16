@@ -24,20 +24,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from video_prompt_engine.evaluator import evaluate
+from video_prompt_engine.evaluator import evaluate, detect_lang
 
 # 首版门禁阈值（先宽后紧：挡住真实回归，不拦合法分数重构）
 _GATE = {"mean_min": 88.0, "ge90_min": 190, "lt60_max": 30, "missing_audio_max": 40}
 _EXPECT_TOTAL = 258
-
-
-def detect_lang(text: str) -> str:
-    """三路语言判定：含 CJK → zh；含西里尔 → ru；否则 en（与评估器语言刻度口径一致）。"""
-    if any("\u4e00" <= ch <= "\u9fff" for ch in text):
-        return "zh"
-    if any("\u0400" <= ch <= "\u04ff" for ch in text):
-        return "ru"
-    return "en"
 
 
 def pick_text(item) -> str:
@@ -97,7 +88,8 @@ def main(argv: list[str]) -> int:
     corpus = root / "video_prompt_engine" / "knowledge" / "seed_higgsfield_prompts.json"
     try:
         data = json.loads(corpus.read_text(encoding="utf-8"))
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
+        # 评审 I1：语料损坏（JSON 语法/编码错误）同样按输入错误返回 2，而非裸 traceback
         print(f"input error: cannot read {corpus}: {exc}", file=sys.stderr)
         return 2
     items = data if isinstance(data, list) else data.get("seeds", data.get("items", []))

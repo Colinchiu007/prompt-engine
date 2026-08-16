@@ -22,7 +22,9 @@ from video_prompt_engine.models import (
 from video_prompt_engine.optimizer import VideoOptimizer
 from video_prompt_engine.strategies import list_strategies
 from video_prompt_engine.classifier import classify
-from video_prompt_engine.evaluator import evaluate as evaluate_prompt, _EVALUATOR_VERSION
+from video_prompt_engine.evaluator import (
+    evaluate as evaluate_prompt, _EVALUATOR_VERSION, detect_lang,
+)
 
 app = FastAPI(title="Video Prompt Engine", version="0.2.0")
 _optimizer: VideoOptimizer | None = None
@@ -149,8 +151,10 @@ def video_evaluate(request: VideoEvaluateRequest):
 
     results = []
     for i, prompt in enumerate(prompts):
+        # 评审 W4：language 缺省逐条自动判定（与哨兵脚本同一 detect_lang 口径），中文不再走 en 词数刻度
+        lang = request.language or detect_lang(prompt)
         info = evaluate_prompt(
-            prompt, {}, source_prompt="", language=request.language,
+            prompt, {}, source_prompt="", language=lang,
             tier=request.tier, max_length=request.max_length,
             length_strict=request.length_strict, enable_advice=request.detail,
         )
@@ -166,7 +170,7 @@ def video_evaluate(request: VideoEvaluateRequest):
             item["advice"] = info["advice"]
         if compares is not None:
             before = evaluate_prompt(
-                compares[i], {}, source_prompt="", language=request.language,
+                compares[i], {}, source_prompt="", language=request.language or detect_lang(compares[i]),
                 tier=request.tier, max_length=request.max_length,
                 length_strict=request.length_strict, enable_advice=False,
             )

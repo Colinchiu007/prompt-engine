@@ -188,3 +188,4 @@
 - v2.0（2026-08-12）：全面增强（140 种子/双级缓存/JSON 重试/四平台策略/输入分类/评估反馈/中文输出/videogen 集成）。
 - v2.1（2026-08-16，评估器 round2）：跨语言保真/中文名字边界/违规量化/版本指纹/阈值联动/golden 门禁（MAE≤18、r≥0.90）。
 - v2.2（2026-08-16，评估器 round3）：zh/ru 长度兜底/CJK 词表 v3/258 哨兵门禁/正则缓存/镜头分型 instrumentation/无 source 缩放封顶（golden MAE 14.85、r 0.920、258 重定基 91.0/216/20/20）。
+- v2.2 评审修复（2026-08-16，round3 review）：CI job 超时 5→15 分钟（C1）；镜头否定感知分句化（W1）；zh 动作形态补全 词表 v3→v4（W2）；refined/batch 音频意图词统一单表（W3）；`/v1/video/evaluate` 未传 language 自动判定 + language 入口归一化 zh-CN→zh（W4/W5）；zh/ru 阈值单一来源 `_CHAR_BATCH_HI=2000`（W6）。golden/258 复测零回归（MAE 14.85 / 91.0/216/225/20/20）。

@@ -65,20 +65,9 @@ def _CYRILLIC_BOUNDARY_RE(token: str) -> re.Pattern:
     )
 
 
-@lru_cache(maxsize=2048)
-def _TYPE_NEGATION_RE(token: str) -> re.Pattern:
-    """镜头分型否定感知（Round3 P1-2）：no/without/never + 可选 camera/any 前缀 + token。
-
-    防「no rotation」假计 rotate 档（golden hg-credits-016 实测案例）。
-    命名与 gated rules 的 _NEGATION_RE 正则变量区分，避免模块级赋值遮蔽。
-    """
-    return re.compile(
-        r"(?i)\b(?:no|without|never)\s+(?:(?:camera|any)\s+){0,2}" + re.escape(token) + r"\b"
-    )
-
-
 # Round3 P1-2：镜头/机位/运动分型词表（仅 instrumentation，零分数影响；保守避泛词——
-# 禁用裸 still/wide/extreme/摇：still 命中 "still alive"、extreme 命中 "extreme wide"、摇 命中 摇晃）
+# 禁用裸 still/extreme/摇：still 命中 "still alive"、extreme 命中 "extreme wide"、摇 命中 摇晃；
+# 裸 wide/aerial 保留为景别核心词（评审 I5：文档措辞已与实现同步））
 _SHOT_TYPE_WORDS: dict[str, tuple[str, ...]] = {
     "wide": ("wide", "establishing", "panoramic", "aerial", "全景", "远景"),
     "medium": ("medium", "mid-shot", "mid shot", "中景"),
@@ -89,7 +78,8 @@ _SHOT_TYPE_WORDS: dict[str, tuple[str, ...]] = {
     "static": ("static shot", "static camera", "locked-off", "locked off", "固定机位", "静止镜头"),
 }
 _CAM_TYPE_WORDS: dict[str, tuple[str, ...]] = {
-    "cam_position": ("camera", "视角", "机位", "perspective", "viewpoint", "angle", "view"),
+    # 评审 I4：去裸 view（"a beautiful view of the city" 假阳性）；camera/angle 保留（镜头指示词）
+    "cam_position": ("camera", "视角", "机位", "perspective", "viewpoint", "angle"),
     "lens_optics": ("lens", "镜头", "focal", "35mm", "50mm", "85mm", "100mm", "135mm", "wide-angle", "telephoto", "广角", "长焦"),
 }
 _MOT_TYPE_WORDS: dict[str, tuple[str, ...]] = {
@@ -113,10 +103,13 @@ def _type_token_hit(text: str, token: str) -> bool:
 
 
 def _type_token_negated(text: str, token: str) -> bool:
-    """分型词否定感知：拉丁走 no/without/never 前缀；CJK 走 无/不/没有 前缀。"""
-    if re.search(r"[\u4e00-\u9fff]", token):
-        return any(prefix + token in text for prefix in ("无", "不", "没有"))
-    return _TYPE_NEGATION_RE(token).search(text) is not None
+    """分型词否定感知（Round3 评审 W1）：与 _negated 同语义——仅当 token 的每次出现
+    都在各自分句内被否定时才抑制。防「tracking shot, but no tracking in the second half」
+    前半正向被整体误抑；复用 _occurrence_is_negated 的分句否定判定（拉丁/CJK 通用）。"""
+    text_value, matches = _token_occurrences(text, token)
+    if not matches:
+        return False
+    return all(_occurrence_is_negated(text_value, m) for m in matches)
 
 
 def _collect_types(text: str, mapping: dict[str, tuple[str, ...]]) -> list[str]:
@@ -650,9 +643,26 @@ def _apply_gated_rules(body: str, tier: str, violations: dict, checks: dict) -> 
     checks["gated_hits"] = hits
 
 
+# Round3 评审 W6：zh/ru batch 长度上界单一来源（detect_tier 兜底阈值 / length_fallback / batch 分带共用，
+# 防「batch 带内却判 refined / 超上界却判 batch」双亏区重演）
+# Round3 评审 W6：zh/ru batch 长度上界单一来源（detect_tier 兜底阈值 / length_fallback / batch 分带共用，
+# 防「batch 带内却判 refined / 超上界却判 batch」双亏区重演）
+_CHAR_BATCH_HI = 2000
+
+
 def _batch_hi(max_length: int | None) -> int:
     """batch 长度上界单一来源（P1-2）：batch 上界与 refined 长度兜底阈值共用，消除 500-833 双亏区。"""
     return min(max(400, (max_length or 1800) // 6), 833)
+
+
+def detect_lang(text: str) -> str:
+    """三路语言判定（评审 W4 共享 util）：含 CJK → zh；含西里尔 → ru；否则 en。
+    与 zh/ru 字符刻度评分口径一致；/v1/video/evaluate 未显式传 language 时逐条自动判定。"""
+    if any("一" <= ch <= "鿿" for ch in str(text or "")):
+        return "zh"
+    if any("Ѐ" <= ch <= "ӿ" for ch in str(text or "")):
+        return "ru"
+    return "en"
 
 
 def detect_tier(
@@ -664,16 +674,17 @@ def detect_tier(
     自动判据：shots 非空 / prompt 含 NON-IP 或 FINAL FRAME（refined 输出特征）；
     P1-2 长度兜底：无引擎标记且 > _batch_hi(max_length) 词 → refined（阈值与 batch 上界单一来源联动）。
     Round3 P0-1：zh/ru 按字符刻度兜底（count_words 按空格切分，中文无空格恒 1 词），
-    阈值 len(prompt) > 2000 与 zh/ru batch 带上界联动（language 参数默认 en 向后兼容；
-    调用侧须保证 language 与正文语言一致，不一致时回退词数兜底——已知调用侧约束）。
+    阈值 len(prompt) > _CHAR_BATCH_HI 与 zh/ru batch 带上界单一来源联动（评审 W6）。
+    评审 W5：入口先归一化 language（zh-CN→zh、EN→en），evaluate()/API 自动判定共用同一口径。
     """
+    language = str(language or "en").lower()[:2]
     if explicit_tier in ("refined", "batch", "asset", "variant"):
         return explicit_tier
     upper = str(prompt or "").upper()
     if (video and video.get("shots")) or "NON-IP" in upper or "FINAL FRAME" in upper:
         return "refined"
     if language in ("zh", "ru"):
-        if len(str(prompt)) > 2000:
+        if len(str(prompt)) > _CHAR_BATCH_HI:
             return "refined"
     elif count_words(prompt) > _batch_hi(max_length):
         return "refined"
@@ -701,6 +712,9 @@ def evaluate(
     continuity_break -5（跨镜承接，评审修订版实体级算法）/ block_coverage -5（refined 块覆盖，自渲染口径）/
     lock-gated 规则 -5（否定感知，默认 3 条启用）。
     """
+    # 评审 W5：language 入口归一化（zh-CN→zh、EN→en），detect_tier/measure/advice 共用同一口径
+    language = str(language or "en").lower()[:2]
+
     # P2-3 空输入契约：空/纯空白 → 显式 0 分 + empty 标记（API 层已 422，引擎内部不产生白送分假分数）。
     # 评审 Minor：checks 形状与正常路径对齐（form/elements/fidelity/violations_detail/tier_auto 等键齐全），
     # advice 按 language 输出而非硬编码中文。
@@ -743,7 +757,7 @@ def evaluate(
         and requested_tier is None
         and not marker_based
         and (
-            (language in ("zh", "ru") and len(str(prompt)) > 2000)
+            (language in ("zh", "ru") and len(str(prompt)) > _CHAR_BATCH_HI)
             or (language not in ("zh", "ru") and count_words(prompt) > _batch_hi(max_length))
         )
     )
@@ -771,7 +785,7 @@ def evaluate(
         elif tier == "variant":
             lo, hi = 80, 2000
         else:
-            lo, hi = 120, 2000
+            lo, hi = 120, _CHAR_BATCH_HI
     else:
         if tier == "refined":
             # DEEP P0-1：精修层 500-5,000 词（词数刻度）。max_length 为字符裁剪预算（optimizer 先裁后评），
@@ -861,7 +875,10 @@ def evaluate(
     _AUDIO_INTENT_WORDS = (
         "sfx", "sound effects", "sound design", "soundscape", "ambient audio",
         "audio cue", "diegetic", "music", "score", "dialogue", "vocal",
-        "voiceover", "narration", "音效", "配乐", "声音", "对话", "旁白", "音轨", "音频",
+        "voiceover", "narration",
+        "音效", "配乐", "声音", "对话", "旁白", "音轨", "音频",
+        "环境声", "雨声", "音乐", "背景音乐", "风声", "枪声",
+        "звук", "музыка", "речь", "голос", "диалог", "эффект",
     )
     audio_field = str((video or {}).get("audio") or "").strip()
     audio_layers = (video or {}).get("audio_layers")
@@ -873,16 +890,9 @@ def evaluate(
             for key in ("environment", "sfx", "dialogue")
         )
     elif tier == "refined":
-        # Round3 P0-1：refined 音频意图词补 zh/ru（原只认拉丁 sfx/sound/audio/music/score，
-        # 中文/俄语精修样本转 refined 后恒 -5 误伤）
-        has_audio = bool(audio_field) or any(
-            k in lower_text
-            for k in (
-                "sfx", "sound", "audio", "music", "score",
-                "音效", "环境声", "雨声", "配乐", "旁白", "对话", "音乐", "背景音乐", "风声", "枪声",
-                "звук", "музыка", "речь", "голос", "диалог", "эффект",
-            )
-        )
+        # Round3 P0-1 + 评审 W3：refined/batch 音频意图词统一单表（zh/ru/en 一表，
+        # 消除双表漂移——en dialogue/voiceover/narration/vocal 不再漏判）
+        has_audio = bool(audio_field) or any(k in lower_text for k in _AUDIO_INTENT_WORDS)
     else:
         if any(k in lower_text for k in _SILENCE_WORDS):
             has_audio = False
