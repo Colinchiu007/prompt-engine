@@ -2,7 +2,7 @@
 import pytest
 
 from video_prompt_engine.evaluator import (
-    evaluate, select_best, evaluate_negatives, detect_tier,
+    evaluate, select_best, evaluate_negatives, detect_tier, _EVALUATOR_VERSION,
 )
 from prompt_engine_core.knowledge import load_element_keywords
 
@@ -225,7 +225,7 @@ class TestEvaluateEndpoint:
         assert r.status_code == 200
         data = r.json()
         assert data["meta"]["count"] == 1
-        assert data["meta"]["evaluator"] == "v0.11-deterministic"
+        assert data["meta"]["evaluator"] == _EVALUATOR_VERSION
         res = data["results"][0]
         assert 0 <= res["score"] <= 100
         assert res["tier"] in ("batch", "refined", "asset", "variant")
