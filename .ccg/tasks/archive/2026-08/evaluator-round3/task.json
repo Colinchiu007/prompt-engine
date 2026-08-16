@@ -1,0 +1,15 @@
+{
+  "id": "evaluator-round3",
+  "title": "评估器 round3：zh/ru 长度兜底 + CJK 单字词表 + 258 哨兵入库 + 正则缓存 + 镜头梯度 + 封顶拆解",
+  "status": "completed",
+  "complexity": "L",
+  "risk": "medium",
+  "domain": "video-prompt-engine",
+  "currentPhase": "completed",
+  "nextAction": "round4 主题：短卡地板（en 词表 + asset/variant 层镜头权重 tier-aware）、镜头分数梯度（需更大带人工标签样本集）、en 短卡词表扩充",
+  "createdAt": "2026-08-16T10:30:00Z",
+  "completedAt": "2026-08-16T09:00:00Z",
+  "branch": "codex/evaluator-round3",
+  "remoteStatus": "PR #57 merged 2026-08-16 merge=94cfdc4; CI 全绿（test 3.11/单元测试+Lint/文档同步）",
+  "evidence": "全量 954 passed; golden MAE 14.85/r 0.920; 258 哨兵 91.0/216/225/20/20; 双模型评审 1C+6W+9I 全处理（antigravity 地区不可用降级记录）"
+}
