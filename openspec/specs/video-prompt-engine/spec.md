@@ -210,13 +210,33 @@ Multi-Publish videogen SHALL 支持配置切换至独立视频引擎（8020）�
 - **THEN** gated 规则不启用，评估正常完成
 
 ### Requirement: 精修层长度词数刻度
-视频引擎 refined 层长度判据 SHALL 使用词数刻度 500–5,000 词（max_length 为输出裁剪预算，不参与 refined 上界判据）；`max_length` 上限 SHALL 支持至 40,000 字符（容纳真实导演分镜单形态，2026-08-16 由 20,000 上浮）；batch 上界封顶 833 词。
+
+视频引擎 refined 层长度判据 SHALL 使用词数刻度 500–5,000 词（max_length 为输出裁剪预算，不参与 refined 上界判据）；`VideoOptimizeRequest.max_length` 校验上界 SHALL 支持至 40,000 字符（2026-08-16 由 20,000 上浮，容纳真实导演分镜单形态）；batch 上界封顶 833 词；`VideoFeedbackRequest.result_prompt` 上限 SHALL 同步 40,000（精修层长结果可回传）；`VideoEvaluateRequest.max_length`（独立评测预算）保持 le=20000 不变。
+
+#### Scenario: 40000 接受 / 40001 拒绝
+
+- **WHEN** 请求携带 `max_length=40000`
+- **THEN** 校验通过，进入优化流程（refined 层长模板可完整生成；max_tokens 仍受默认 cap 16384 约束）
+- **AND WHEN** 请求携带 `max_length=40001`
+- **THEN** 校验拒绝（422/ValidationError）
+
+#### Scenario: feedback 40000 字符结果回传
+
+- **WHEN** 用户对 40000 字符内的引擎输出提交反馈
+- **THEN** `result_prompt` 校验通过；40001 字符拒绝
+
+#### Scenario: 默认与预算语义不放松
+
+- **WHEN** 未显式携带 `max_length` 或携带 20000 及以下值
+- **THEN** 行为与上界 20000 时一致（默认 1800、tier 默认、独立评测预算 le=20000、max_tokens cap 16384 不变）
 
 #### Scenario: 长分镜单不误杀
+
 - **WHEN** refined 模板 1,000-5,000 词
 - **THEN** 长度判据通过
 
 #### Scenario: 超长拒绝
+
 - **WHEN** 词数 >5,000
 - **THEN** 长度判据失败
 
@@ -241,6 +261,7 @@ Multi-Publish videogen SHALL 支持配置切换至独立视频引擎（8020）�
 #### Scenario: 文化锚定
 - **WHEN** 角色描述含族裔/文化背景
 - **THEN** 优化结果保持外貌与文化背景锚定，不漂移
+
 ### Requirement: 语料目录规范与格式扩展
 视频引擎语料 SHALL 支持目录化组织（`knowledge/corpus/<source>/`，构建脚本 glob 合并）与条目格式扩展：可选字段 `corpus_type`（positive/negative，默认 positive）、`failure_tags`（负样本失败模式标签，对齐 failure_patterns.json）、`applicable_to`（few-shot/eval/both，默认 few-shot）；旧条目无新字段时行为零回归。
 
@@ -284,6 +305,7 @@ Multi-Publish videogen SHALL 支持配置切换至独立视频引擎（8020）�
 #### Scenario: 重复检测
 - **WHEN** 新语料 prompt_text 与既有条目重复
 - **THEN** 按确定性规则保留一条并记录去重数（与 Higgsfield 语料去重语义一致）
+
 ### Requirement: 评估器 P0-P2 优化（tier/form/保真/运镜/区分度/词表资产）
 视频引擎 evaluator SHALL 支持：tier 白名单含 asset/variant 且 auto 判定增加 >833 词→refined 长度兜底；`checks["form"]` 形态标签（<100 词推断 asset）；长度带按 tier 分带（batch/refined/asset/variant，en 词数 / zh 字符），`length_strict=False` 评测口径按接近度梯度给 0-20 分、True 引擎候选口径 0/20 二值；英文保真用实体 token 词边界命中率（无实体→1.0 不扣分）；运镜词表只保留镜头运动词（walking/running/moving 不计运镜）；六要素支持部分命中（score=min(1, 命中词数/3)）并保留布尔 `elements` 兼容键；六要素关键词 SHALL 外置为共享资产 `prompt_engine_core/knowledge/element_keywords.json`（en/zh/ru，缺失/损坏回退内置默认），视频与图片评估器共用；`select_best` 同分时违规数少者胜；`evaluate_negatives` FP 按样本×违规键去重归属；`evaluate()` 返回纯规则 `advice`（中英双语，可关闭）。
 
