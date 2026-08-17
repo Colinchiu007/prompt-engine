@@ -22,6 +22,11 @@ def create_provider(name: str, **kwargs) -> BaseLLMProvider:
     """创建指定供应商的实例。"""
     if name not in _PROVIDERS:
         raise ValueError(f"Unknown provider: {name}. Available: {list(_PROVIDERS.keys())}")
+    import inspect
+    sig = inspect.signature(_PROVIDERS[name].__init__)
+    params = list(sig.parameters.keys())
+    if len(params) == 2 and params[1] == "config":
+        return _PROVIDERS[name](kwargs)
     return _PROVIDERS[name](**kwargs)
 
 

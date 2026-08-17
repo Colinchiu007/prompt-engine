@@ -4,7 +4,7 @@ spec: openspec/changes/image-engine-higgsfield-alignment/specs/image-prompt-qual
 参照: video_prompt_engine/evaluator.py（select_best/violations/tier，origin/main）
 """
 import uuid
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -18,6 +18,12 @@ from prompt_engine.evaluator import (
 )
 from prompt_engine.models import DomainType, OptimizeRequest, PlatformType
 from prompt_engine.optimizer import Optimizer
+
+
+def _mock_provider(model_name="mock-model"):
+    p = MagicMock()
+    p.model_name = model_name
+    return p
 
 
 def _unique(base: str = "test") -> str:
@@ -231,7 +237,7 @@ class TestOptimizerIntegration:
             creative_level=5, num_candidates=3,
             excluded_characters=["JAX"], no_swap_pairs=[["ROKO", "JAX"]],
         )
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=_mock_provider())
         # post_process 可能注入风格关键词，断言包含关系
         assert c1 in result.optimized_prompt
         assert c1 in result.candidates[0]
@@ -243,7 +249,7 @@ class TestOptimizerIntegration:
         mock_call.return_value = ("single optimized output", 50)
         optimizer = Optimizer()
         req = OptimizeRequest(prompt=_unique("cat"), platform=PlatformType.GENERIC, num_candidates=1)
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=_mock_provider())
         assert "single optimized output" in result.optimized_prompt
         assert result.candidates == []
 
@@ -256,7 +262,7 @@ class TestOptimizerIntegration:
             prompt=_unique("a scene"), platform="generic_video", domain=DomainType.VIDEO,
             num_candidates=2, excluded_characters=["JAX"],
         )
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=_mock_provider())
         assert result.candidates[0] == result.optimized_prompt
 
 
@@ -307,9 +313,10 @@ class TestRestNormalization:
 
 class TestCompareRegression:
     def test_llm_compare_evaluate_still_available(self):
-        # 既有 LLM 对比评估（5 维 before/after）签名不变
         from prompt_engine.evaluator import evaluate as llm_evaluate, EvaluationResult
-        result = llm_evaluate("original prompt", "optimized prompt")
+        mock_provider = MagicMock()
+        mock_provider.chat.return_value = ({"clarity": {"before": 3, "after": 8}, "specificity": {"before": 2, "after": 9}, "creativity": {"before": 5, "after": 7}, "actionability": {"before": 4, "after": 8}, "platform_best": {"before": 3, "after": 9}}, 100)
+        result = llm_evaluate("original prompt", "optimized prompt", provider=mock_provider)
         assert isinstance(result, EvaluationResult)
         assert "clarity" in result.scores
 

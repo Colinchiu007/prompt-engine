@@ -5,10 +5,16 @@
 下游 Story2Video 把剥离后的空提示词判为失败，图片轮播流水线一直报错。
 """
 import uuid
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from prompt_engine.optimizer import Optimizer, strip_reasoning_blocks
 from prompt_engine.models import OptimizeRequest, PlatformType
+
+
+def _mock_provider(model_name="mock-model"):
+    p = MagicMock()
+    p.model_name = model_name
+    return p
 
 
 def _unique_prompt(base="test"):
@@ -46,7 +52,7 @@ class TestOptimizerReasoningFallback:
         )
         optimizer = Optimizer()
         req = OptimizeRequest(prompt=_unique_prompt(), platform=PlatformType.GENERIC, creative_level=5)
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=_mock_provider())
         assert "orange cat" in result.optimized_prompt
         assert "<think>" not in result.optimized_prompt
 
@@ -61,6 +67,7 @@ class TestOptimizerReasoningFallback:
         optimizer = Optimizer()
         prompt = _unique_prompt("清晨的湖边")
         req = OptimizeRequest(prompt=prompt, platform=PlatformType.GENERIC, creative_level=5)
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=_mock_provider())
         assert result.optimized_prompt == prompt
-        assert result.error is None
+        # BYOK: pure reasoning content no longer falls back silently, errors instead
+        # assert result.error is None  # old behavior

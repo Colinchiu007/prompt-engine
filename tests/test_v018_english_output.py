@@ -1,5 +1,12 @@
 """v0.18.0 — 中文输入自动英文输出"""
 import re
+from unittest.mock import MagicMock
+
+
+def _mock_provider(model_name="mock-model"):
+    p = MagicMock()
+    p.model_name = model_name
+    return p
 
 
 class TestEnglishOutputRule:
@@ -56,7 +63,7 @@ class TestEnglishOutputRule:
             mock_llm.return_value = ("A majestic feline on a velvet throne", 100)
             optimizer = Optimizer()
             req = OptimizeRequest(prompt="一只威严的猫", platform="midjourney", max_length=300)
-            result = optimizer.optimize(req)
+            result = optimizer.optimize(req, provider=_mock_provider())
             assert "majestic feline" in result.optimized_prompt
 
     def test_midjourney_system_prompt_contains_chinese_to_english(self):
