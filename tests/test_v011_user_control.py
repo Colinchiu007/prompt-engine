@@ -52,17 +52,47 @@ class TestStyleSelector:
 class TestRewriteUI:
     """F3: 扩写 UI."""
 
-    def test_rewrite_endpoint_works(self):
+    def test_rewrite_endpoint_works_with_caller_llm(self, monkeypatch):
         """POST /v1/rewrite 返回扩写结果"""
+        from prompt_engine.api import rest
+        from prompt_engine.models import OptimizeResult
+        from prompt_engine.optimizer import Optimizer
+
+        optimizer = Optimizer()
+        monkeypatch.setattr(
+            optimizer,
+            "rewrite",
+            lambda request, provider, provider_id: OptimizeResult(
+                optimized_prompt="a detailed cat prompt",
+                platform=request.platform,
+                model_used="test-model",
+                key_source="caller",
+                strategy_used="llm",
+                caller=request.llm.caller if request.llm else None,
+            ),
+        )
+        monkeypatch.setattr(rest, "get_optimizer", lambda: optimizer)
+        client = TestClient(rest.app)
+        resp = client.post("/v1/rewrite", json={
+            "prompt": "a cat",
+            "platform": "midjourney",
+            "max_length": 300,
+            "llm": {"provider": "openai_compat", "model": "test-model", "api_key": "test-key", "caller": "test-client"},
+        })
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["key_source"] == "caller"
+        assert resp.json()["caller"] == "test-client"
+
+    def test_rewrite_requires_caller_llm(self):
+        """没有调用方 LLM 绑定时必须 fail-closed。"""
         from prompt_engine.api.rest import app
         client = TestClient(app)
         resp = client.post("/v1/rewrite", json={
             "prompt": "a cat",
             "platform": "midjourney",
-            "max_length": 300
+            "max_length": 300,
         })
-        # 端点可能 502（无 LLM key），但不应 422
-        assert resp.status_code in (200, 502)
+        assert resp.status_code == 422
 
     def test_rewrite_requires_text(self):
         """空 prompt 应返回 422"""

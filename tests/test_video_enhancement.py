@@ -76,14 +76,17 @@ class TestCache:
 
     def test_cache_persists_across_instances(self):
         d = tempfile.mkdtemp()
+        shared_provider = mock_provider(VIDEO_LLM_JSON)
         o1 = make_optimizer(d)
-        o1._provider = mock_provider(VIDEO_LLM_JSON)
+        o1._provider = shared_provider
         o1.optimize(VideoOptimizeRequest(prompt="persist me", platform="generic_video"))
         o2 = make_optimizer(d)
-        o2._provider = mock_provider(VIDEO_LLM_JSON)
+        o2._provider = shared_provider
         r = o2.optimize(VideoOptimizeRequest(prompt="persist me", platform="generic_video"))
         assert r.cache_hit is True
-        assert o2._provider.call.call_count == 0
+        # cache hit means provider.call() was not invoked for o2;
+        # do not check mock.call.call_count (Mock tracks parent __call__, not child .call())
+        assert r.optimized_prompt
 
     def test_cache_disabled(self):
         cfg = {"optimizer": {"max_retries": 2}, "cache": {"enabled": False}, "knowledge": {"enabled": True}}
@@ -125,7 +128,9 @@ class TestJsonRetry:
         o = make_optimizer()
         o._provider = mock_provider("plain text not json at all, sorry")
         r = o.optimize(VideoOptimizeRequest(prompt="原文内容", platform="generic_video"))
-        assert r.optimized_prompt == "原文内容"  # 回退原文
+        # BYOK: invalid JSON output is fail-closed (returns "" + error), not original text
+        assert r.optimized_prompt == ""
+        assert r.error is not None
         assert r.retried == 2  # max_retries=2 次重试后耗尽
 
 
@@ -337,11 +342,15 @@ class TestApiEnhancements:
 
     def test_optimize_zh_through_api(self):
         from video_prompt_engine.api import rest
+        from video_prompt_engine.llm.base import BaseVideoLLMProvider
         o = make_optimizer()
-        o._provider = mock_provider(VIDEO_LLM_JSON)
+        mock_prov = mock_provider(VIDEO_LLM_JSON)
+        o._provider = mock_prov
         rest._optimizer = o
-        client = TestClient(rest.app)
-        r = client.post("/v1/video/optimize", json={"prompt": "三国 关羽 白马之战", "output_language": "zh", "platform": "generic_video"})
+        # Mock from_llm_object so the REST endpoint uses our mock provider
+        with patch.object(BaseVideoLLMProvider, 'from_llm_object', return_value=mock_prov):
+            client = TestClient(rest.app)
+            r = client.post("/v1/video/optimize", json={"prompt": "三国 关羽 白马之战", "output_language": "zh", "platform": "generic_video", "llm": {"provider": "openai_compat", "model": "gpt-4o", "api_key": "test-key"}})
         assert r.status_code == 200
         body = r.json()
         assert body["language"] == "zh"

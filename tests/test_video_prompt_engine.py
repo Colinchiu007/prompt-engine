@@ -67,6 +67,28 @@ class TestStrategies:
         req = VideoOptimizeRequest(prompt="x")
         assert req.max_length == 1800
 
+    def test_video_request_accepts_caller_llm_and_uses_llm_strategy(self):
+        req = VideoOptimizeRequest(
+            prompt="x",
+            optimization_strategy="llm",
+            llm={
+                "provider": "sensenova",
+                "model": "SenseNova-V6-Plus",
+                "api_key": "caller-key",
+                "caller": "multi-publish-desktop",
+            },
+        )
+        assert req.optimization_strategy == "llm"
+        assert req.llm.caller == "multi-publish-desktop"
+
+    def test_video_template_strategy_is_rejected(self):
+        with pytest.raises(Exception):
+            VideoOptimizeRequest(prompt="x", optimization_strategy="template")
+
+    def test_video_auto_strategy_is_rejected(self):
+        with pytest.raises(Exception):
+            VideoOptimizeRequest(prompt="x", optimization_strategy="auto")
+
     def test_generic_video_detail_instruction(self):
         """策略要求详细（150-300 词），避免短提示词。"""
         sp = get_strategy("generic_video").build_system_prompt()
@@ -126,12 +148,13 @@ class TestOptimizer:
         assert result.video is not None
         assert result.video.shot == "medium_wide"
 
-    def test_optimize_empty_falls_back(self):
+    def test_optimize_empty_fails_closed(self):
         o = VideoOptimizer()
         o._provider = self._mock_provider("")
         req = VideoOptimizeRequest(prompt="原文兜底", platform="generic_video")
         result = o.optimize(req)
-        assert result.optimized_prompt == "原文兜底"
+        assert result.optimized_prompt == ""
+        assert result.error
 
     def test_optimize_missing_key_fail_closed(self):
         o = VideoOptimizer()
@@ -195,12 +218,81 @@ class TestApi:
         rest._optimizer = fake
         try:
             client = TestClient(rest.app)
-            payload = {"requests": [{"prompt": f"scene {i}", "platform": "generic_video"} for i in range(12)]}
+            payload = {"requests": [{
+                "prompt": f"scene {i}",
+                "platform": "generic_video",
+                "llm": {"provider": "sensenova", "model": "m", "api_key": "k"},
+            } for i in range(12)]}
             r = client.post("/v1/video/optimize/batch", json=payload)
             assert r.status_code == 200
             assert len(r.json()) == 12
         finally:
             rest._optimizer = None
+
+    def test_optimize_requires_caller_llm(self, monkeypatch):
+        from video_prompt_engine.api import rest
+
+        fake = rest.VideoOptimizer.__new__(rest.VideoOptimizer)
+        fake.optimize = lambda req: (_ for _ in ()).throw(AssertionError("optimizer must not run"))
+        monkeypatch.setattr(rest, "_optimizer", fake)
+        client = TestClient(rest.app)
+        response = client.post("/v1/video/optimize", json={"prompt": "x"})
+        assert response.status_code == 422
+
+    def test_optimize_forwards_caller_llm_without_using_config(self, monkeypatch):
+        from video_prompt_engine.api import rest
+        from video_prompt_engine.models import VideoOptimizeResult
+
+        seen = []
+        fake = rest.VideoOptimizer.__new__(rest.VideoOptimizer)
+
+        def optimize(request):
+            seen.append(request)
+            return VideoOptimizeResult(
+                optimized_prompt="optimized",
+                platform="generic_video",
+                model_used=request.llm.model,
+                key_source="caller",
+                strategy_used="llm",
+                caller=request.llm.caller,
+            )
+
+        fake.optimize = optimize
+        monkeypatch.setattr(rest, "_optimizer", fake)
+        client = TestClient(rest.app)
+        response = client.post("/v1/video/optimize", json={
+            "prompt": "x",
+            "llm": {
+                "provider": "sensenova",
+                "model": "SenseNova-V6-Plus",
+                "api_key": "caller-key",
+                "caller": "multi-publish-desktop",
+            },
+        })
+        assert response.status_code == 200, response.text
+        assert seen[0].llm.api_key == "caller-key"
+        assert seen[0].llm.caller == "multi-publish-desktop"
+        assert response.json()["key_source"] == "caller"
+
+    def test_batch_fails_closed_when_any_item_fails(self, monkeypatch):
+        from video_prompt_engine.api import rest
+        from video_prompt_engine.models import VideoOptimizeResult
+
+        fake = rest.VideoOptimizer.__new__(rest.VideoOptimizer)
+        fake.optimize_batch = lambda requests: [
+            VideoOptimizeResult(optimized_prompt="ok"),
+            VideoOptimizeResult(optimized_prompt="", error="provider failed"),
+        ]
+        monkeypatch.setattr(rest, "_optimizer", fake)
+        client = TestClient(rest.app)
+        payload = {
+            "requests": [
+                {"prompt": "one", "llm": {"provider": "sensenova", "model": "m", "api_key": "k"}},
+                {"prompt": "two", "llm": {"provider": "sensenova", "model": "m", "api_key": "k"}},
+            ]
+        }
+        response = client.post("/v1/video/optimize/batch", json=payload)
+        assert response.status_code == 502
 
 
 class TestIndependence:

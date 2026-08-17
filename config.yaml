@@ -1,41 +1,6 @@
 # 图片生成提示词优化引擎配置
 # 通过环境变量 CONFIG_PATH 可指定自定义路径
 
-llm:
-  # 供应商: ai_router | openai_compat | xfyun | minimax
-  provider: minimax
-  openai_compat:
-    api_key: "${OPENAI_API_KEY}"
-    base_url: "https://openrouter.ai/api/v1"
-    model: "deepseek/deepseek-chat"
-    temperature: 0.7
-    max_tokens: 500
-    timeout: 60
-  # 仅当 LLM_PROVIDER=ai_router 时启用；默认 Provider 仍为 MiniMax
-  ai_router:
-    api_key: "${AI_ROUTER_PROJECT_KEY}"
-    base_url: "https://ai-router.truevideo.top/v1"
-    model: "auto"
-    temperature: 0.7
-    max_tokens: 500
-    timeout: 60
-  xfyun:
-    api_key: "${XFYUN_API_KEY}"
-    base_url: "https://maas-coding-api.cn-huabei-1.xf-yun.com/v2"
-    model: "astron-code-latest"
-    temperature: 0.7
-    max_tokens: 500
-    timeout: 60
-  minimax:
-    api_key: "${MINIMAX_API_KEY}"
-    base_url: "https://api.minimaxi.com/v1"
-    model: "MiniMax-M3"
-    temperature: 0.7
-    # MiniMax-M3 是推理模型，<think> 会消耗输出预算；500 太小导致整段输出只有推理
-    # （2026-08-09 图片轮播流水线 optimize 回退原文）。1500 给足思考 + 成文空间。
-    max_tokens: 1500
-    timeout: 60
-
 engine:
   default_platform: generic      # 默认平台
   default_style: realistic       # 默认风格

@@ -52,15 +52,23 @@ python -m prompt_engine.cli optimize --prompt "a cat" --platform midjourney
 python -m prompt_engine.cli classify --prompt "a majestic cat"
 ```
 
-### 配置 LLM（可选但推荐）
+### 配置调用方 LLM
 
-在项目根目录创建 `.env` 文件：
+文字优化不读取 Prompt Engine 自己的 `.env` 或 `config.yaml` LLM Key。调用方必须在
+每次需要 LLM 的请求中传入 `llm` 对象；例如桌面版应把自己的模型设置序列化为：
 
+```json
+{
+  "provider": "sensenova",
+  "model": "SenseNova",
+  "base_url": "https://token.sensenova.cn/v1",
+  "api_key": "<caller-key>",
+  "caller": "multi-publish-desktop"
+}
 ```
-OPENAI_API_KEY=sk-...
-```
 
-如不配置，优化/分类/评估功能会返回错误。图片预览（Picsum）无需任何 Key。
+图片显式选择 `optimization_strategy=template` 时不需要 LLM。图片生成/对比页的
+`MINIMAX_API_KEY` 属于独立的图片能力，不会被文字优化路径读取。
 
 ---
 
@@ -352,8 +360,8 @@ docker-compose logs -f
 # 停止
 docker-compose down
 
-# 带 LLM Key 启动
-OPENAI_API_KEY=sk-... docker-compose up -d
+# 启动（文字 LLM 不在容器环境中配置）
+docker-compose up -d
 ```
 
 ### 6.2 手动部署
@@ -375,11 +383,9 @@ nohup uvicorn prompt_engine.api.rest:app --host 0.0.0.0 --port 8000 &
 
 | 变量 | 说明 | 必需 |
 |------|------|------|
-| `OPENAI_API_KEY` | OpenAI API Key | 优化/分类/评估 |
-| `XFYUN_APPID` | 讯飞星火 APPID | 讯飞供应商 |
-| `XFYUN_API_KEY` | 讯飞星火 API Key | 讯飞供应商 |
-| `GEMINI_API_KEY` | Gemini API Key | Gemini 供应商 |
-| `LLM_PROVIDER` | 供应商名（默认 xfyun） | 否 |
+| `MINIMAX_API_KEY` | 图片生成/对比页使用的 MiniMax Key | 按需 |
+| `SPLITTER_BASE_URL` | 分句服务地址 | 按需 |
+| `PROMPT_ENGINE_ADMIN_TOKEN` | 管理端点令牌 | 管理功能必需 |
 
 ### 6.4 测试
 

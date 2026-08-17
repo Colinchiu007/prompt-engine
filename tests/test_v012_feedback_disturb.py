@@ -32,8 +32,8 @@ class TestFeedbackUI:
 class TestDisturbUI:
     """F2: 扰动增强 UI."""
 
-    def test_disturb_endpoint_accepted(self):
-        """POST /v1/disturb-optimize 不应 422"""
+    def test_disturb_endpoint_requires_caller_llm(self):
+        """默认 LLM 路径缺少调用方绑定时 fail-closed 返回 422。"""
         from fastapi.testclient import TestClient
         from prompt_engine.api.rest import app
         client = TestClient(app)
@@ -41,11 +41,11 @@ class TestDisturbUI:
             "prompt": "a cat",
             "platform": "midjourney"
         })
-        # 可能 502 (无 LLM key)，但不该 422
-        assert resp.status_code in (200, 502)
+        assert resp.status_code == 422
+        assert "llm 必填" in resp.json()["detail"]
 
-    def test_disturb_returns_candidates(self):
-        """扰动结果应有 candidates 字段"""
+    def test_disturb_returns_422_without_caller_llm(self):
+        """默认 LLM 路径没有调用方绑定时不进入扰动执行。"""
         from fastapi.testclient import TestClient
         from prompt_engine.api.rest import app
         client = TestClient(app)
@@ -54,6 +54,21 @@ class TestDisturbUI:
             "platform": "midjourney",
             "num_candidates": 3
         })
-        if resp.status_code == 200:
-            data = resp.json()
-            assert "candidates" in data
+        assert resp.status_code == 422
+        assert "llm 必填" in resp.json()["detail"]
+
+    def test_disturb_template_strategy_does_not_require_llm(self):
+        """显式模板策略仍可在无 LLM 绑定时执行。"""
+        from fastapi.testclient import TestClient
+        from prompt_engine.api.rest import app
+        client = TestClient(app)
+        resp = client.post("/v1/disturb-optimize", json={
+            "prompt": "a cat",
+            "platform": "midjourney",
+            "creative_level": 10,
+            "optimization_strategy": "template",
+        })
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["strategy_used"] == "template"
+        assert data["key_source"] == "none"

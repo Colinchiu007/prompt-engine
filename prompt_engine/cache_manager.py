@@ -13,7 +13,7 @@ from prompt_engine.models import OptimizeResult
 logger = logging.getLogger(__name__)
 
 # ── 内存缓存池（L1 热点缓存）
-_PromptCacheKey = tuple[str, str, int, int, str, int]
+_PromptCacheKey = tuple[str, str, int, int, str, int, str, str, str]
 _PromptCache: dict[_PromptCacheKey, OptimizeResult] = {}
 
 # ── TF-IDF 向量化器（惰性初始化）
@@ -67,16 +67,23 @@ def fuzzy_match_prompt(
     prompt: str, platform: str, creative_level: int = 7,
     max_length: int = 500, negative_prompt: str = "",
     num_candidates: int = 1, similarity_threshold: float = 0.7,
+    domain: str = "image", optimization_strategy: str = "llm", provider: str = "",
 ) -> Optional[OptimizeResult]:
     """模糊匹配相似 prompt，命中缓存后返回"""
     normalized = prompt.strip().lower()
     best_result = None
     best_score = 0.0
 
-    for (cached_p, cached_plat, cached_cl, cached_ml, cached_np, cached_nc), cached_res in _PromptCache.items():
+    for cache_key, cached_res in _PromptCache.items():
+        if len(cache_key) != 9:
+            continue
+        (cached_p, cached_plat, cached_cl, cached_ml, cached_np, cached_nc,
+         cached_domain, cached_strategy, cached_provider) = cache_key
         if cached_plat != platform:
             continue
         if cached_cl != creative_level or cached_ml != max_length or cached_np != negative_prompt or cached_nc != num_candidates:
+            continue
+        if cached_domain != domain or cached_strategy != optimization_strategy or cached_provider != provider:
             continue
         score = similarity(normalized, cached_p.lower())
         if score > best_score:
@@ -104,12 +111,14 @@ class CacheManager:
         max_length: int, negative_prompt: str, num_candidates: int,
         excluded_characters=None, no_swap_pairs=None,
         context=None, style=None, language: str = "en",
-        provider: str = "",
+        provider: str = "", domain: str = "image",
+        optimization_strategy: str = "llm",
     ) -> str:
         return SqlitePromptCache.make_key(
             prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
             excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
             context=context, style=style, language=language, provider=provider,
+            domain=domain, optimization_strategy=optimization_strategy,
         )
 
     def get(
@@ -117,12 +126,14 @@ class CacheManager:
         max_length: int, negative_prompt: str, num_candidates: int,
         excluded_characters=None, no_swap_pairs=None,
         context=None, style=None, language: str = "en",
-        provider: str = "",
+        provider: str = "", domain: str = "image",
+        optimization_strategy: str = "llm",
     ) -> Optional[OptimizeResult]:
         """双级缓存读取：L1 内存 → L2 SQLite（预热 L1）"""
         key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
                             excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-                            context=context, style=style, language=language, provider=provider)
+                            context=context, style=style, language=language, provider=provider,
+                            domain=domain, optimization_strategy=optimization_strategy)
         # L1
         cached = self._mem_cache.get(key)
         if cached:
@@ -130,7 +141,8 @@ class CacheManager:
         # L2
         cached = self._sqlite_cache.get(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
                                         excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-                                        context=context, style=style, language=language, provider=provider)
+                                        context=context, style=style, language=language, provider=provider,
+                                        domain=domain, optimization_strategy=optimization_strategy)
         if cached:
             self._mem_cache.set(key, cached)  # 预热 L1
             return cached
@@ -142,18 +154,22 @@ class CacheManager:
         result: OptimizeResult,
         excluded_characters=None, no_swap_pairs=None,
         context=None, style=None, language: str = "en",
-        provider: str = "",
+        provider: str = "", domain: str = "image",
+        optimization_strategy: str = "llm",
     ) -> None:
         """写入双级缓存"""
         key = self.make_key(prompt, platform, creative_level, max_length, negative_prompt, num_candidates,
                             excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-                            context=context, style=style, language=language, provider=provider)
+                            context=context, style=style, language=language, provider=provider,
+                            domain=domain, optimization_strategy=optimization_strategy)
         self._mem_cache.set(key, result)
         self._sqlite_cache.set(prompt, platform, creative_level, max_length, negative_prompt, num_candidates, result,
                                excluded_characters=excluded_characters, no_swap_pairs=no_swap_pairs,
-                               context=context, style=style, language=language, provider=provider)
-        # 同时写入旧版 dict 缓存（兼容 fuzzy_match_prompt）
-        _PromptCache[(prompt.strip().lower(), platform, creative_level, max_length, negative_prompt, num_candidates)] = result
+                               context=context, style=style, language=language, provider=provider,
+                               domain=domain, optimization_strategy=optimization_strategy)
+        # 同时写入进程内 dict 缓存，供 fuzzy_match_prompt 检索。
+        _PromptCache[(prompt.strip().lower(), platform, creative_level, max_length, negative_prompt,
+                      num_candidates, domain, optimization_strategy, provider)] = result
 
     @property
     def sqlite_cache(self) -> SqlitePromptCache:

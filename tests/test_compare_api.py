@@ -2,8 +2,8 @@
 
 覆盖：
 - split：文案校验（空 / 超 6000 字）、分句代理成功、分句服务不可用（503）
-- prompt：无 key（400）、<think> 剥离、剥离后为空（502 可重试）
-- images：无 key（400）、成功返回 urls、空结果（422）、鉴权错误（400）
+- prompt：调用方 llm 必填、环境 Key 不回退、<think> 剥离、剥离后为空（502 可重试）
+- images：独立图片 Key（无 key / 成功 / 空结果 / 鉴权错误）
 
 铁律：全部 mock 隔离，不依赖真实 API Key / 网络 / 分句服务。
 """
@@ -93,83 +93,90 @@ class TestCompareSplit:
 # ── POST /v1/compare/prompt ────────────────────────────
 
 class TestComparePrompt:
-    def test_prompt_requires_key(self, client, monkeypatch):
-        monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
+    @staticmethod
+    def llm_payload():
+        return {
+            "provider": "sensenova",
+            "model": "SenseNova-Test",
+            "base_url": "https://llm.example/v1",
+            "api_key": "caller-llm-key",
+        }
+
+    def test_prompt_requires_caller_llm_even_when_image_env_key_exists(self, client, monkeypatch):
+        monkeypatch.setenv("MINIMAX_API_KEY", "image-only-key")
         resp = client.post("/v1/compare/prompt", json={"text": "一只猫"})
-        assert resp.status_code == 400
-        assert "API Key" in resp.json()["detail"]
+        assert resp.status_code == 422
+        assert "llm" in str(resp.json()["detail"])
 
     def test_prompt_strips_think_blocks(self, client, monkeypatch):
         from prompt_engine.api import compare as compare_mod
 
-        class FakeMessage:
-            content = "<think>推理过程</think>A majestic cat sitting on a velvet throne."
+        captured = {}
 
-        class FakeChoice:
-            message = FakeMessage()
+        class FakeProvider:
+            model_name = "SenseNova-Test"
 
-        class FakeCompletion:
-            choices = [FakeChoice()]
-            usage = None
+            def chat(self, messages):
+                captured["messages"] = messages
+                return "<think>推理过程</think>A majestic cat sitting on a velvet throne.", 12
 
-        class FakeChatCompletions:
-            def create(self, **kwargs):
-                return FakeCompletion()
-
-        class FakeChat:
-            completions = FakeChatCompletions()
-
-        class FakeOpenAI:
-            def __init__(self, *a, **k):
-                pass
-            @property
-            def chat(self):
-                return FakeChat()
-
-        monkeypatch.setattr(compare_mod, "OpenAI", FakeOpenAI)
+        monkeypatch.setattr(
+            compare_mod.BaseLLMProvider,
+            "from_llm_object",
+            classmethod(lambda cls, llm: (captured.setdefault("llm", llm), FakeProvider())[1]),
+        )
         resp = client.post("/v1/compare/prompt", json={
             "text": "一只猫坐在天鹅绒王座上",
-            "api_key": "test-key-123",
+            "llm": self.llm_payload(),
         })
         assert resp.status_code == 200
         data = resp.json()
         assert "<think>" not in data["prompt"]
         assert "majestic cat" in data["prompt"].lower()
+        assert captured["llm"].provider == "sensenova"
+        assert captured["llm"].model == "SenseNova-Test"
+        assert captured["llm"].api_key == "caller-llm-key"
+        assert data["model"] == "SenseNova-Test"
 
     def test_prompt_empty_after_strip_retryable(self, client, monkeypatch):
         from prompt_engine.api import compare as compare_mod
 
-        class FakeMessage:
-            content = "<think>only thinking</think>"
+        class FakeProvider:
+            model_name = "SenseNova-Test"
 
-        class FakeChoice:
-            message = FakeMessage()
+            def chat(self, messages):
+                return "<think>only thinking</think>", 12
 
-        class FakeCompletion:
-            choices = [FakeChoice()]
-            usage = None
-
-        class FakeChatCompletions:
-            def create(self, **kwargs):
-                return FakeCompletion()
-
-        class FakeChat:
-            completions = FakeChatCompletions()
-
-        class FakeOpenAI:
-            def __init__(self, *a, **k):
-                pass
-            @property
-            def chat(self):
-                return FakeChat()
-
-        monkeypatch.setattr(compare_mod, "OpenAI", FakeOpenAI)
+        monkeypatch.setattr(
+            compare_mod.BaseLLMProvider,
+            "from_llm_object",
+            classmethod(lambda cls, llm: FakeProvider()),
+        )
         resp = client.post("/v1/compare/prompt", json={
             "text": "测试",
-            "api_key": "test-key-123",
+            "llm": self.llm_payload(),
         })
         assert resp.status_code == 502
         assert "空" in resp.json()["detail"]
+
+    def test_prompt_does_not_read_minimax_env_as_text_llm(self, client, monkeypatch):
+        from prompt_engine.api import compare as compare_mod
+
+        monkeypatch.setenv("MINIMAX_API_KEY", "image-only-key")
+        called = {"value": False}
+
+        def fail_if_called(cls, llm):
+            called["value"] = True
+            raise AssertionError("provider must not be built without caller llm")
+
+        monkeypatch.setattr(
+            compare_mod.BaseLLMProvider,
+            "from_llm_object",
+            classmethod(fail_if_called),
+        )
+        resp = client.post("/v1/compare/prompt", json={"text": "测试"})
+        assert resp.status_code == 422
+        assert called["value"] is False
 
 
 # ── POST /v1/compare/images ────────────────────────────
@@ -332,51 +339,41 @@ class TestBaseUrlValidation:
 
 
 class TestCompareStatus:
-    def test_status_reports_env_key(self, client, monkeypatch):
+    def test_status_reports_image_env_key_only(self, client, monkeypatch):
         monkeypatch.setenv("MINIMAX_API_KEY", "sk-test-123456")
         resp = client.get("/v1/compare/status")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["has_env_key"] is True
+        assert data["has_image_env_key"] is True
+        assert data["text_llm_requires_caller_bind"] is True
         assert "splitter" in data
 
-    def test_status_no_env_key(self, client, monkeypatch):
+    def test_status_no_image_env_key(self, client, monkeypatch):
         monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
         resp = client.get("/v1/compare/status")
         assert resp.status_code == 200
-        assert resp.json()["has_env_key"] is False
+        assert resp.json()["has_image_env_key"] is False
 
 
 class TestPromptTruncation:
     def test_prompt_truncated_flag(self, client, monkeypatch):
         from prompt_engine.api import compare as compare_mod
 
-        class FakeMessage:
-            content = "word " * 5000  # 远超 2000 上限
+        class FakeProvider:
+            model_name = "SenseNova-Test"
 
-        class FakeChoice:
-            message = FakeMessage()
+            def chat(self, messages):
+                return "word " * 5000, 12
 
-        class FakeCompletion:
-            choices = [FakeChoice()]
-            usage = None
-
-        class FakeChatCompletions:
-            def create(self, **kwargs):
-                return FakeCompletion()
-
-        class FakeChat:
-            completions = FakeChatCompletions()
-
-        class FakeOpenAI:
-            def __init__(self, *a, **k):
-                pass
-            @property
-            def chat(self):
-                return FakeChat()
-
-        monkeypatch.setattr(compare_mod, "OpenAI", FakeOpenAI)
-        resp = client.post("/v1/compare/prompt", json={"text": "测试", "api_key": "k"})
+        monkeypatch.setattr(
+            compare_mod.BaseLLMProvider,
+            "from_llm_object",
+            classmethod(lambda cls, llm: FakeProvider()),
+        )
+        resp = client.post("/v1/compare/prompt", json={
+            "text": "测试",
+            "llm": TestComparePrompt.llm_payload(),
+        })
         assert resp.status_code == 200
         data = resp.json()
         assert data["truncated"] is True

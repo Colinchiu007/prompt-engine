@@ -14,6 +14,29 @@
 
 ## REST API 端点
 
+## 调用方 BYOK 契约
+
+图片优化默认使用调用方的 `llm` 绑定；`optimization_strategy=template` 仅限图片且不需要 LLM。
+`auto` 已删除，传入时返回 HTTP 422；缺少 LLM 绑定也返回 HTTP 422。
+绑定对象必须包含 `provider`、`model`、`api_key`，可选 `base_url` 和 `caller`。
+`caller` 只能放在 `llm.caller`，不能放在请求顶层。引擎不会从 `config.yaml`、`.env` 或 OpsCenter
+读取文字 LLM Key；图片生成 Key 是独立能力。
+
+```json
+{
+  "prompt": "一座古城",
+  "optimization_strategy": "llm",
+  "bypass_cache": true,
+  "llm": {
+    "provider": "sensenova",
+    "model": "SenseNova",
+    "base_url": "https://token.sensenova.cn/v1",
+    "api_key": "<caller-key>",
+    "caller": "multi-publish-desktop"
+  }
+}
+```
+
 ### 核心优化
 
 | 端点 | 方法 | 说明 |
@@ -102,9 +125,8 @@ Dockerfile 基于 python:3.11-slim，暴露端口 8000。
 
 | 变量 | 说明 | 必需 |
 |------|------|:----:|
-| `OPENAI_API_KEY` | OpenAI 兼容 API Key | 按需 |
-| `XFYUN_API_KEY` / `XFYUN_API_SECRET` | 讯飞星火 | 按需 |
-| `GEMINI_API_KEY` | Google Gemini | 按需 |
+| `MINIMAX_API_KEY` | 图片生成/对比页使用的 MiniMax Key | 按需 |
+| `SPLITTER_BASE_URL` | 分句服务地址 | 按需 |
 | `VOICE_TOOLS_OPENAI_KEY` | TTS 预览用 Open AI Key | 按需 |
 
 ## 版本兼容

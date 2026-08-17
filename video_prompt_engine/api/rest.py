@@ -56,6 +56,13 @@ def keywords():
 
 @app.post("/v1/video/optimize", response_model=dict)
 def optimize(request: VideoOptimizeRequest):
+    if request.llm is None:
+        raise HTTPException(status_code=422, detail="llm 必填：视频引擎只使用调用方自己的模型绑定")
+    try:
+        from video_prompt_engine.llm.base import BaseVideoLLMProvider
+        BaseVideoLLMProvider.from_llm_object(request.llm)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     result = get_optimizer().optimize(request)
     if result.error:
         raise HTTPException(status_code=502, detail=result.error)
@@ -65,8 +72,23 @@ def optimize(request: VideoOptimizeRequest):
 @app.post("/v1/video/optimize/batch", response_model=list[dict])
 def optimize_batch(request: VideoBatchOptimizeRequest):
     # 有界并发 8（ThreadPoolExecutor），结果顺序与请求一致
+    for index, item in enumerate(request.requests):
+        if item.llm is None:
+            raise HTTPException(status_code=422, detail=f"requests[{index}].llm 必填")
+        try:
+            from video_prompt_engine.llm.base import BaseVideoLLMProvider
+            BaseVideoLLMProvider.from_llm_object(item.llm)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=f"requests[{index}].llm 无效: {exc}") from exc
     optimizer = get_optimizer()
     results = optimizer.optimize_batch(request.requests)
+    failures = [
+        f"requests[{index}]: {result.error or 'optimized_prompt 为空'}"
+        for index, result in enumerate(results)
+        if result.error or not result.optimized_prompt.strip()
+    ]
+    if failures:
+        raise HTTPException(status_code=502, detail="; ".join(failures))
     return [r.model_dump(exclude_none=True) for r in results]
 
 

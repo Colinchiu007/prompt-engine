@@ -67,19 +67,17 @@ def _build_evaluation_prompt(original: str, optimized: str, platform: str = "gen
 每个分数 1-10 整数。"""
 
 
-def _call_llm_for_evaluation(original: str, optimized: str, platform: str = "generic") -> dict:
-    """调用 LLM 进行评估（使用 prompt-engine 自身的 Optimizer 的 provider）."""
-    from prompt_engine.config import load_config
-    from prompt_engine.llm import create_provider
-
-    config = load_config()
-    provider_name = config.get("llm", {}).get("provider", "openai_compat")
-    provider_config = config.get("llm", {}).get(provider_name, {})
+def _call_llm_for_evaluation(original: str, optimized: str, platform: str = "generic", provider=None) -> dict:
+    """使用调用方提供的 BYOK provider 评估优化结果。"""
+    if provider is None:
+        raise ValueError("评估需要调用方传入 llm 绑定；引擎不使用服务端 key 兜底")
 
     try:
-        provider = create_provider(provider_name, **provider_config)
         prompt = _build_evaluation_prompt(original, optimized, platform)
-        response, _ = provider.chat("你是一位 prompt 质量评估专家。", prompt)
+        response, _ = provider.chat([
+            {"role": "system", "content": "你是一位 prompt 质量评估专家。"},
+            {"role": "user", "content": prompt},
+        ])
         return _parse_evaluation_response(response)
     except Exception as e:
         logger.warning("LLM evaluation failed: %s", e)
@@ -117,6 +115,7 @@ def evaluate(
     original: str,
     optimized: str,
     platform: str = "generic",
+    provider=None,
 ) -> EvaluationResult:
     """评估两段 prompt 的质量对比.
 
@@ -131,7 +130,7 @@ def evaluate(
     if not original.strip():
         original = "(empty)"
 
-    scores_dict = _call_llm_for_evaluation(original, optimized, platform)
+    scores_dict = _call_llm_for_evaluation(original, optimized, platform, provider)
 
     scores: dict[str, DimensionScore] = {}
     total_before = 0

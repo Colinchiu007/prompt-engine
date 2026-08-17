@@ -8,7 +8,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 
 class VideoPlatformType(str, Enum):
@@ -71,6 +71,18 @@ VIDEO_OUTPUT_KEYS = (
 )
 
 
+class VideoLLMBind(BaseModel):
+    """调用方传入的视频文字推理模型绑定（BYOK）。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str = Field(..., min_length=1, max_length=64)
+    model: str = Field(..., min_length=1, max_length=128)
+    api_key: str = Field(..., min_length=1, max_length=512)
+    base_url: Optional[str] = Field(default=None, max_length=256)
+    caller: Optional[str] = Field(default=None, max_length=64)
+
+
 class VideoOptimizeRequest(BaseModel):
     """视频提示词优化请求（domain 恒为 video）。"""
     prompt: str = Field(..., min_length=1, max_length=2000, description="原始视频提示词")
@@ -83,6 +95,11 @@ class VideoOptimizeRequest(BaseModel):
     prev_final_frame: Optional[str] = Field(default=None, max_length=1000, description="上一镜终态描述（跨镜承接；trim 后空由契约层丢弃，超长 422 双保险）")
     context: Optional[dict] = Field(default=None, description="上下文（白名单键）")
     output_language: str = Field(default="en", pattern="^(zh|en)$", description="输出语言：en/zh；zh 保留中文主体 + 镜头术语双语，结构化枚举仍英文")
+    optimization_strategy: Literal["llm"] = Field(default="llm", description="视频始终使用调用方 LLM")
+    llm: Optional[VideoLLMBind] = Field(default=None, description="调用方 BYOK LLM；REST 请求必填")
+    bypass_cache: StrictBool = Field(default=False, description="跳过缓存读写")
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class VideoBatchOptimizeRequest(BaseModel):
@@ -142,6 +159,9 @@ class VideoOptimizeResult(BaseModel):
     cache_hit: bool = Field(default=False, description="是否命中缓存（跳过 LLM）")
     retried: int = Field(default=0, description="结构化输出 JSON 重试次数")
     classification: Optional[dict] = Field(default=None, description="输入题材/镜头意图检测结果")
+    key_source: str = Field(default="caller", description="文字 LLM Key 来源：caller")
+    strategy_used: Literal["llm"] = Field(default="llm", description="实际执行策略")
+    caller: Optional[str] = Field(default=None, description="调用产品标识")
 
 
 def normalize_video_platform(value: Any) -> str:

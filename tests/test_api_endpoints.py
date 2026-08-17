@@ -1,7 +1,7 @@
 """v0.19.x — REST API 端点集成测试
 
 覆盖 P0-P2 的关键端点：
-  - POST /v1/optimize（模板路径，免 LLM）
+  - POST /v1/optimize（显式 template 路径，免 LLM）
   - POST /v1/classify（关键词匹配路径，免 LLM）
   - POST /v1/feedback + GET /v1/feedback/stats
   - GET /v1/cache/stats
@@ -17,8 +17,8 @@ from fastapi.testclient import TestClient
 class TestOptimizeEndpoint:
     """POST /v1/optimize — 核心优化端点"""
 
-    def test_optimize_template_path(self):
-        """creative_level=1 走模板直出，返回成功"""
+    def test_optimize_default_llm_without_bind_rejected(self):
+        """缺省策略固定为 llm，未携带 BYOK 绑定时返回 422"""
         from prompt_engine.api.rest import app
         client = TestClient(app)
         resp = client.post("/v1/optimize", json={
@@ -26,11 +26,35 @@ class TestOptimizeEndpoint:
             "platform": "generic",
             "creative_level": 1,
         })
+        assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text}"
+        assert "llm" in str(resp.json()["detail"])
+
+    def test_optimize_explicit_template_path(self):
+        """显式 template 走模板直出，返回成功"""
+        from prompt_engine.api.rest import app
+        client = TestClient(app)
+        resp = client.post("/v1/optimize", json={
+            "prompt": "a cat",
+            "platform": "generic",
+            "creative_level": 1,
+            "optimization_strategy": "template",
+        })
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
         data = resp.json()
-        assert "optimized_prompt" in data
-        assert len(data["optimized_prompt"]) > 0
+        assert data["strategy_used"] == "template"
+        assert data["model_used"] == "template"
         assert data["tokens_used"] == 0
+
+    def test_optimize_auto_strategy_rejected(self):
+        """已删除的 auto 策略必须在请求边界返回 422"""
+        from prompt_engine.api.rest import app
+        client = TestClient(app)
+        resp = client.post("/v1/optimize", json={
+            "prompt": "a cat",
+            "platform": "generic",
+            "optimization_strategy": "auto",
+        })
+        assert resp.status_code == 422
 
     def test_optimize_short_text_rejected(self):
         """短中文应返回 400"""
@@ -60,6 +84,7 @@ class TestOptimizeEndpoint:
             "prompt": "sunset over mountains",
             "platform": "midjourney",
             "creative_level": 1,
+            "optimization_strategy": "template",
         })
         assert resp.status_code == 200
         data = resp.json()
@@ -75,6 +100,7 @@ class TestOptimizeEndpoint:
                 "prompt": "a test prompt",
                 "platform": p,
                 "creative_level": 1,
+                "optimization_strategy": "template",
             })
             assert resp.status_code == 200, f"{p} failed: {resp.status_code}"
             assert resp.json()["tokens_used"] == 0
@@ -101,8 +127,8 @@ class TestBatchOptimize:
         client = TestClient(app)
         resp = client.post("/v1/optimize/batch", json={
             "requests": [
-                {"prompt": "cat", "platform": "generic", "creative_level": 1},
-                {"prompt": "dog", "platform": "generic", "creative_level": 1},
+                {"prompt": "cat", "platform": "generic", "creative_level": 1, "optimization_strategy": "template"},
+                {"prompt": "dog", "platform": "generic", "creative_level": 1, "optimization_strategy": "template"},
             ]
         })
         assert resp.status_code == 200

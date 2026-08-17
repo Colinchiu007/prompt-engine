@@ -1,50 +1,18 @@
-"""Prompt optimization service — scene-to-prompt, with prompt-engine fallback.
-
-This module provides the higher-level optimization service that:
-1. Takes raw scene text (not platform-specific prompts)
-2. Optionally segments the text for batch processing
-3. Uses prompt-engine's platform-specific Optimizer when available
-4. Falls back to a direct LLM call for generic optimization
-
-Note: this is the migrated home from platform-orchestrator/services/prompt_service.py.
-The old location now contains a deprecation shim.
-"""
+"""调用方 BYOK 的场景文案到图片提示词服务。"""
 
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass, field
+import hashlib
+from dataclasses import dataclass
 from typing import List, Optional
 
-import httpx
+from prompt_engine.llm.base import BaseLLMProvider
+from prompt_engine.models import LLMBind, OptimizeRequest
 
-# ── Optional prompt-engine Optimizer ─────────────────────────────────────
-# Import directly from the optimizer submodule to avoid circular imports
-# through prompt_engine/__init__.py's __getattr__.
-_HAS_PROMPT_ENGINE = False
 try:
     from prompt_engine.optimizer import Optimizer
-    _HAS_PROMPT_ENGINE = True
 except ImportError:  # pragma: no cover
     Optimizer = None  # type: ignore
-
-
-# ── Default System Prompt ────────────────────────────────────────────────
-
-DEFAULT_SYSTEM_PROMPT = """你是一位专业的AI图像生成提示词专家。
-请将以下场景描述优化为高质量的图像生成提示词。
-
-要求：
-1. 描述视觉元素：主体、环境、光线、色彩、构图
-2. 指定艺术风格和氛围
-3. 添加必要的技术参数（比例、画质等）
-4. 保持与原文的语义一致性
-5. 输出简洁、精准的英文或中文提示词
-
-直接输出优化后的提示词，不要包含解释性文字。"""
-
-
-# ── Data Models ──────────────────────────────────────────────────────────
 
 
 @dataclass
@@ -53,137 +21,89 @@ class OptimizePromptResult:
     error: Optional[str] = None
 
 
-# ── Fallback LLM Call (async, OpenAI-compatible) ─────────────────────────
+def _normalize_llm(llm: LLMBind | dict | None) -> LLMBind | None:
+    if llm is None:
+        return None
+    if isinstance(llm, LLMBind):
+        return llm
+    return LLMBind.model_validate(llm)
 
 
-async def _call_llm(
-    api_key: str,
-    base_url: str,
-    model: str,
-    system_prompt: str,
-    user_content: str,
-    timeout: int = 120,
-) -> str:
-    """Call OpenAI-compatible LLM API via HTTPX.
-
-    This is a self-contained fallback used when prompt-engine's Optimizer
-    is not available or raises an error.
-    """
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.post(
-            f"{base_url.rstrip('/')}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content},
-                ],
-                "temperature": 0.7,
-            },
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
+def _provider_identity(llm: LLMBind) -> str:
+    key_digest = hashlib.sha256(llm.api_key.encode("utf-8")).hexdigest()[:16]
+    return (
+        f"{llm.caller or ''}|{llm.provider}|{llm.model}|{llm.base_url or ''}"
+        f"|key:{key_digest}"
+    )
 
 
-# ── Public API ───────────────────────────────────────────────────────────
+def _missing_llm_result() -> OptimizePromptResult:
+    return OptimizePromptResult(
+        prompts=[],
+        error="llm 必填：场景提示词优化必须使用调用方传入的模型绑定",
+    )
 
 
 async def optimize_prompt(
     text: str,
     segments: Optional[List[str]] = None,
     system_prompt: Optional[str] = None,
-    api_key: Optional[str] = None,
-    base_url: Optional[str] = None,
-    model: Optional[str] = None,
+    llm: LLMBind | dict | None = None,
 ) -> OptimizePromptResult:
-    """Optimize scene text into image generation prompts.
+    """使用调用方传入的 LLM 优化场景文案。
 
-    Args:
-        text: Full scene text or primary prompt input.
-        segments: Optional list of sub-segments to optimize individually.
-        system_prompt: Custom system prompt (defaults to built-in).
-        api_key: LLM API key override (defaults to OPENAI_API_KEY env).
-        base_url: LLM base URL override (defaults to OPENAI_BASE_URL env).
-        model: LLM model override (defaults to env or gpt-4o-mini).
-
-    Returns:
-        OptimizePromptResult with list of optimized prompts.
+    本服务不读取环境变量或 config.yaml 中的文字 LLM Key。system_prompt
+    保留为接口参数，具体平台系统提示词由 prompt-engine Optimizer 统一生成。
     """
-    key = api_key or os.environ.get("OPENAI_API_KEY", "")
-    url = base_url or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    mdl = model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    del system_prompt
+    bind = _normalize_llm(llm)
+    if bind is None:
+        return _missing_llm_result()
+    if Optimizer is None:  # pragma: no cover
+        return OptimizePromptResult(prompts=[], error="prompt-engine Optimizer 不可用")
 
-    if not key:
-        return OptimizePromptResult(prompts=[], error="No LLM API key configured")
+    try:
+        provider = BaseLLMProvider.from_llm_object(bind)
+        optimizer = Optimizer()
+        inputs = segments if segments is not None else [text]
+        prompts: List[str] = []
+        provider_id = _provider_identity(bind)
 
-    # ── Try prompt-engine's platform-specific optimizer first ────────────
-    if _HAS_PROMPT_ENGINE:
-        try:
-            optim = Optimizer()
-            inputs = segments if segments else [text]
-            from prompt_engine.models import OptimizeRequest
-
-            all_prompts: List[str] = []
-            for segment in inputs:
-                if not segment.strip():
-                    continue
-                req = OptimizeRequest(
-                    prompt=segment,
-                    platform="generic",
-                    style="cinematic",
-                )
-                result = optim.optimize(req)
-                if result.optimized_prompt:
-                    all_prompts.append(result.optimized_prompt)
-            if all_prompts:
-                return OptimizePromptResult(prompts=all_prompts)
-        except Exception:
-            # Fall back to generic LLM call below
-            pass
-
-    sys_prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
-
-    prompts: List[str] = []
-    inputs = segments if segments else [text]
-
-    for segment in inputs:
-        if not segment.strip():
-            continue
-
-        try:
-            result = await _call_llm(
-                api_key=key,
-                base_url=url,
-                model=mdl,
-                system_prompt=sys_prompt,
-                user_content=segment,
+        for segment in inputs:
+            if not segment or not segment.strip():
+                continue
+            request = OptimizeRequest(
+                prompt=segment,
+                platform="generic",
+                llm=bind,
             )
-            prompts.append(result.strip())
-        except Exception as e:
-            prompts.append(f"[ERROR] {str(e)}")
+            result = optimizer.optimize(
+                request,
+                provider=provider,
+                provider_id=provider_id,
+            )
+            if result.error:
+                return OptimizePromptResult(prompts=[], error=result.error)
+            if result.optimized_prompt and result.optimized_prompt.strip():
+                prompts.append(result.optimized_prompt.strip())
 
-    return OptimizePromptResult(prompts=prompts)
+        return OptimizePromptResult(prompts=prompts)
+    except ValueError as exc:
+        return OptimizePromptResult(prompts=[], error=str(exc))
+    except Exception as exc:  # noqa: BLE001
+        return OptimizePromptResult(prompts=[], error=f"提示词优化失败：{exc}")
 
 
 async def optimize_prompts_batch(
     scenes: List[dict],
-    api_key: Optional[str] = None,
+    llm: LLMBind | dict | None = None,
 ) -> OptimizePromptResult:
-    """Optimize prompts for multiple scenes at once.
-
-    Each scene dict should have 'text' key (the scene text to optimize).
-
-    Args:
-        scenes: List of scene dicts with 'text' field.
-        api_key: LLM API key.
-
-    Returns:
-        OptimizePromptResult with one prompt per scene.
-    """
-    texts = [s.get("text", "") for s in scenes]
-    return await optimize_prompt(text="", segments=texts, api_key=api_key)
+    """使用同一个调用方 LLM 绑定批量优化多个场景。"""
+    if llm is None:
+        return _missing_llm_result()
+    texts = [scene.get("text", "") for scene in scenes]
+    return await optimize_prompt(
+        text="",
+        segments=texts,
+        llm=llm,
+    )

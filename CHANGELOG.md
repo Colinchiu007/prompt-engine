@@ -1,3 +1,10 @@
+## [未发布] 优化：创意等级与执行策略解耦（decouple-creative-level-strategy，2026-08-17）
+
+- **执行策略**：`optimization_strategy` 只允许 `template|llm`，缺省为 `llm`；`creative_level` 只表达创意/细节强度，不参与路由；传入已删除的 `auto` 返回 422。
+- **可验证手动重生成**：`bypass_cache=true` 禁止优化缓存读写；响应新增/统一 `strategy_used`、`cache_hit`、`key_source`、`model_used`、`caller`，可证明本次是模板、缓存还是调用方 LLM。
+- **确定性模板**：模板光影标签改为等级稳定映射，避免重复调用因随机词误呈现为“重新生成”。
+- **BYOK 不回退**：单条、批量、扰动和 MCP 的 LLM 路径全部只使用请求 `llm`，缺失返回 422，不读取服务端 config LLM Key。
+
 ## [未发布] 变更：视频提示词 max_length 上限 20000 → 40000（video-maxlength-40000，2026-08-16）
 
 - **`VideoOptimizeRequest.max_length` 校验上界 20000 → 40000**：精修层/显式顶格路径（对齐 Multi-Publish 契约层 `videoMaxLengthMax=40000`），容纳更长导演分镜单；批量默认 1800、`ge=200` 不变。
@@ -7,7 +14,7 @@
 
 ## [未发布] 功能：调用方 BYOK llm 绑定 + 移除服务端 key 兜底（byok-llm-object，2026-08-16）
 
-- **BYOK 契约**：`/v1/optimize`、`/v1/optimize/batch` 支持调用方自带的 `llm` 对象（provider/model/base_url/api_key）+ 可选 `caller` 产品标识；需调 LLM 的请求（图片 creative_level>3 / video 域）缺 `llm` 即 HTTP 422 fail-closed；图片 creative_level≤3 模板直出保持免 LLM。
+- **BYOK 契约**：`/v1/optimize`、`/v1/optimize/batch` 支持调用方自带的 `llm` 对象（provider/model/base_url/api_key）+ 可选 `caller` 产品标识；缺省或 `llm` 策略缺绑定即 HTTP 422 fail-closed；图片只有显式 `template` 策略免 LLM。
 - **移除服务端兜底**：删除 `key_router.py` / `ops_client.py`（config.yaml 兜底 key + OpsCenter 官方 Key 路径）与 `optimize_with_key_router` 死调用；`Optimizer.__init__` config provider 构造容错（无 key 部署可启动）。
 - **缓存隔离修复**：缓存键并入 provider 身份（provider|model|base_url），修复 `make_key` provider 追加死代码（原 return 在 provider 后缀之前）与 SQLite L2 漏传 provider 的双级缓存键不一致。
 - **版本 0.19.0 → 0.20.0**；新增 `tests/test_llm_object.py`（LLMBind 契约/422 fail-closed/caller 透传/key_source/缓存 provider 隔离），全量测试 975 passed / 3 skipped / 1 warning。

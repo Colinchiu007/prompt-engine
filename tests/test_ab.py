@@ -1,8 +1,21 @@
 """A/B 测试候选生成测试"""
 import uuid
 from unittest.mock import MagicMock, patch
-from prompt_engine.models import OptimizeRequest, OptimizeResult, PlatformType, StyleType
+from prompt_engine.models import OptimizeRequest, OptimizeResult, PlatformType, StyleType, LLMBind
+from prompt_engine.llm.base import BaseLLMProvider
 from prompt_engine.optimizer import Optimizer
+
+
+MOCK_LLM = LLMBind(provider="openai_compat", model="test-model", api_key="test-key")
+
+
+class _MockProvider(BaseLLMProvider):
+    model_name = "test-model"
+    def chat(self, messages, **kw):
+        return ("mock response", 100)
+
+
+MOCK_PROVIDER = _MockProvider({})
 
 
 def _unique_prompt(base="test"):
@@ -19,9 +32,9 @@ class TestABCandidates:
         req = OptimizeRequest(
             prompt=_unique_prompt("a cat"),
             platform=PlatformType.GENERIC,
-            num_candidates=1,
+            num_candidates=1, llm=MOCK_LLM,
         )
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=MOCK_PROVIDER)
         assert isinstance(result, OptimizeResult)
         assert result.candidates == []  # 单候选不返回数组
         # post_process 可能注入关键词
@@ -39,9 +52,9 @@ class TestABCandidates:
         req = OptimizeRequest(
             prompt=_unique_prompt("multi cat"),
             platform=PlatformType.GENERIC,
-            num_candidates=3,
+            num_candidates=3, llm=MOCK_LLM,
         )
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=MOCK_PROVIDER)
         assert isinstance(result, OptimizeResult)
         assert len(result.candidates) == 3
         # 择优语义：最高分候选既是主输出也在数组首位（post_process 关键词注入带随机性，
@@ -81,10 +94,10 @@ class TestABCandidates:
         req = OptimizeRequest(
             prompt=_unique_prompt("a forest"),
             platform=PlatformType.GENERIC,
-            num_candidates=3,
+            num_candidates=3, llm=MOCK_LLM,
             creative_level=8,
         )
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=MOCK_PROVIDER)
         assert mock_call.call_count == 3
         assert len(result.candidates) == 3
         assert result.tokens_used == 330

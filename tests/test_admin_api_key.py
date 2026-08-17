@@ -103,23 +103,18 @@ def test_authorized_api_key_write_and_status(monkeypatch, tmp_path):
     assert "MINIMAX_API_KEY" in status.json()["configured"]
 
 
-def test_authorized_ai_router_key_write_and_status(monkeypatch, tmp_path):
+def test_text_llm_provider_key_write_is_rejected(monkeypatch, tmp_path):
     client = _client(monkeypatch, tmp_path)
     headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
 
-    saved = client.post(
+    response = client.post(
         "/v1/config/api-key",
         headers=headers,
         json={"provider": "ai_router", "api_key": "router-project-secret"},
     )
-    status = client.get("/v1/config/api-key", headers=headers)
 
-    assert saved.status_code == 200
-    assert saved.json()["env_var"] == "AI_ROUTER_PROJECT_KEY"
-    assert "AI_ROUTER_PROJECT_KEY=router-project-secret" in rest.ENV_FILE.read_text(
-        encoding="utf-8"
-    )
-    assert "AI_ROUTER_PROJECT_KEY" in status.json()["configured"]
+    assert response.status_code == 400
+    assert not rest.ENV_FILE.exists()
 
 
 def test_api_key_status_ignores_example_values(monkeypatch, tmp_path):
@@ -137,7 +132,7 @@ def test_api_key_status_ignores_example_values(monkeypatch, tmp_path):
     )
 
     assert status.status_code == 200
-    assert status.json()["configured"] == ["AI_ROUTER_PROJECT_KEY"]
+    assert status.json()["configured"] == []
 
 
 @pytest.mark.parametrize(
@@ -191,4 +186,6 @@ def test_settings_page_sends_admin_bearer_token():
     assert "adminToken" in content
     assert "sessionStorage" in content
     assert "Authorization: `Bearer ${adminToken.value.trim()}`" in content
-    assert 'label="AI Router" value="ai_router"' in content
+    assert 'label="AI Router" value="ai_router"' not in content
+    assert "调用方 LLM" in content
+    assert "图片生成/预览服务" in content

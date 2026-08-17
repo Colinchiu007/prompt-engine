@@ -8,7 +8,6 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-      - LLM_PROVIDER=${LLM_PROVIDER:-openai_compat}
     env_file:
       - .env
     volumes:

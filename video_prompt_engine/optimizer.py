@@ -141,7 +141,8 @@ class VideoOptimizer:
 
     def __init__(self, config: Optional[dict] = None, cache_dir: Optional[str] = None):
         self.config = config or load_config()
-        self._provider = BaseVideoLLMProvider(self.config)
+        # 生产 provider 必须由 request.llm 创建；该属性只保留给单元测试显式注入 fake provider。
+        self._provider = None
         self._rag = VideoRAGRetriever(self.config)
         self._builder = VideoPromptBuilder()
         cache_cfg = self.config.get("cache", {})
@@ -192,7 +193,28 @@ class VideoOptimizer:
         for key in unknown:
             logger.warning("unknown context key ignored: %s", key)
 
-    def _cache_key(self, request: VideoOptimizeRequest, platform: str, lang: str) -> str:
+    @staticmethod
+    def _llm_identity(llm, provider=None) -> str:
+        if llm is not None:
+            provider_name = str(getattr(llm, "provider", "") or "").strip().lower()
+            model = str(getattr(llm, "model", "") or "").strip()
+            base_url = str(getattr(llm, "base_url", "") or "").strip()
+            caller = str(getattr(llm, "caller", "") or "").strip()
+            key_digest = hashlib.sha256(str(getattr(llm, "api_key", "") or "").encode("utf-8")).hexdigest()[:16]
+            return f"{caller}|{provider_name}|{model}|{base_url}|key:{key_digest}"
+        if provider is None:
+            return ""
+        # 测试注入 provider 不携带调用方 Key；实例身份防止默认缓存目录跨测试串用。
+        return f"injected|{provider.__class__.__name__}|{getattr(provider, 'model_name', '')}|{id(provider)}"
+
+    def _provider_for_request(self, request: VideoOptimizeRequest):
+        if request.llm is not None:
+            return BaseVideoLLMProvider.from_llm_object(request.llm)
+        if self._provider is not None:
+            return self._provider
+        raise RuntimeError("未配置调用方 LLM：视频引擎不使用自身 config/env Key 兜底")
+
+    def _cache_key(self, request: VideoOptimizeRequest, platform: str, lang: str, provider=None) -> str:
         """缓存 key：对每个可变组件做 sha1 哈希后拼接，避免 `|` 碰撞并覆盖全部影响结果的参数。"""
         def _h(value: str) -> str:
             return hashlib.sha1(str(value or "").encode("utf-8")).hexdigest()[:16]
@@ -213,6 +235,7 @@ class VideoOptimizer:
             _h(request.negative_prompt or ""),
             ctx_hash,
             _h(request.prev_final_frame or ""),  # Round3 B：跨镜终态影响输出，必须入 key
+            _h(self._llm_identity(request.llm, provider)),
         ])
 
     @staticmethod
@@ -233,7 +256,9 @@ class VideoOptimizer:
         return "\n".join(lines)
     def optimize(self, request: VideoOptimizeRequest) -> VideoOptimizeResult:
         start = time.time()
+        provider = None
         try:
+            provider = self._provider_for_request(request)
             platform = normalize_video_platform(request.platform)
             # context 敏感键拦截
             if request.context:
@@ -243,10 +268,10 @@ class VideoOptimizer:
             lang = "zh" if str(getattr(request, "output_language", "en") or "en").lower().startswith("zh") else "en"
             # tier 层级：creative_level≥7 → refined（导演工作流/尾行/5000 上限）；否则 batch（无尾行）
             tier = "refined" if request.creative_level >= 7 else "batch"
-            cache_key = self._cache_key(request, platform, lang)
+            cache_key = self._cache_key(request, platform, lang, provider)
 
             # 双级缓存命中（跳过 LLM）
-            if self._cache_mgr is not None:
+            if self._cache_mgr is not None and not request.bypass_cache:
                 cached = self._cache_mgr.get(cache_key)
                 if cached:
                     hit = dict(cached)  # 拷贝，避免变异缓存内共享对象
@@ -281,19 +306,19 @@ class VideoOptimizer:
             candidates: list[tuple[str, dict]] = []
             total_retried = 0
             for i in range(request.num_candidates):
-                raw, _tokens = self._provider.call(system_prompt, request.prompt, variant=i, max_length=request.max_length)
+                raw, _tokens = provider.call(system_prompt, request.prompt, variant=i, max_length=request.max_length)
                 raw = strip_reasoning_blocks(raw)
                 retried = 0
                 # JSON 结构化输出失败 → 带"只输出严格 JSON"提示重试（≤max_retries）
-                while raw and strategy_cls.parse_video_json(raw) is None and retried < max_retries:
+                while strategy_cls.parse_video_json(raw or "") is None and retried < max_retries:
                     retried += 1
                     total_retried += 1
-                    raw, _tokens = self._provider.call(
+                    raw, _tokens = provider.call(
                         system_prompt + build_json_retry_hint(tier), request.prompt, variant=i + 100 * retried,
                         max_length=request.max_length,
                     )
                     raw = strip_reasoning_blocks(raw)
-                if raw and strategy_cls.parse_video_json(raw) is not None:
+                if strategy_cls.parse_video_json(raw or "") is not None:
                     optimized, video_meta = strategy_cls.post_process_video(raw, creative_level=request.creative_level, tier=tier)
                     # C6 尾行生命周期：body 预算 = max_length − len(tail)，tail 永不截断
                     if len(optimized) > request.max_length:
@@ -309,12 +334,9 @@ class VideoOptimizer:
                         else:
                             optimized = optimized[:request.max_length]
                     if not optimized.strip():
-                        optimized = request.prompt
-                        video_meta = {}
+                        raise RuntimeError("LLM 生成了空视频优化词")
                 else:
-                    # 重试耗尽 → 回退原文（保持内容保真）
-                    optimized = request.prompt
-                    video_meta = {}
+                    raise RuntimeError("LLM 未返回有效 JSON 视频优化结果")
                 candidates.append((optimized, video_meta))
 
             # Round3 B：角色白名单（context.character_list 角色名，continuity_check 硬判据用）
@@ -349,10 +371,7 @@ class VideoOptimizer:
             try:
                 meta_model = VideoPromptMeta(**video_meta) if video_meta else None
             except Exception as e:
-                logger.warning("video meta validation failed, falling back to source: %s", e)
-                optimized = request.prompt
-                final_candidates = []
-                meta_model = None
+                raise RuntimeError("视频优化结果结构化元数据无效") from e
             result = VideoOptimizeResult(
                 optimized_prompt=optimized,
                 platform=platform,
@@ -365,8 +384,11 @@ class VideoOptimizer:
                 language=lang,
                 retried=total_retried,
                 classification=classification,
+                key_source="caller",
+                strategy_used="llm",
+                caller=getattr(request.llm, "caller", None),
             )
-            if self._cache_mgr is not None:
+            if self._cache_mgr is not None and not request.bypass_cache:
                 self._cache_mgr.set(cache_key, result.model_dump(exclude_none=True))
             return result
         except Exception as e:
@@ -375,10 +397,14 @@ class VideoOptimizer:
                 optimized_prompt="",
                 platform=normalize_video_platform(request.platform),
                 style=request.style,
-                model_used=self._provider.model_name,
+                model_used=getattr(provider, "model_name", ""),
                 duration_ms=round((time.time() - start) * 1000, 1),
                 language="zh" if str(getattr(request, "output_language", "en") or "en").lower().startswith("zh") else "en",
                 error=str(e),
+                retried=total_retried,
+                key_source="caller",
+                strategy_used="llm",
+                caller=getattr(request.llm, "caller", None),
             )
 
     def optimize_batch(self, requests: list[VideoOptimizeRequest]) -> list[VideoOptimizeResult]:

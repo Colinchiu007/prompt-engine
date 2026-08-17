@@ -3,7 +3,6 @@
 Extracted from optimizer.py God Class refactoring (Phase 1).
 """
 
-from random import choice
 from typing import Optional
 
 from prompt_engine.models import OptimizeRequest, OptimizeResult
@@ -15,28 +14,47 @@ class PromptBuilder:
 
     @staticmethod
     def render_from_template(request: OptimizeRequest) -> OptimizeResult:
-        """低创意等级（≤3）用模板直出，不调 LLM"""
+        """确定性模板直出；creative_level 只控制细节密度，不决定是否调用 LLM。"""
         strategy_cls = get_strategy(request.platform.value)
         if not strategy_cls:
             strategy_cls = get_strategy("generic")
 
-        cl = max(1, min(3, request.creative_level))
+        cl = max(1, min(10, request.creative_level))
 
         # 基础块：用户 prompt 就是主体
         parts = [request.prompt]
 
-        # Level 2+: 质量标签
+        quality_tags = {
+            2: "clean visual description",
+            3: "balanced visual detail",
+            4: "detailed visual description",
+            5: "refined visual detail",
+            6: "cinematic composition and atmosphere",
+            7: "layered environment and emotional tone",
+            8: "historical authenticity and coherent spatial storytelling",
+            9: "intricate environmental, material, and lighting details",
+            10: "highly detailed visual storytelling with precise composition",
+        }
         if cl >= 2:
-            quality_tags = ["simple", "clean", "medium", "detailed", "refined"]
-            parts.append(quality_tags[min(cl - 1, len(quality_tags) - 1)])
+            parts.append(quality_tags[cl])
 
-        # Level 3: 简单光影描述
+        # Level 3+: 稳定光影描述；模板路径不应以随机词制造“重新生成”的假象。
         if cl >= 3:
-            lighting = choice(["soft lighting", "natural light", "warm glow", "bright daylight"])
+            lighting = {
+                3: "soft lighting",
+                4: "natural light",
+                5: "warm glow",
+                6: "bright daylight",
+                7: "natural light",
+                8: "soft lighting",
+                9: "warm glow",
+                10: "bright daylight",
+            }[cl]
             parts.append(lighting)
-
         raw = ", ".join(parts)
-        final = strategy_cls.post_process(raw, creative_level=cl)
+        # 策略后处理只负责平台格式；以 level 1 调用可跳过其随机风格关键词注入。
+        # 模板自身已按 cl 注入稳定的细节密度，不能再次引入随机性。
+        final = strategy_cls.post_process(raw, creative_level=1)
 
         return OptimizeResult(
             optimized_prompt=final,
