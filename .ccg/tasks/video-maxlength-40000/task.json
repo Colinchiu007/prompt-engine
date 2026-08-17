@@ -1,0 +1,14 @@
+{
+  "id": "video-maxlength-40000",
+  "title": "视频提示词 max_length 上限 20000 → 40000（8020 引擎侧，联动 Multi-Publish 桌面契约）",
+  "status": "in_progress",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "video-prompt-engine",
+  "currentPhase": "implementation",
+  "nextAction": "commit + push codex/video-maxlength-40000 + PR(目标 main) + CI + 合并",
+  "createdAt": "2026-08-16T15:25:00Z",
+  "openspecChange": "video-maxlength-40000",
+  "desktopChange": "Multi-Publish#s2v-video-maxlength-40000",
+  "branch": "codex/video-maxlength-40000"
+}

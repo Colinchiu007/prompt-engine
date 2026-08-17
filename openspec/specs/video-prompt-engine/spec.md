@@ -210,7 +210,7 @@ Multi-Publish videogen SHALL 支持配置切换至独立视频引擎（8020）�
 - **THEN** gated 规则不启用，评估正常完成
 
 ### Requirement: 精修层长度词数刻度
-视频引擎 refined 层长度判据 SHALL 使用词数刻度 500–5,000 词（max_length 为输出裁剪预算，不参与 refined 上界判据）；`max_length` 上限 SHALL 支持至 20,000 字符（容纳真实导演分镜单形态）；batch 上界封顶 833 词。
+视频引擎 refined 层长度判据 SHALL 使用词数刻度 500–5,000 词（max_length 为输出裁剪预算，不参与 refined 上界判据）；`max_length` 上限 SHALL 支持至 40,000 字符（容纳真实导演分镜单形态，2026-08-16 由 20,000 上浮）；batch 上界封顶 833 词。
 
 #### Scenario: 长分镜单不误杀
 - **WHEN** refined 模板 1,000-5,000 词

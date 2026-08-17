@@ -50,22 +50,22 @@ def mock_provider(value, *, side_effect=None):
 
 
 class TestModelsBoundary:
-    def test_max_length_20000_accepted_20001_rejected(self):
-        # Higgsfield P0 边界上浮：精修层 500-5000 词模板（≈22871 字符）需 20000 字符预算
-        # （对齐契约层 VIDEO_ENGINE_LIMITS.videoMaxLengthMax=20000 / standalone.max）
-        VideoOptimizeRequest(prompt="x" * 10, max_length=20000)
+    def test_max_length_40000_accepted_40001_rejected(self):
+        # Higgsfield P0 边界上浮：精修层 500-5000 词模板（≈22871 字符）预算上浮至 40000
+        # （对齐契约层 VIDEO_ENGINE_LIMITS.videoMaxLengthMax=40000 / standalone.max）
+        VideoOptimizeRequest(prompt="x" * 10, max_length=40000)
         with pytest.raises(Exception):
-            VideoOptimizeRequest(prompt="x" * 10, max_length=20001)
+            VideoOptimizeRequest(prompt="x" * 10, max_length=40001)
 
     def test_feedback_result_4500_accepted(self):
         r = VideoFeedbackRequest(prompt_text="x" * 10, result_prompt="y" * 4500)
         assert len(r.result_prompt) == 4500
 
-    def test_feedback_result_20000_accepted_20001_rejected(self):
+    def test_feedback_result_40000_accepted_40001_rejected(self):
         # 评审 W2：feedback 闭环上限与 max_length 边界上浮对齐（refined 长模板结果可回传）
-        VideoFeedbackRequest(prompt_text="x" * 10, result_prompt="y" * 20000)
+        VideoFeedbackRequest(prompt_text="x" * 10, result_prompt="y" * 40000)
         with pytest.raises(Exception):
-            VideoFeedbackRequest(prompt_text="x" * 10, result_prompt="y" * 20001)
+            VideoFeedbackRequest(prompt_text="x" * 10, result_prompt="y" * 40001)
 
     def test_new_field_limits_rejected(self):
         with pytest.raises(Exception):

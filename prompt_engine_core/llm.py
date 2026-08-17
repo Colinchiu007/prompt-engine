@@ -66,7 +66,7 @@ class BaseLLMProvider:
     def call(self, system_prompt: str, user_prompt: str, variant: int = 0, max_length: int | None = None) -> tuple[str, int]:
         """返回 (content, tokens)。无 key 时抛错（fail closed）。
 
-        max_tokens 按 max_length 动态放大（refined 长模板 ≤20000 字符），
+        max_tokens 按 max_length 动态放大（refined 长模板 ≤40000 字符），
         固定 3000 会让 JSON 截断 → 重试耗尽 → 静默回退原文。
         W1：默认 cap 16384（gpt-4o 级常见输出上限），防长模板 max_tokens 溢出被上游 400 拒绝；
         需更大输出时配置 llm.max_tokens_cap。

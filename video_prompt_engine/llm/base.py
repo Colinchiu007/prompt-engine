@@ -16,8 +16,8 @@ class BaseVideoLLMProvider(BaseLLMProvider):
     ) -> tuple[str, int]:
         """返回 (content, tokens)。无 key 时抛错（fail closed）。
 
-        C2：max_tokens 按 max_length 动态放大（refined 长模板 ≤20000 字符）；
-        W1：默认 cap 16384（gpt-4o 级常见输出上限），防 le=20000 时 max_tokens=40000
+        C2：max_tokens 按 max_length 动态放大（refined 长模板 ≤40000 字符）；
+        W1：默认 cap 16384（gpt-4o 级常见输出上限），防 le=40000 时 max_tokens=80000
         被 OpenAI 兼容端点 400 拒绝；需更大输出时配置 llm.max_tokens_cap。
         """
         # 刻意先于 super().call() 检查：core 的报错文案不含视频引擎环境变量提示
