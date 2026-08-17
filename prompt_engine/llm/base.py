@@ -1,6 +1,4 @@
 """LLM 供应商抽象基类"""
-from typing import Optional
-from prompt_engine.config import load_config
 
 
 class BaseLLMProvider:
@@ -19,29 +17,6 @@ class BaseLLMProvider:
         raise NotImplementedError
 
     @classmethod
-    def from_config(cls, config: Optional[dict] = None) -> "BaseLLMProvider":
-        """工厂方法：根据配置创建 provider 实例"""
-        cfg = config or load_config()
-        provider_name = cfg["llm"]["provider"]
-        if provider_name in ("openai_compat", "ai_router"):
-            from prompt_engine.llm.openai_compat import OpenAICompatProvider
-            return OpenAICompatProvider(cfg["llm"][provider_name])
-        elif provider_name == "xfyun":
-            from prompt_engine.llm.xfyun import XfyunProvider
-            return XfyunProvider(cfg["llm"]["xfyun"])
-        elif provider_name == "gemini":
-            from prompt_engine.llm.gemini import GeminiProvider
-            return GeminiProvider(cfg["llm"]["gemini"])
-        elif provider_name == "minimax":
-            from prompt_engine.llm.minimax import MiniMaxProvider
-            return MiniMaxProvider(cfg["llm"]["minimax"])
-        elif provider_name == "deepseek":
-            from prompt_engine.llm.deepseek import DeepSeekProvider
-            return DeepSeekProvider(cfg["llm"]["deepseek"])
-        else:
-            raise ValueError(f"不支持的 LLM 供应商: {provider_name}")
-
-    @classmethod
     def from_llm_object(cls, llm: dict) -> "BaseLLMProvider":
         """BYOK 工厂：根据调用方传入的 llm 对象创建 provider 实例。
 
@@ -49,6 +24,8 @@ class BaseLLMProvider:
         校验失败抛 ValueError（rest 层映射为 422 fail-closed）。
         api_key 不出现在任何日志/异常细节中。
         """
+        if hasattr(llm, "model_dump"):
+            llm = llm.model_dump()
         if not isinstance(llm, dict):
             raise ValueError("llm 必须是对象 { provider, model, api_key, base_url? }")
         provider = str(llm.get("provider") or "").strip()
@@ -80,4 +57,6 @@ class BaseLLMProvider:
         cfg: dict = {"api_key": api_key, "model": model}
         if base_url:
             cfg["base_url"] = base_url
+        elif provider == "xfyun":
+            cfg["base_url"] = "https://maas-coding-api.cn-huabei-1.xf-yun.com/v2"
         return provider_cls(cfg)

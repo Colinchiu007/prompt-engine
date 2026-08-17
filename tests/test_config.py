@@ -1,9 +1,11 @@
-"""配置系统测试"""
-import os
+"""引擎运行配置测试。"""
+
 import tempfile
 from pathlib import Path
-import yaml
+
 import pytest
+import yaml
+
 from prompt_engine.config import load_config, _resolve_env, _resolve_env_recursive
 
 
@@ -11,198 +13,62 @@ class TestResolveEnv:
     def test_literal_string(self):
         assert _resolve_env("hello") == "hello"
 
-    def test_env_var(self):
-        os.environ["_TEST_KEY"] = "sk-test123"
-        assert _resolve_env("${_TEST_KEY}") == "sk-test123"
+    def test_env_var(self, monkeypatch):
+        monkeypatch.setenv("_TEST_KEY", "sk-test123")
+        assert _resolve_env("$" + "{_TEST_KEY}") == "sk-test123"
 
     def test_nonexistent_env_var(self):
-        """环境变量不存在时保留占位符"""
-        result = _resolve_env("${_DOES_NOT_EXIST_ABC123}")
-        assert result == "${_DOES_NOT_EXIST_ABC123}"
+        value = "$" + "{_DOES_NOT_EXIST_ABC123}"
+        assert _resolve_env(value) == value
 
-    def test_normal_int(self):
-        assert _resolve_env(42) == 42
-
-
-class TestResolveEnvRecursive:
-    def test_nested_dict(self):
-        data = {
-            "api_key": "${_TEST_KEY}",
-            "nested": {"key": "${_TEST_KEY}"},
-        }
-        os.environ["_TEST_KEY"] = "sk-abc"
-        result = _resolve_env_recursive(data)
-        assert result["api_key"] == "sk-abc"
-        assert result["nested"]["key"] == "sk-abc"
-
-    def test_list(self):
-        os.environ["_TEST_KEY"] = "val"
-        data = {"keys": ["${_TEST_KEY}", "static"]}
-        result = _resolve_env_recursive(data)
-        assert result["keys"] == ["val", "static"]
+    def test_nested_dict(self, monkeypatch):
+        monkeypatch.setenv("_TEST_KEY", "sk-abc")
+        value = "$" + "{_TEST_KEY}"
+        result = _resolve_env_recursive({"api_key": value, "nested": {"key": value}})
+        assert result == {"api_key": "sk-abc", "nested": {"key": "sk-abc"}}
 
 
 class TestLoadConfig:
-    def test_load_default_fields(self):
-        """加载 config.yaml 验证关键字段存在"""
+    def test_load_default_fields_and_no_llm_section(self):
         cfg = load_config()
-        assert "llm" in cfg
-        assert "engine" in cfg
-        assert "server" in cfg
-        assert "platforms" in cfg
-        assert cfg["llm"]["provider"] in ("ai_router", "openai_compat", "xfyun", "minimax")
+        assert "llm" not in cfg
         assert cfg["engine"]["default_platform"] == "generic"
         assert cfg["server"]["port"] == 8013
+        assert "platforms" in cfg
 
-    def test_load_with_env_override(self):
-        """写临时配置文件测试环境变量解析"""
-        os.environ["_TEST_OPENAI_KEY"] = "sk-real-key"
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False, encoding="utf-8"
-        ) as f:
-            yaml.dump({
-                "llm": {
-                    "provider": "openai_compat",
-                    "openai_compat": {
-                        "api_key": "${_TEST_OPENAI_KEY}",
-                        "base_url": "https://test.com/v1",
-                        "model": "gpt-4o",
-                        "temperature": 0.7,
-                        "max_tokens": 500,
-                        "timeout": 15,
-                    },
-                },
+    def test_top_level_llm_section_is_rejected(self, tmp_path):
+        config_path = tmp_path / "legacy-config.yaml"
+        config_path.write_text(
+            yaml.safe_dump({
+                "llm": {"provider": "minimax", "minimax": {"api_key": "must-not-be-used"}},
                 "engine": {"default_platform": "midjourney"},
-                "server": {"host": "0.0.0.0", "port": 8080},
-                "platforms": {"midjourney": {"enabled": True}},
-            }, f)
-            tmp_path = f.name
+                "server": {"port": 8080},
+            }),
+            encoding="utf-8",
+        )
+        with pytest.raises(ValueError, match="不支持顶层 llm"):
+            load_config(str(config_path))
 
+    def test_load_resolves_non_llm_environment_values(self, monkeypatch):
+        monkeypatch.setenv("_TEST_HOST", "127.0.0.1")
+        value = "$" + "{_TEST_HOST}"
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, encoding="utf-8") as handle:
+            yaml.safe_dump({"server": {"host": value, "port": 8080}}, handle)
+            config_path = handle.name
         try:
-            cfg = load_config(tmp_path)
-            assert cfg["llm"]["openai_compat"]["api_key"] == "sk-real-key"
-            assert cfg["engine"]["default_platform"] == "midjourney"
-            assert cfg["server"]["port"] == 8080
+            cfg = load_config(config_path)
         finally:
-            os.unlink(tmp_path)
+            Path(config_path).unlink()
+        assert cfg["server"]["host"] == "127.0.0.1"
+        assert cfg["server"]["port"] == 8080
+
+    def test_config_path_environment_variable(self, monkeypatch, tmp_path):
+        config_path = tmp_path / "custom.yaml"
+        config_path.write_text(yaml.safe_dump({"engine": {"default_platform": "custom"}}), encoding="utf-8")
+        monkeypatch.setenv("CONFIG_PATH", str(config_path))
+        cfg = load_config()
+        assert cfg["engine"]["default_platform"] == "custom"
 
     def test_config_not_found(self):
         with pytest.raises(FileNotFoundError):
             load_config("/nonexistent/path/config.yaml")
-
-    def test_config_path_environment_variable(self, monkeypatch):
-        """未传显式路径时应读取 CONFIG_PATH。"""
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            suffix=".yaml",
-            dir=Path(__file__).parent,
-            delete=False,
-            encoding="utf-8",
-        ) as handle:
-            yaml.safe_dump(
-                {
-                    "llm": {"provider": "minimax", "minimax": {}},
-                    "engine": {"default_platform": "custom"},
-                },
-                handle,
-            )
-            config_path = handle.name
-        monkeypatch.setenv("CONFIG_PATH", config_path)
-        monkeypatch.delenv("LLM_PROVIDER", raising=False)
-
-        try:
-            cfg = load_config()
-        finally:
-            os.unlink(config_path)
-
-        assert cfg["engine"]["default_platform"] == "custom"
-
-    def test_minimax_environment_overrides_selected_profile(self, monkeypatch):
-        """MiniMax 示例环境变量应覆盖默认配置并保留数值类型。"""
-        monkeypatch.setenv("LLM_PROVIDER", "minimax")
-        monkeypatch.setenv("MINIMAX_API_KEY", "minimax-test-key")
-        monkeypatch.setenv("MINIMAX_BASE_URL", "https://minimax.example/v1")
-        monkeypatch.setenv("MINIMAX_MODEL", "MiniMax-Test")
-        monkeypatch.setenv("MINIMAX_TIMEOUT", "45")
-
-        cfg = load_config()
-
-        assert cfg["llm"]["minimax"] == {
-            "api_key": "minimax-test-key",
-            "base_url": "https://minimax.example/v1",
-            "model": "MiniMax-Test",
-            "temperature": 0.7,
-            "max_tokens": 1500,
-            "timeout": 45,
-        }
-
-    def test_openai_compat_environment_overrides_selected_profile(self, monkeypatch):
-        """OpenAI 兼容示例环境变量应覆盖对应配置。"""
-        monkeypatch.setenv("LLM_PROVIDER", "openai_compat")
-        monkeypatch.setenv("OPENAI_COMPAT_API_KEY", "openai-test-key")
-        monkeypatch.setenv("OPENAI_COMPAT_BASE_URL", "https://openai.example/v1")
-        monkeypatch.setenv("OPENAI_COMPAT_MODEL", "openai-test-model")
-        monkeypatch.setenv("OPENAI_COMPAT_TIMEOUT", "30")
-
-        cfg = load_config()
-
-        assert cfg["llm"]["openai_compat"] == {
-            "api_key": "openai-test-key",
-            "base_url": "https://openai.example/v1",
-            "model": "openai-test-model",
-            "temperature": 0.7,
-            "max_tokens": 500,
-            "timeout": 30,
-        }
-
-    def test_provider_name_environment_override_is_normalized(self, monkeypatch):
-        """Provider 名称应兼容环境变量中常见的空格和大小写。"""
-        monkeypatch.setenv("LLM_PROVIDER", " AI_ROUTER ")
-        monkeypatch.setenv("AI_ROUTER_PROJECT_KEY", "router-test-key")
-
-        cfg = load_config()
-
-        assert cfg["llm"]["provider"] == "ai_router"
-        assert cfg["llm"]["ai_router"]["api_key"] == "router-test-key"
-
-class TestDotenvLoading:
-    def test_load_config_reads_project_dotenv(self, monkeypatch, tmp_path):
-        """引擎必须自行加载项目根 .env：桌面 Bridge 启动时不注入 LLM Key，
-        若只依赖 os.environ，占位符会被原样当 key 调用供应商（MiniMax 401）。"""
-        import prompt_engine.config as cfg_module
-
-        monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
-        env_file = tmp_path / ".env"
-        env_file.write_text("MINIMAX_API_KEY=sk-dotenv-test-abc\n", encoding="utf-8")
-        monkeypatch.setattr(cfg_module, "_ENV_FILE", str(env_file))
-
-        cfg = cfg_module.load_config()
-        assert cfg["llm"]["provider"] == "minimax"
-        assert cfg["llm"]["minimax"]["api_key"] == "sk-dotenv-test-abc"
-        assert cfg["llm"]["minimax"]["api_key"] != "$" + "{MINIMAX_API_KEY}"
-
-    def test_existing_environment_takes_precedence_over_dotenv(self, monkeypatch, tmp_path):
-        """进程环境变量优先于 .env（override=False），允许外部注入覆盖。"""
-        import prompt_engine.config as cfg_module
-
-        monkeypatch.setenv("MINIMAX_API_KEY", "sk-env-priority")
-        env_file = tmp_path / ".env"
-        env_file.write_text("MINIMAX_API_KEY=sk-dotenv-ignored\n", encoding="utf-8")
-        monkeypatch.setattr(cfg_module, "_ENV_FILE", str(env_file))
-
-        cfg = cfg_module.load_config()
-        assert cfg["llm"]["minimax"]["api_key"] == "sk-env-priority"
-
-
-class TestMinimaxMaxTokens:
-    def test_minimax_default_max_tokens_from_config(self, monkeypatch):
-        """config.yaml 默认 max_tokens=1500（推理模型预算，避免 <think> 耗尽输出）"""
-        monkeypatch.delenv("MINIMAX_MAX_TOKENS", raising=False)
-        cfg = load_config()
-        assert cfg["llm"]["minimax"]["max_tokens"] == 1500
-
-    def test_minimax_max_tokens_env_override(self, monkeypatch):
-        """MINIMAX_MAX_TOKENS 环境变量可覆盖 config.yaml"""
-        monkeypatch.setenv("MINIMAX_MAX_TOKENS", "2000")
-        cfg = load_config()
-        assert cfg["llm"]["minimax"]["max_tokens"] == 2000

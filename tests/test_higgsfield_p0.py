@@ -622,7 +622,9 @@ class TestReviewFixes:
         )
         o._provider = mock_provider(raw)
         r = o.optimize(VideoOptimizeRequest(prompt="source text", creative_level=8, max_length=5000))
-        assert r.optimized_prompt == "source text"
+        # BYOK fail-closed: meta validation error → empty prompt + error (not source text fallback)
+        assert r.optimized_prompt == ""
+        assert r.error is not None
         assert r.video is None
 
     def test_t9_zh_refined_lower_bound(self):

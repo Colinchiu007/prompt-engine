@@ -1,6 +1,7 @@
 """策略集成测试 — 验证策略拼接、post_process、异常路径"""
 import pytest
 from unittest.mock import patch, MagicMock
+from types import SimpleNamespace
 from prompt_engine.optimizer import Optimizer
 from prompt_engine.models import (
     OptimizeRequest, ReverseRequest, PlatformType, StyleType,
@@ -85,7 +86,8 @@ class TestOptimizerErrorPaths:
         from prompt_engine.optimizer import Optimizer
         optimizer = Optimizer()
         req = OptimizeRequest(prompt="test", platform=PlatformType.GENERIC, creative_level=8)
-        result = optimizer.optimize(req)
+        provider = SimpleNamespace(model_name="test-model")
+        result = optimizer.optimize(req, provider=provider)
         # 出错时应返回原 prompt 作为 fallback
         assert result.error is not None
         assert "timeout" in result.error.lower() or "api" in result.error.lower()
@@ -96,15 +98,19 @@ class TestOptimizerErrorPaths:
         mock_call.return_value = ("x" * 1000, 100)
         optimizer = Optimizer()
         req = OptimizeRequest(prompt="test", platform=PlatformType.GENERIC, max_length=100)
-        result = optimizer.optimize(req)
+        provider = SimpleNamespace(model_name="test-model")
+        result = optimizer.optimize(req, provider=provider)
         assert len(result.optimized_prompt) <= 100
 
     @patch.object(Optimizer, "_call_vision_llm")
     def test_reverse_fallback_on_error(self, mock_vision):
         mock_vision.side_effect = RuntimeError("Vision model error")
         optimizer = Optimizer()
-        req = ReverseRequest(image_url="https://example.com/test.jpg")
-        result = optimizer.reverse_engineer(req)
+        req = ReverseRequest(image_url="https://example.com/test.jpg", llm={
+            "provider": "openai_compat", "model": "test-model", "api_key": "test-key",
+        })
+        provider = SimpleNamespace(model_name="test-model")
+        result = optimizer.reverse_engineer(req, provider=provider)
         assert result.error is not None
         assert result.prompt == ""
 

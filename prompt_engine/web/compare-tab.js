@@ -11,7 +11,7 @@
  *
  * 端点：
  *   POST /v1/compare/split   分句（代理 smart-sentence-splitter）
- *   POST /v1/compare/prompt  单句 → MiniMax LLM → 英文生图提示词
+ *   POST /v1/compare/prompt  单句 → 调用方 LLM → 英文生图提示词
  *   POST /v1/compare/images  单提示词 → MiniMax image-01 → n 张图（默认 2）
  */
 (function () {
@@ -34,7 +34,8 @@
   }
 
   const MAX_TEXT = 6000;
-  const DEFAULT_KEY_STORAGE = 'pe_compare_minimax_key';
+  const DEFAULT_LLM_KEY_STORAGE = 'pe_compare_llm_key';
+  const DEFAULT_IMAGE_KEY_STORAGE = 'pe_compare_image_key';
 
   function maskKey(k) {
     if (!k) return '';
@@ -71,21 +72,22 @@
         </div>
       </el-card>
 
-      <!-- 2. 设置（MiniMax API） -->
+      <!-- 2. 设置（文字 LLM 与生图能力独立配置） -->
       <el-card shadow="never" style="margin-bottom:16px">
         <template #header>
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <span>MiniMax 模型设置</span>
-            <span style="font-size:12px;color:#909399">文字推理 + 图片生成共用同一 API Key</span>
+            <span>模型能力设置</span>
+            <span style="font-size:12px;color:#909399">文字推理与图片生成使用独立模型和 Key</span>
           </div>
         </template>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <el-input v-model="apiKey" type="password" show-password autocomplete="off"
+          <span style="font-size:12px;color:#606266;min-width:70px">文字 LLM</span>
+          <el-input v-model="llmApiKey" type="password" show-password autocomplete="off"
             style="flex:1;min-width:240px;max-width:420px"
-            placeholder="粘贴 MiniMax API Key（仅需 Key 即可）"
-            @change="persistKey" />
-          <el-tag v-if="apiKey" size="small" type="success">{{ maskKey(apiKey) }}</el-tag>
-          <el-button size="small" @click="testConnection" :loading="testing" :disabled="!apiKey.trim()">
+            placeholder="粘贴文字 LLM API Key"
+            @change="persistKeys" />
+          <el-tag v-if="llmApiKey" size="small" type="success">{{ maskKey(llmApiKey) }}</el-tag>
+          <el-button size="small" @click="testConnection" :loading="testing" :disabled="!hasLlmKey">
             测试连接
           </el-button>
           <el-button size="small" text @click="advanced = !advanced">
@@ -97,9 +99,18 @@
         <template v-if="advanced">
           <el-divider style="margin:14px 0" />
           <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-            <el-input v-model="baseUrl" style="width:320px" size="small"
-              placeholder="Base URL（默认 https://api.minimaxi.com/v1）" />
-            <el-input v-model="llmModel" style="width:200px" size="small" placeholder="LLM 模型（默认 MiniMax-M3）" />
+            <el-input v-model="llmProvider" style="width:160px" size="small" placeholder="文字 provider（如 minimax）" />
+            <el-input v-model="llmBaseUrl" style="width:320px" size="small"
+              placeholder="文字 LLM Base URL（可选）" />
+            <el-input v-model="llmModel" style="width:200px" size="small" placeholder="文字模型（如 MiniMax-M3）" />
+            <span style="font-size:12px;color:#606266;min-width:70px">图片 Key</span>
+            <el-input v-model="imageApiKey" type="password" show-password autocomplete="off"
+              style="flex:1;min-width:240px;max-width:420px"
+              placeholder="粘贴图片生成 API Key（可与文字 Key 不同）"
+              @change="persistKeys" />
+            <el-tag v-if="imageApiKey" size="small" type="success">{{ maskKey(imageApiKey) }}</el-tag>
+            <el-input v-model="imageBaseUrl" style="width:320px" size="small"
+              placeholder="图片 Base URL（可选）" />
             <el-select v-model="size" size="small" style="width:180px">
               <el-option label="1:1 (1024x1024)" value="1024x1024" />
               <el-option label="16:9 (1920x1080)" value="1920x1080" />
@@ -111,8 +122,8 @@
             <span style="font-size:12px;color:#909399">张图</span>
           </div>
           <div style="margin-top:8px;font-size:12px;color:#909399">
-            Key 仅保存在本机浏览器 localStorage 并随请求发送，不写入服务端文件；服务端也支持环境变量
-            <code>MINIMAX_API_KEY</code> 注入（未填写时自动回退）。
+            两类 Key 仅保存在本机浏览器 localStorage 并随对应请求发送，不写入服务端文件；
+            图片能力可额外使用服务端环境变量 <code>MINIMAX_API_KEY</code>，文字推理不会使用该回退。
           </div>
         </template>
       </el-card>
@@ -123,18 +134,20 @@
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
             <span>分句结果与生图对比（{{ sentences.length }} 句）</span>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <el-button size="small" type="primary" :loading="bulkPrompting" :disabled="!hasKey || !pendingPrompts.length"
+              <el-button size="small" type="primary" :loading="bulkPrompting" :disabled="!hasLlmKey || !pendingPrompts.length"
                 @click="genAllPrompts">
                 生成全部提示词（{{ pendingPrompts.length }}）
               </el-button>
-              <el-button size="small" type="success" :loading="bulkGenerating" :disabled="!hasKey || !pendingImages.length"
+              <el-button size="small" type="success" :loading="bulkGenerating" :disabled="!hasImageKey || !pendingImages.length"
                 @click="genAllImages">
                 生成全部图片（{{ pendingImages.length }}）
               </el-button>
             </div>
           </div>
         </template>
-        <el-alert v-if="!hasKey" title="请先在「MiniMax 模型设置」填写 API Key（或配置环境变量 MINIMAX_API_KEY）"
+        <el-alert v-if="!hasLlmKey" title="请先填写文字 LLM Key；文字推理不会使用服务端图片 Key 回退"
+          type="warning" :closable="false" show-icon style="margin-bottom:12px" />
+        <el-alert v-if="!hasImageKey" title="图片生成需要图片能力 Key，或服务端配置 MINIMAX_API_KEY"
           type="warning" :closable="false" show-icon style="margin-bottom:12px" />
         <el-alert v-if="sentences.length > 30" type="info" :closable="false" show-icon style="margin-bottom:12px"
           title="文案分句较多，生图将产生较多 API 调用，建议只对需要验证的分句生成图片。" />
@@ -154,11 +167,11 @@
             </div>
             <div style="display:flex;gap:6px">
               <el-button size="small" text @click="copyText(s.text)">复制原文</el-button>
-              <el-button size="small" @click="genPrompt(s)" :loading="s.promptState === 'loading'" :disabled="!hasKey">
+              <el-button size="small" @click="genPrompt(s)" :loading="s.promptState === 'loading'" :disabled="!hasLlmKey">
                 {{ s.promptState === 'done' ? '重新生成提示词' : '生成提示词' }}
               </el-button>
               <el-button size="small" type="success" @click="genImages(s)" :loading="s.imageState === 'loading'"
-                :disabled="!hasKey || !s.prompt.trim()">
+                :disabled="!hasImageKey || !s.prompt.trim()">
                 {{ s.imageState === 'done' ? '重新生图' : '生图对比' }}
               </el-button>
             </div>
@@ -287,9 +300,12 @@
         return v.toFixed(1) + 's';
       }
 
-      const apiKey = ref(localStorage.getItem(DEFAULT_KEY_STORAGE) || '');
+      const llmApiKey = ref(localStorage.getItem(DEFAULT_LLM_KEY_STORAGE) || '');
+      const imageApiKey = ref(localStorage.getItem(DEFAULT_IMAGE_KEY_STORAGE) || '');
       const advanced = ref(false);
-      const baseUrl = ref('');
+      const llmProvider = ref('minimax');
+      const llmBaseUrl = ref('');
+      const imageBaseUrl = ref('');
       const llmModel = ref('MiniMax-M3');
       const size = ref('1024x1024');
       const n = ref(2);
@@ -303,25 +319,38 @@
       const previewVisible = ref(false);
       const previewUrl = ref('');
 
-      // 服务端环境变量 MINIMAX_API_KEY 是否已配置（挂载时查询 /v1/compare/status）
-      const envKeyAvailable = ref(false);
-      const hasKey = computed(() => !!apiKey.value.trim() || envKeyAvailable.value);
+      const imageEnvKeyAvailable = ref(false);
+      const hasLlmKey = computed(() => !!llmApiKey.value.trim());
+      const hasImageKey = computed(() => !!imageApiKey.value.trim() || imageEnvKeyAvailable.value);
       const width = computed(() => parseInt(size.value.split('x')[0], 10));
       const height = computed(() => parseInt(size.value.split('x')[1], 10));
       const pendingPrompts = computed(() => sentences.value.filter(s => s.promptState !== 'done'));
       const pendingImages = computed(() => sentences.value.filter(s => s.imageState !== 'done' && s.prompt.trim()));
 
-      function persistKey() {
+      function persistKeys() {
         try {
-          if (apiKey.value.trim()) localStorage.setItem(DEFAULT_KEY_STORAGE, apiKey.value.trim());
-          else localStorage.removeItem(DEFAULT_KEY_STORAGE);
+          if (llmApiKey.value.trim()) localStorage.setItem(DEFAULT_LLM_KEY_STORAGE, llmApiKey.value.trim());
+          else localStorage.removeItem(DEFAULT_LLM_KEY_STORAGE);
+          if (imageApiKey.value.trim()) localStorage.setItem(DEFAULT_IMAGE_KEY_STORAGE, imageApiKey.value.trim());
+          else localStorage.removeItem(DEFAULT_IMAGE_KEY_STORAGE);
         } catch (e) { /* localStorage 不可用时静默 */ }
       }
 
-      function authBody() {
+      function llmBody() {
         return {
-          api_key: apiKey.value.trim() || undefined,
-          base_url: baseUrl.value.trim() || undefined,
+          llm: {
+            provider: llmProvider.value.trim() || 'minimax',
+            model: llmModel.value.trim() || 'MiniMax-M3',
+            api_key: llmApiKey.value.trim(),
+            base_url: llmBaseUrl.value.trim() || undefined,
+          },
+        };
+      }
+
+      function imageBody() {
+        return {
+          api_key: imageApiKey.value.trim() || undefined,
+          base_url: imageBaseUrl.value.trim() || undefined,
         };
       }
 
@@ -382,8 +411,7 @@
         try {
           const d = await apiReq('/v1/compare/prompt', {
             text: s.text,
-            ...authBody(),
-            model: llmModel.value.trim() || undefined,
+            ...llmBody(),
           });
           s.prompt = d.prompt;
           s.promptModel = d.model;
@@ -406,7 +434,7 @@
         try {
           const d = await apiReq('/v1/compare/images', {
             prompt: s.prompt,
-            ...authBody(),
+            ...imageBody(),
             n: n.value,
             width: width.value,
             height: height.value,
@@ -467,8 +495,7 @@
         try {
           await apiReq('/v1/compare/prompt', {
             text: '一朵盛开的红色玫瑰',
-            ...authBody(),
-            model: llmModel.value.trim() || undefined,
+            ...llmBody(),
           });
           testOk.value = true;
           testResult.value = '连接成功：MiniMax 文字推理可用（API Key 有效）';
@@ -495,24 +522,24 @@
         previewVisible.value = false;
       }
 
-      // 挂载时查询服务端 MiniMax Key 配置状态（env fallback 场景下启用操作按钮）
+      // 挂载时只查询图片能力环境 Key；文字 LLM 永远要求调用方显式填写绑定。
       onMounted(async () => {
         try {
           const st = await apiReq('/v1/compare/status', null, 'GET');
-          envKeyAvailable.value = !!st.has_env_key;
+          imageEnvKeyAvailable.value = !!st.has_image_env_key;
         } catch (e) { /* 查询失败保持 false，用户可手动输入 Key */ }
       });
 
       return {
         MAX_TEXT, text, splitting, sentences, scenes, layerTab, splitMeta,
-        apiKey, advanced, baseUrl, llmModel, size, n,
-        testing, testResult, testOk, hasKey, envKeyAvailable,
+        llmApiKey, imageApiKey, advanced, llmProvider, llmBaseUrl, imageBaseUrl, llmModel, size, n,
+        testing, testResult, testOk, hasLlmKey, hasImageKey, imageEnvKeyAvailable,
         bulkPrompting, bulkGenerating,
         previewVisible, previewUrl,
         width, height, pendingPrompts, pendingImages,
         maskKey, copyText, fmtTime, fmtDuration,
         runSplit, genPrompt, genImages, genAllPrompts, genAllImages,
-        testConnection, previewImage, reset, persistKey,
+        testConnection, previewImage, reset, persistKeys,
       };
     },
   };

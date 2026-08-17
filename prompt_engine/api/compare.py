@@ -2,12 +2,12 @@
 
 三个无状态端点，供前端「对比验证」页签使用：
 - POST /v1/compare/split   — 代理 smart-sentence-splitter 分句服务（SPLITTER_BASE_URL）
-- POST /v1/compare/prompt  — 单句经 MiniMax LLM（OpenAI 兼容 chat/completions）生成英文生图提示词
+- POST /v1/compare/prompt  — 单句经调用方 LLM 绑定生成英文生图提示词
 - POST /v1/compare/images  — 单提示词经 MiniMax image-01 生成 n 张图（默认 2 张）供对比
 
 API Key 流转（C1）：
-- 请求体 api_key（前端输入，浏览器内存/localStorage）优先级最高
-- 其次环境变量 MINIMAX_API_KEY（验证/部署场景由宿主注入）
+- 文字推理只接受请求体 llm 对象（provider/model/api_key/base_url），不读取服务端文字 LLM Key
+- 图片生成使用独立的请求体 api_key，缺省才读取图片能力环境变量 MINIMAX_API_KEY
 - key 仅存于本次请求的局部变量，不落盘、不进日志（错误消息清洗）
 
 外部契约（对齐 Multi-Publish 运营后台 model-preset）：
@@ -23,7 +23,6 @@ import time
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from openai import OpenAI
 from pydantic import BaseModel, Field
 from typing import Literal
 
@@ -33,6 +32,8 @@ from prompt_engine.api.minimax_client import (
     generate_minimax_images,
 )
 from prompt_engine_core.text import strip_reasoning_blocks
+from prompt_engine.llm.base import BaseLLMProvider
+from prompt_engine.models import LLMBind
 
 router = APIRouter(tags=["compare"])
 
@@ -41,8 +42,8 @@ MAX_TEXT_LENGTH = 6000          # 文案上限（需求）
 MAX_PROMPT_LENGTH = 2000        # 生图提示词上限
 SPLITTER_BASE_URL = os.environ.get("SPLITTER_BASE_URL", "http://127.0.0.1:8002")
 SPLITTER_TIMEOUT = 15.0
-DEFAULT_LLM_BASE_URL = os.environ.get("MINIMAX_BASE_URL", DEFAULT_MINIMAX_BASE_URL)
-DEFAULT_LLM_MODEL = os.environ.get("MINIMAX_MODEL", "MiniMax-M3")
+DEFAULT_IMAGE_BASE_URL = os.environ.get("MINIMAX_BASE_URL", DEFAULT_MINIMAX_BASE_URL)
+DEFAULT_IMAGE_MODEL = "image-01"
 DEFAULT_LLM_MAX_TOKENS = 1500
 DEFAULT_LLM_TIMEOUT = 60.0
 
@@ -58,8 +59,8 @@ PROMPT_SYSTEM_PROMPT = (
 )
 
 
-def _get_api_key(body_api_key: str | None) -> str:
-    """取 MiniMax API Key：请求体 > 环境变量。"""
+def _get_image_api_key(body_api_key: str | None) -> str:
+    """取图片能力 Key：请求体 > 图片能力环境变量。"""
     key = (body_api_key or "").strip()
     if key:
         return key
@@ -74,9 +75,9 @@ def _validate_base_url(base_url: str | None) -> str:
       192.168.x、169.254.x、::1、fc00::/7、fe80::/10 等）；
     - 非回环 host 强制 https（避免 Key 走明文网络）。
     """
-    value = (base_url or DEFAULT_LLM_BASE_URL).strip().rstrip("/")
+    value = (base_url or DEFAULT_IMAGE_BASE_URL).strip().rstrip("/")
     if not value:
-        value = DEFAULT_LLM_BASE_URL
+        value = DEFAULT_IMAGE_BASE_URL
     m = re.match(r"^(https?)://([^/\s]+)(/.*)?$", value)
     if not m:
         raise HTTPException(status_code=422, detail=f"base_url 格式非法：{value}")
@@ -146,9 +147,7 @@ class SplitResponse(BaseModel):
 
 class PromptRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=MAX_TEXT_LENGTH)
-    api_key: str | None = Field(default=None, description="MiniMax API Key（可选，缺省用环境变量）")
-    base_url: str | None = Field(default=None, description="MiniMax base_url（可选）")
-    model: str | None = Field(default=None, description="LLM 模型名（默认 MiniMax-M3）")
+    llm: LLMBind = Field(..., description="调用方文字 LLM 绑定；不读取服务端 Key")
 
 
 class PromptResult(BaseModel):
@@ -246,46 +245,31 @@ async def compare_prompt(req: PromptRequest):
     if not text:
         raise HTTPException(status_code=422, detail="分句文本不能为空")
 
-    api_key = _get_api_key(req.api_key)
-    if not api_key:
-        raise HTTPException(
-            status_code=400,
-            detail="MiniMax API Key 未配置：请在「对比验证」设置区填写，或设置环境变量 MINIMAX_API_KEY")
-
-    base_url = _validate_base_url(req.base_url)
-    model = (req.model or DEFAULT_LLM_MODEL).strip() or DEFAULT_LLM_MODEL
+    if req.llm.base_url:
+        _validate_base_url(req.llm.base_url)
 
     start = time.perf_counter()
     try:
-        client = OpenAI(api_key=api_key, base_url=base_url, max_retries=2)
-        # to_thread：LLM 单次最长 60s 且含重试，同步调用会阻塞事件循环
-        response = await asyncio.to_thread(
-            client.chat.completions.create,
-            model=model,
-            messages=[
+        provider = BaseLLMProvider.from_llm_object(req.llm)
+        response_text, _tokens = await asyncio.to_thread(
+            provider.chat,
+            [
                 {"role": "system", "content": PROMPT_SYSTEM_PROMPT},
                 {"role": "user", "content": text},
             ],
-            temperature=0.8,
-            max_tokens=DEFAULT_LLM_MAX_TOKENS,
-            timeout=DEFAULT_LLM_TIMEOUT,
         )
     except Exception as e:  # noqa: BLE001 — openai 客户端异常统一映射
         msg = str(e).replace("\n", " ")[:200]
         status = getattr(e, "status_code", None)
         if status in (401, 403):
-            raise HTTPException(status_code=400, detail=f"MiniMax 鉴权失败：请检查 API Key（{msg[:80]}）")
+            raise HTTPException(status_code=400, detail=f"文字 LLM 鉴权失败：请检查调用方模型配置（{msg[:80]}）")
         if status == 429:
-            raise HTTPException(status_code=429, detail="MiniMax 请求过于频繁，请稍后重试")
-        raise HTTPException(status_code=502, detail=f"MiniMax LLM 调用失败：{msg}")
+            raise HTTPException(status_code=429, detail="文字 LLM 请求过于频繁，请稍后重试")
+        if isinstance(e, ValueError):
+            raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=502, detail=f"文字 LLM 调用失败：{msg}")
 
-    raw_content = ""
-    try:
-        raw_content = response.choices[0].message.content or ""
-    except Exception:  # noqa: BLE001
-        raw_content = ""
-
-    prompt = strip_reasoning_blocks(raw_content)
+    prompt = strip_reasoning_blocks(response_text or "")
     if not prompt:
         # 输出 token 被推理耗尽或模型未返回内容 → 可重试
         raise HTTPException(
@@ -299,7 +283,7 @@ async def compare_prompt(req: PromptRequest):
 
     return PromptResult(
         prompt=prompt,
-        model=model,
+        model=req.llm.model,
         duration_ms=int((time.perf_counter() - start) * 1000),
         retryable=False,
         truncated=truncated,
@@ -313,7 +297,7 @@ async def compare_images(req: ImagesRequest):
     if not prompt:
         raise HTTPException(status_code=422, detail="提示词不能为空")
 
-    api_key = _get_api_key(req.api_key)
+    api_key = _get_image_api_key(req.api_key)
     if not api_key:
         raise HTTPException(
             status_code=400,
@@ -359,7 +343,8 @@ async def compare_images(req: ImagesRequest):
 async def compare_status():
     """对比验证页初始化状态：服务端是否已配置 MiniMax API Key（供前端启用按钮）。"""
     return {
-        "has_env_key": bool((os.environ.get("MINIMAX_API_KEY") or "").strip()),
+        "has_image_env_key": bool((os.environ.get("MINIMAX_API_KEY") or "").strip()),
+        "text_llm_requires_caller_bind": True,
         "splitter": SPLITTER_BASE_URL,
-        "default_llm_model": DEFAULT_LLM_MODEL,
+        "image_model": DEFAULT_IMAGE_MODEL,
     }

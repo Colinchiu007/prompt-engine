@@ -71,7 +71,7 @@ class TestFuzzyMatchPrompt:
             duration_ms=500,
         )
         import prompt_engine.optimizer as opt_mod
-        opt_mod._PromptCache[("a majestic cat", "midjourney", 7, 500, "", 1)] = result
+        opt_mod._PromptCache[("a majestic cat", "midjourney", 7, 500, "", 1, "image", "llm", "")] = result
 
         # 类似 prompt 应命中
         matched = fuzzy_match_prompt("a majestic cat", "midjourney", 7, 500, "", 1)
@@ -88,7 +88,7 @@ class TestFuzzyMatchPrompt:
         from prompt_engine.models import OptimizeResult, PlatformType, StyleType
         import prompt_engine.optimizer as opt_mod
 
-        opt_mod._PromptCache[("a cat", "midjourney", 7, 500, "", 1)] = OptimizeResult(
+        opt_mod._PromptCache[("a cat", "midjourney", 7, 500, "", 1, "image", "llm", "")] = OptimizeResult(
             optimized_prompt="mj cat", platform=PlatformType.MIDJOURNEY,
             style=StyleType.REALISTIC, model_used="test", tokens_used=100, duration_ms=500,
         )

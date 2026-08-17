@@ -405,7 +405,7 @@ class TestGatedRules:
 class TestSaltV4:
     def test_salt(self):
         req = VideoOptimizeRequest(prompt="hero walks")
-        key = VideoOptimizer._cache_key(None, req, "generic_video", "en")
+        key = VideoOptimizer()._cache_key(req, "generic_video", "en")
         assert key.startswith("HIGGSFIELD_FMT_V4|")
 
     def test_meta_blocks_roundtrip(self):

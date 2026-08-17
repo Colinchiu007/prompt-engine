@@ -7,7 +7,6 @@
   - Optimizer 视频路径（结构化填充 / 空输出回退原文 / 图片路径无 video 字段）
   - REST /v1/optimize domain=video（mock LLM，不依赖真实 8013/LLM key）
 """
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,7 +22,17 @@ VIDEO_LLM_JSON = (
     'cool blue and magenta palette, dramatic rim lighting", '
     '"shot": "medium_wide", "camera": "dolly", "motion_intensity": 7, '
     '"scene_transition": "cut", "continuity_token": "cat_neon_alley", "duration_hint": 5}'
+
+
 )
+
+
+def _make_mock_provider(return_value):
+    from unittest.mock import Mock
+    p = Mock()
+    p.model_name = "mock-llm"
+    p.chat.return_value = return_value
+    return p
 
 
 class TestVideoModels:
@@ -77,9 +86,8 @@ class TestOptimizerVideoPath:
         monkeypatch.setattr(Optimizer, "_cache_get", lambda self, *a, **k: None)
         monkeypatch.setattr(Optimizer, "_cache_set", lambda self, *a, **k: None)
 
-    @patch.object(Optimizer, "_call_llm")
-    def test_video_domain_fills_video_result(self, mock_call):
-        mock_call.return_value = (VIDEO_LLM_JSON, 120)
+    def test_video_domain_fills_video_result(self):
+        provider = _make_mock_provider((VIDEO_LLM_JSON, 120))
         optimizer = Optimizer()
         req = OptimizeRequest(
             prompt="a cat running",
@@ -87,7 +95,7 @@ class TestOptimizerVideoPath:
             platform=VideoPlatformType.GENERIC_VIDEO,
             creative_level=5,
         )
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=provider)
         assert result.video is not None
         assert result.video.shot == "medium_wide"
         assert result.video.camera == "dolly"
@@ -96,9 +104,8 @@ class TestOptimizerVideoPath:
         assert result.video.duration_hint == 5
         assert "neon alley" in result.optimized_prompt
 
-    @patch.object(Optimizer, "_call_llm")
-    def test_video_domain_empty_llm_falls_back_to_original(self, mock_call):
-        mock_call.return_value = ("", 0)
+    def test_video_domain_empty_llm_falls_back_to_original(self):
+        provider = _make_mock_provider(("", 0))
         optimizer = Optimizer()
         req = OptimizeRequest(
             prompt="原始文案",
@@ -106,22 +113,20 @@ class TestOptimizerVideoPath:
             platform=VideoPlatformType.GENERIC_VIDEO,
             creative_level=5,
         )
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=provider)
         assert result.optimized_prompt == "原始文案"
         assert result.video is None
 
-    @patch.object(Optimizer, "_call_llm")
-    def test_image_domain_has_no_video_field(self, mock_call):
-        mock_call.return_value = ("optimized image prompt", 80)
+    def test_image_domain_has_no_video_field(self):
+        provider = _make_mock_provider(("optimized image prompt", 80))
         optimizer = Optimizer()
         req = OptimizeRequest(prompt="a cat", creative_level=5)
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=provider)
         assert result.video is None
         assert "optimized image prompt" in result.optimized_prompt
 
-    @patch.object(Optimizer, "_call_llm")
-    def test_video_unknown_platform_falls_back_to_generic_video(self, mock_call):
-        mock_call.return_value = (VIDEO_LLM_JSON, 90)
+    def test_video_unknown_platform_falls_back_to_generic_video(self):
+        provider = _make_mock_provider((VIDEO_LLM_JSON, 90))
         optimizer = Optimizer()
         # 平台字段是枚举联合，直接构造非法值会被 pydantic 拒绝；
         # 通过 monkeypatch 平台值验证 Optimizer 回退 generic_video（不抛异常）
@@ -131,13 +136,12 @@ class TestOptimizerVideoPath:
             platform=VideoPlatformType.GENERIC_VIDEO,
             creative_level=5,
         )
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=provider)
         assert result.optimized_prompt != ""
 
-    @patch.object(Optimizer, "_call_llm")
-    def test_video_template_path_skipped(self, mock_call):
+    def test_video_template_path_skipped(self):
         """视频领域 creative_level<=3 不走模板直出（模板只渲染图片六要素）。"""
-        mock_call.return_value = (VIDEO_LLM_JSON, 10)
+        provider = _make_mock_provider((VIDEO_LLM_JSON, 10))
         optimizer = Optimizer()
         req = OptimizeRequest(
             prompt="a cat",
@@ -145,9 +149,9 @@ class TestOptimizerVideoPath:
             platform=VideoPlatformType.GENERIC_VIDEO,
             creative_level=1,
         )
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=provider)
         assert result.video is not None
-        assert mock_call.called
+        assert provider.chat.called
 
 
 class TestVideoOptimizeEndpoint:
@@ -234,9 +238,8 @@ class TestVideoFactFidelity:
         assert "Fact-Fidelity" in prompt
         assert "Do NOT change the subject's identity, era/setting, or event facts" in prompt
 
-    @patch.object(Optimizer, "_call_llm")
-    def test_video_optimize_injects_context_synopsis(self, mock_call):
-        mock_call.return_value = (VIDEO_LLM_JSON, 120)
+    def test_video_optimize_injects_context_synopsis(self):
+        provider = _make_mock_provider((VIDEO_LLM_JSON, 120))
         optimizer = Optimizer()
         req = OptimizeRequest(
             prompt="关羽率军北伐，水淹七军，威震华夏",
@@ -244,16 +247,16 @@ class TestVideoFactFidelity:
             platform=VideoPlatformType.GENERIC_VIDEO,
             context={"synopsis": "襄樊之战 关羽 水淹七军"},
         )
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=provider)
         assert result.optimized_prompt
-        system_prompt = mock_call.call_args[0][0]
+        messages = provider.chat.call_args[0][0]
+        system_prompt = messages[0]["content"]
         assert "Fact-Fidelity" in system_prompt
         assert "襄樊之战 关羽 水淹七军" in system_prompt
 
-    @patch.object(Optimizer, "_call_llm")
-    def test_video_optimize_unknown_context_key_ignored(self, mock_call):
+    def test_video_optimize_unknown_context_key_ignored(self):
         """未知 context 键不改变行为（白名单外键被忽略），优化正常完成。"""
-        mock_call.return_value = (VIDEO_LLM_JSON, 120)
+        provider = _make_mock_provider((VIDEO_LLM_JSON, 120))
         optimizer = Optimizer()
         req = OptimizeRequest(
             prompt="a cat running",
@@ -261,8 +264,9 @@ class TestVideoFactFidelity:
             platform=VideoPlatformType.GENERIC_VIDEO,
             context={"bogus_key": "should be ignored", "synopsis": "cat story"},
         )
-        result = optimizer.optimize(req)
+        result = optimizer.optimize(req, provider=provider)
         assert result.optimized_prompt
-        system_prompt = mock_call.call_args[0][0]
+        messages = provider.chat.call_args[0][0]
+        system_prompt = messages[0]["content"]
         assert "should be ignored" not in system_prompt
         assert "cat story" in system_prompt

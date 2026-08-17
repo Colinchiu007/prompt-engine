@@ -1,7 +1,7 @@
 """数据模型 — Pydantic 类型定义"""
 from typing import Any, Optional
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PlatformType(str, Enum):
@@ -19,6 +19,12 @@ class DomainType(str, Enum):
     """优化领域：image（图片，默认）/ video（视频）"""
     IMAGE = "image"
     VIDEO = "video"
+
+
+class OptimizationStrategy(str, Enum):
+    """优化执行策略：template/llm；缺省策略固定为 llm。"""
+    TEMPLATE = "template"
+    LLM = "llm"
 
 
 class VideoPlatformType(str, Enum):
@@ -150,10 +156,13 @@ class StyleCategoryResult(BaseModel):
 
 
 class AutoStyleRequest(BaseModel):
-    """自动风格识别请求"""
+    """风格识别请求；LLM 分类也必须显式携带调用方 BYOK 绑定。"""
     prompt: str = Field(..., min_length=1, max_length=2000, description="待分析的原始 prompt")
     platform: PlatformType = Field(default=PlatformType.GENERIC, description="目标平台")
-    use_llm: bool = Field(default=True, description="是否使用 LLM 做深度分类")
+    model_config = ConfigDict(extra="forbid")
+
+    use_llm: bool = Field(default=False, description="是否使用调用方传入的 LLM 做深度分类")
+    llm: Optional["LLMBind"] = Field(default=None, description="use_llm=true 时必填的调用方 BYOK 绑定")
     max_categories: int = Field(default=5, ge=1, le=10, description="最多返回几个风格类别")
 
 
@@ -163,24 +172,43 @@ class LLMBind(BaseModel):
     字段来自调用方（如桌面版「模型设置」），引擎不再使用服务端 config.yaml / OpsCenter key 兜底。
     api_key 只用于构建 provider，绝不写入日志。
     """
+    model_config = ConfigDict(extra="forbid")
+
     provider: str = Field(..., min_length=1, max_length=64, description="引擎 provider 注册名：openai_compat / ai_router / sensenova / xfyun / gemini / minimax / deepseek")
     model: str = Field(..., min_length=1, max_length=128, description="模型名（调用方配置，如 deepseek-v4-flash）")
     base_url: Optional[str] = Field(default=None, max_length=256, description="OpenAI 兼容 base_url；sensenova 缺省 https://token.sensenova.cn/v1")
     api_key: str = Field(..., min_length=1, max_length=512, description="调用方自己的 API Key（不落日志）")
+    caller: Optional[str] = Field(default=None, max_length=64, description="调用产品标识（可选）")
+
+
+AutoStyleRequest.model_rebuild()
+
+
+class EvaluateRequest(BaseModel):
+    """调用方 BYOK 的 prompt 质量评估请求。"""
+    model_config = ConfigDict(extra="forbid")
+
+    original: str = Field(..., min_length=1, max_length=2000, description="原始提示词")
+    optimized: str = Field(..., min_length=1, max_length=2000, description="优化后的提示词")
+    platform: str = Field(default="generic", min_length=1, max_length=64, description="目标平台")
+    llm: LLMBind = Field(..., description="调用方模型绑定，评估必须使用 caller BYOK")
 
 
 class OptimizeRequest(BaseModel):
     """优化请求"""
+    model_config = ConfigDict(extra="forbid")
+
     prompt: str = Field(..., min_length=1, max_length=2000, description="原始提示词")
     domain: DomainType = Field(default=DomainType.IMAGE, description="优化领域：image（默认）/ video")
     platform: PlatformType | VideoPlatformType = Field(default=PlatformType.GENERIC, description="目标平台（图片或视频）")
     style: Optional[StyleType] = Field(default=None, description="艺术风格")
     creative_level: int = Field(default=5, ge=1, le=10, description="创意程度 1-10")
+    optimization_strategy: OptimizationStrategy = Field(
+        default=OptimizationStrategy.LLM,
+        description="执行策略：template/llm；缺省 llm，creative_level 只控制生成强度",
+    )
     max_length: int = Field(default=500, ge=50, le=2000, description="优化结果最大字符数")
-    user_tier: int = Field(default=0, ge=0, le=3, description="已弃用（BYOK）：服务端 Key 路由不再使用，保留字段仅为 schema 兼容")
-    user_own_key: Optional[str] = Field(default=None, description="已弃用（BYOK）：服务端 Key 路由不再使用，保留字段仅为 schema 兼容")
-    llm: Optional[LLMBind] = Field(default=None, description="BYOK：调用方模型的 LLM 绑定。需要调用 LLM 的请求（图片 creative_level>3 或 video 域）必填，缺失返回 422 fail-closed")
-    caller: Optional[str] = Field(default=None, max_length=64, description="产品标识（如 multi-publish-desktop），透传回结果")
+    llm: Optional[LLMBind] = Field(default=None, description="BYOK：调用方模型的 LLM 绑定。llm 策略请求必填，缺失返回 422 fail-closed")
     negative_prompt: Optional[str] = Field(default=None, max_length=500, description="负面提示词，避免的元素")
     num_candidates: int = Field(default=1, ge=1, le=5, description="候选版本数量，用于 A/B 测试")
     auto_detect_style: bool = Field(
@@ -190,6 +218,7 @@ class OptimizeRequest(BaseModel):
     context: Optional[dict] = Field(default=None, description="PROJECT-012 注入的上下文：synopsis, character, setting, character_list。用于角色一致性")
     excluded_characters: Optional[Any] = Field(default=None, description="禁止出现角色/元素（图片引擎 Higgsfield 对齐；rest 层收敛，兼容字符串/数组，≤20 项）")
     no_swap_pairs: Optional[list] = Field(default=None, description="禁止替换对二元组数组 [[from, to], ...]（rest 层校验，≤10 对）")
+    bypass_cache: bool = Field(default=False, description="是否跳过缓存读写；手动重生成应设为 true")
 
 
 class BatchOptimizeRequest(BaseModel):
@@ -199,10 +228,13 @@ class BatchOptimizeRequest(BaseModel):
 
 class ReverseRequest(BaseModel):
     """图片逆向工程请求"""
+    model_config = ConfigDict(extra="forbid")
+
     image_url: str = Field(..., description="图片 URL")
     platform: PlatformType = Field(default=PlatformType.GENERIC, description="目标平台")
     style: Optional[StyleType] = Field(default=None, description="艺术风格")
     detail: str = Field(default="auto", description="视觉分析详细度: low / auto / high")
+    llm: LLMBind = Field(..., description="BYOK：调用方模型绑定，逆向调用必填")
 
 
 class ReverseResult(BaseModel):
@@ -213,6 +245,8 @@ class ReverseResult(BaseModel):
     model_used: str = Field(default="", description="LLM 模型名称")
     description: str = Field(default="", description="图片描述（纯文本版本）")
     duration_ms: float = Field(default=0.0, description="耗时")
+    key_source: str = Field(default="none", description="Key 来源：caller")
+    caller: Optional[str] = Field(default=None, description="产品标识")
     error: Optional[str] = Field(default=None, description="错误信息")
 
 
@@ -226,8 +260,10 @@ class OptimizeResult(BaseModel):
     tokens_used: int = Field(default=0, description="消耗的 token 数")
     duration_ms: float = Field(default=0.0, description="优化耗时（毫秒）")
     candidates: list[str] = Field(default_factory=list, description="多候选版本（A/B 测试时返回）")
-    key_source: str = Field(default="config", description="Key 来源: caller（llm 对象路径）/ config（兼容缺省，仅模板直出等免 LLM 路径）")
+    key_source: str = Field(default="none", description="Key 来源：caller（请求 llm 对象）/ none（模板路径或失败）")
+    strategy_used: Optional[str] = Field(default=None, description="实际执行路径：template 或 llm")
     caller: Optional[str] = Field(default=None, description="产品标识透传（来自请求 caller）")
+    cache_hit: bool = Field(default=False, description="是否直接命中缓存；false 表示本次实际执行了模板或 LLM")
     error: Optional[str] = Field(default=None, description="出错时的错误信息")
     detected_categories: Optional[StyleCategoryResult] = Field(
         default=None,
@@ -237,9 +273,12 @@ class OptimizeResult(BaseModel):
 
 class RewriteRequest(BaseModel):
     """Prompt 扩写请求（灵感: Infinity 项目）"""
+    model_config = ConfigDict(extra="forbid")
+
     prompt: str = Field(..., min_length=1, max_length=500, description="原始简短描述")
     platform: PlatformType = Field(default=PlatformType.GENERIC, description="目标平台")
     max_length: int = Field(default=500, ge=50, le=2000, description="输出最大字符数")
+    llm: LLMBind = Field(..., description="BYOK：调用方模型绑定，扩写调用必填")
 
 
 class FeedbackEntry(BaseModel):
@@ -352,5 +391,3 @@ CATEGORY_DESCRIPTIONS: dict["StyleCategory", str] = {
     StyleCategory.EMOJIS: "Emoji 风格、表情符号、Unicode 符号",
     StyleCategory.MISCELLANEOUS: "杂项、其他、特殊渲染效果",
 }
-
-

@@ -5,7 +5,16 @@ from mcp.server.models import InitializationOptions
 import mcp.server.stdio
 import mcp.types as types
 from mcp.server import NotificationOptions, Server
-from prompt_engine.models import OptimizeRequest, PlatformType, StyleType, ReverseRequest, AutoStyleRequest
+from prompt_engine.models import (
+    OptimizeRequest,
+    PlatformType,
+    VideoPlatformType,
+    DomainType,
+    StyleType,
+    OptimizationStrategy,
+    ReverseRequest,
+    AutoStyleRequest,
+)
 from prompt_engine.optimizer import Optimizer
 from prompt_engine.classifier import StyleCategoryClassifier
 
@@ -47,6 +56,35 @@ async def handle_list_tools() -> list[types.Tool]:
                         "minimum": 1,
                         "maximum": 10,
                     },
+                    "domain": {
+                        "type": "string",
+                        "description": "优化领域：image 或 video",
+                        "default": "image",
+                    },
+                    "optimization_strategy": {
+                        "type": "string",
+                        "description": "执行策略：template/llm；缺省 llm，creative_level 只控制生成强度，LLM 路径必须传 llm",
+                        "enum": ["template", "llm"],
+                        "default": "llm",
+                    },
+                    "llm": {
+                        "type": "object",
+                        "description": "调用方自己的 LLM 绑定；provider/model/api_key 必填，base_url 可选",
+                        "properties": {
+                            "provider": {"type": "string"},
+                            "model": {"type": "string"},
+                            "base_url": {"type": "string"},
+                            "api_key": {"type": "string"},
+                            "caller": {"type": "string"},
+                        },
+                        "required": ["provider", "model", "api_key"],
+                        "additionalProperties": False,
+                    },
+                    "bypass_cache": {
+                        "type": "boolean",
+                        "description": "跳过缓存读写；手动重生成时使用 true",
+                        "default": False,
+                    },
                     "negative_prompt": {
                         "type": "string",
                         "description": "负面提示词，避免的元素（可选）",
@@ -61,6 +99,18 @@ async def handle_list_tools() -> list[types.Tool]:
                     },
                 },
                 "required": ["prompt"],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {"optimization_strategy": {"const": "template"}},
+                            "required": ["optimization_strategy"],
+                        },
+                        "then": {
+                            "properties": {"domain": {"const": "image"}},
+                        },
+                        "else": {"required": ["llm"]},
+                    },
+                ],
             },
         ),
         types.Tool(
@@ -83,8 +133,21 @@ async def handle_list_tools() -> list[types.Tool]:
                         "description": "艺术风格（可选）",
                         "default": None,
                     },
+                    "llm": {
+                        "type": "object",
+                        "description": "调用方自己的视觉 LLM 绑定；provider/model/api_key 必填",
+                        "properties": {
+                            "provider": {"type": "string"},
+                            "model": {"type": "string"},
+                            "base_url": {"type": "string"},
+                            "api_key": {"type": "string"},
+                            "caller": {"type": "string"},
+                        },
+                        "required": ["provider", "model", "api_key"],
+                        "additionalProperties": False,
+                    },
                 },
-                "required": ["image_url"],
+                "required": ["image_url", "llm"],
             },
         ),
         types.Tool(
@@ -139,33 +202,65 @@ async def _handle_optimize(arguments: dict) -> list[types.TextContent]:
     platform_str = arguments.get("platform", "generic")
     style_str = arguments.get("style")
     creative_level = arguments.get("creative_level", 5)
+    domain_str = arguments.get("domain", "image")
+    optimization_strategy = arguments.get("optimization_strategy", "llm")
+    llm = arguments.get("llm")
+    bypass_cache = bool(arguments.get("bypass_cache", False))
     negative_prompt = arguments.get("negative_prompt")
     num_candidates = arguments.get("num_candidates", 1)
 
     try:
-        platform = PlatformType(platform_str)
+        domain = DomainType(domain_str)
     except ValueError:
-        platform = PlatformType.GENERIC
+        raise ValueError(f"domain 参数无效：必须是 image 或 video，收到 {domain_str!r}")
+
+    try:
+        optimization_strategy = OptimizationStrategy(optimization_strategy)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("optimization_strategy 必须是 template 或 llm") from exc
+
+    try:
+        platform = (VideoPlatformType if domain == DomainType.VIDEO else PlatformType)(platform_str)
+    except ValueError:
+        expected = "VideoPlatformType" if domain == DomainType.VIDEO else "PlatformType"
+        raise ValueError(f"platform 参数无效：{expected} 不接受 {platform_str!r}")
 
     style = None
     if style_str:
         try:
             style = StyleType(style_str)
         except ValueError:
-            pass
+            raise ValueError(f"style 参数无效：收到 {style_str!r}")
 
     request = OptimizeRequest(
         prompt=prompt,
         platform=platform,
+        domain=domain,
         style=style,
         creative_level=creative_level,
+        optimization_strategy=optimization_strategy,
+        llm=llm,
+        bypass_cache=bypass_cache,
         negative_prompt=negative_prompt or "",
         num_candidates=num_candidates,
         auto_detect_style=True,
     )
 
     optimizer = get_optimizer()
-    result = optimizer.optimize(request)
+    from prompt_engine.optimizer import requires_llm
+    from prompt_engine.llm.base import BaseLLMProvider
+
+    provider = None
+    if requires_llm(request):
+        if request.llm is None:
+            raise ValueError("llm 必填：调用方需传入自己的模型绑定（provider/model/api_key），引擎不再使用服务端 key 兜底")
+        provider = BaseLLMProvider.from_llm_object(request.llm.model_dump())
+    provider_identity = ""
+    if request.llm is not None:
+        import hashlib
+        key_digest = hashlib.sha256(request.llm.api_key.encode("utf-8")).hexdigest()[:16]
+        provider_identity = f"{request.llm.caller or ''}|{request.llm.provider}|{request.llm.model}|{request.llm.base_url or ''}|key:{key_digest}"
+    result = optimizer.optimize(request, provider, provider_identity)
 
     if result.error:
         return [types.TextContent(
@@ -185,27 +280,34 @@ async def _handle_reverse(arguments: dict) -> list[types.TextContent]:
     image_url = arguments.get("image_url", "")
     platform_str = arguments.get("platform", "generic")
     style_str = arguments.get("style")
+    llm = arguments.get("llm")
+
+    if llm is None:
+        raise ValueError("llm 必填：调用方需传入自己的模型绑定（provider/model/api_key）")
 
     try:
         platform = PlatformType(platform_str)
     except ValueError:
-        platform = PlatformType.GENERIC
+        raise ValueError(f"platform 参数无效：必须是图片平台枚举值，收到 {platform_str!r}")
 
     style = None
     if style_str:
         try:
             style = StyleType(style_str)
         except ValueError:
-            pass
+            raise ValueError(f"style 参数无效：收到 {style_str!r}")
 
     request = ReverseRequest(
         image_url=image_url,
         platform=platform,
         style=style,
+        llm=llm,
     )
 
     optimizer = get_optimizer()
-    result = optimizer.reverse_engineer(request)
+    from prompt_engine.llm.base import BaseLLMProvider
+    provider = BaseLLMProvider.from_llm_object(request.llm.model_dump())
+    result = optimizer.reverse_engineer(request, provider=provider)
 
     if result.error:
         return [types.TextContent(type="text", text=f"逆向失败: {result.error}")]
@@ -218,7 +320,7 @@ async def _handle_classify(arguments: dict) -> list[types.TextContent]:
     max_categories = arguments.get("max_categories", 5)
 
     classifier = StyleCategoryClassifier()
-    result = classifier.classify(prompt=prompt, max_categories=max_categories)
+    result = classifier.classify(prompt=prompt, max_categories=max_categories, use_llm=False)
 
     if not result.categories:
         return [types.TextContent(

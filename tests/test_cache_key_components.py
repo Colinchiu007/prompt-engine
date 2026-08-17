@@ -2,7 +2,7 @@
 
 覆盖（REQ-1.5）：
 - make_key 单测：同参异 excluded/no_swap/context/style/language → key 不同，全同 → 相同
-- 版本盐：key 含 IMAGE_FMT_V1；旧格式（无盐）不再命中
+- 版本盐：key 以 IMAGE_FMT_V4 开头；旧格式（无盐）不再命中
 - 集成级：同参异 excluded_characters 的两次 optimize() 第二次必须 cache miss
 - fuzzy 零回归：legacy _PromptCache tuple 键/fuzzy_match_prompt 不受影响
 """
@@ -25,6 +25,10 @@ BASE = dict(
     negative_prompt="",
     num_candidates=1,
 )
+
+
+class _FakeProvider:
+    model_name = "test-model"
 
 
 def _key(**overrides):
@@ -60,7 +64,11 @@ class TestMakeKeyComponents:
 
     def test_version_salt_present(self):
         key = _key()
-        assert "IMAGE_FMT_V1" in key
+        assert key.startswith("IMAGE_FMT_V4|")
+
+    def test_domain_and_effective_strategy_change_key(self):
+        assert _key(domain="video") != _key(domain="image")
+        assert _key(optimization_strategy="template") != _key(optimization_strategy="llm")
 
     def test_old_sha256_format_no_longer_matches(self):
         # 旧实现：sha256(prompt|platform|...)，新 key 必须与旧格式不同（旧缓存自然失效）
@@ -94,8 +102,9 @@ class TestOptimizeCacheMiss:
             creative_level=7,
             excluded_characters=[],
         )
-        r_a = o.optimize(req_a)
-        r_b = o.optimize(req_b)
+        provider = _FakeProvider()
+        r_a = o.optimize(req_a, provider=provider, provider_id="test|test-model|")
+        r_b = o.optimize(req_b, provider=provider, provider_id="test|test-model|")
         assert not r_a.error and not r_b.error
         # 两次都走 LLM → 第二次不是缓存命中（串号被修复）
         assert mock_call.call_count == 2
@@ -112,26 +121,37 @@ class TestOptimizeCacheMiss:
             context={"synopsis": "war"},
             style=StyleType.REALISTIC,
         )
-        o.optimize(req)
-        r2 = o.optimize(req)
+        provider = _FakeProvider()
+        o.optimize(req, provider=provider, provider_id="test|test-model|")
+        r2 = o.optimize(req, provider=provider, provider_id="test|test-model|")
         # 缓存命中：第二次不调 LLM（L1 命中不重置 tokens，用调用次数判定）
         assert mock_call.call_count == 1
+        assert r2.cache_hit is True
 
     @patch.object(Optimizer, "_call_llm")
     def test_style_differs_second_is_cache_miss(self, mock_call):
         mock_call.return_value = ("optimized prompt A", 100)
         o = Optimizer()
         prompt = self._unique_prompt()
-        o.optimize(OptimizeRequest(prompt=prompt, platform=PlatformType.GENERIC, creative_level=7, style=None))
-        o.optimize(OptimizeRequest(prompt=prompt, platform=PlatformType.GENERIC, creative_level=7, style=StyleType.REALISTIC))
+        provider = _FakeProvider()
+        o.optimize(
+            OptimizeRequest(prompt=prompt, platform=PlatformType.GENERIC, creative_level=7, style=None),
+            provider=provider,
+            provider_id="test|test-model|",
+        )
+        o.optimize(
+            OptimizeRequest(prompt=prompt, platform=PlatformType.GENERIC, creative_level=7, style=StyleType.REALISTIC),
+            provider=provider,
+            provider_id="test|test-model|",
+        )
         assert mock_call.call_count == 2
 
 
-class TestLegacyFuzzyCompat:
-    def test_fuzzy_match_prompt_still_works(self):
+class TestCurrentFuzzyCache:
+    def test_fuzzy_match_prompt_uses_current_tuple_shape(self):
         from prompt_engine.models import OptimizeResult
         from prompt_engine import optimizer as opt_mod
-        opt_mod._PromptCache[("a majestic cat", "midjourney", 7, 500, "", 1)] = OptimizeResult(
+        opt_mod._PromptCache[("a majestic cat", "midjourney", 7, 500, "", 1, "image", "llm", "")] = OptimizeResult(
             optimized_prompt="a majestic cat --ar 16:9",
             platform=PlatformType.MIDJOURNEY,
             style=StyleType.REALISTIC,
@@ -152,7 +172,7 @@ class TestReviewFixes:
         import datetime
         ctx = {"ts": datetime.datetime(2026, 8, 15, 10, 30)}
         key = SqlitePromptCache.make_key("a cat", "generic", 7, 500, "", 1, context=ctx)
-        assert isinstance(key, str) and key.startswith("IMAGE_FMT_V1|")
+        assert isinstance(key, str) and key.startswith("IMAGE_FMT_V4|")
         assert SqlitePromptCache.make_key("a cat", "generic", 7, 500, "", 1, context=ctx) == key
 
     def test_set_excluded_sorted_deterministic(self):

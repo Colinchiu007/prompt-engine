@@ -3,11 +3,12 @@
 覆盖：
   - BaseLLMProvider.from_llm_object：sensenova 默认 base_url / openai_compat 缺省 base_url /
     缺 api_key / 缺 model / 未知 provider / 非 dict → ValueError（rest 映射 422，api_key 绝不泄露）
-  - REST /v1/optimize：需 LLM 请求（video 域 / 图片 creative_level>3）缺 llm → 422 fail-closed
-  - 模板直出（图片 creative_level<=3）免 llm → 200
+  - REST /v1/optimize：缺省 llm 请求缺 llm → 422 fail-closed，与 creative_level 无关
+  - 模板直出（图片显式 template）免 llm → 200
   - llm 路径结果 key_source=caller 且 caller 透传
   - batch：全带 llm 200 / 任一需 LLM 缺 llm → 422
-  - 缓存键并入 provider 身份（provider|model|base_url），防跨调用方串缓存
+  - 缓存键并入调用方 + provider 身份，防跨产品串缓存
+  - 手动重生成可 bypass_cache，跳过缓存读写并通过 cache_hit 证明真实执行
 """
 import pytest
 from fastapi.testclient import TestClient
@@ -16,10 +17,12 @@ from prompt_engine.llm.base import BaseLLMProvider
 from prompt_engine.optimizer import Optimizer
 
 
-def _llm(provider="openai_compat", model="gpt-4o", api_key="sk-test-not-secret", base_url=None):
+def _llm(provider="openai_compat", model="gpt-4o", api_key="sk-test-not-secret", base_url=None, caller=None):
     payload = {"provider": provider, "model": model, "api_key": api_key}
     if base_url:
         payload["base_url"] = base_url
+    if caller:
+        payload["caller"] = caller
     return payload
 
 
@@ -76,6 +79,58 @@ class TestFromLlmObject:
 
 
 class TestOptimizeEndpointByok:
+    def test_explicit_llm_strategy_at_low_creative_level_uses_caller_llm(self, monkeypatch):
+        client = self._client_with_mocked_llm(monkeypatch)
+        resp = client.post("/v1/optimize", json={
+            "prompt": "一位扶余王子在山城落脚",
+            "platform": "generic",
+            "creative_level": 1,
+            "optimization_strategy": "llm",
+            "llm": _llm(provider="sensenova", model="SenseNova", caller="multi-publish-desktop"),
+        })
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["strategy_used"] == "llm"
+        assert data["key_source"] == "caller"
+        assert data["caller"] == "multi-publish-desktop"
+
+    def test_explicit_template_strategy_ignores_creative_level_and_needs_no_llm(self):
+        client = TestClient(self._app())
+        resp = client.post("/v1/optimize", json={
+            "prompt": "a cat",
+            "platform": "generic",
+            "creative_level": 8,
+            "optimization_strategy": "template",
+        })
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["strategy_used"] == "template"
+        assert data["model_used"] == "template"
+        assert data["key_source"] == "none"
+
+    def test_explicit_template_strategy_rejects_video_domain(self):
+        client = TestClient(self._app())
+        resp = client.post("/v1/optimize", json={
+            "prompt": "a cat running",
+            "domain": "video",
+            "platform": "generic_video",
+            "creative_level": 1,
+            "optimization_strategy": "template",
+        })
+        assert resp.status_code == 422, resp.text
+        assert "template" in str(resp.json()["detail"])
+
+    def test_top_level_caller_is_rejected(self, monkeypatch):
+        client = self._client_with_mocked_llm(monkeypatch)
+        resp = client.post("/v1/optimize", json={
+            "prompt": "a cat",
+            "platform": "generic",
+            "llm": _llm(provider="sensenova", model="SenseNova"),
+            "caller": "multi-publish-desktop",
+        })
+        assert resp.status_code == 422, resp.text
+        assert "caller" in resp.text
+
     """REST /v1/optimize 的 BYOK fail-closed 契约。"""
 
     @pytest.fixture(autouse=True)
@@ -102,22 +157,23 @@ class TestOptimizeEndpointByok:
         assert resp.status_code == 422
         assert "llm 必填" in resp.json()["detail"]
 
-    def test_image_creative5_missing_llm_422(self, monkeypatch):
+    def test_image_default_strategy_missing_llm_422(self, monkeypatch):
         client = self._client_with_mocked_llm(monkeypatch)
         resp = client.post("/v1/optimize", json={
             "prompt": "a majestic cat",
             "platform": "generic",
-            "creative_level": 5,
+            "creative_level": 1,
         })
         assert resp.status_code == 422
         assert "llm 必填" in resp.json()["detail"]
 
-    def test_template_path_no_llm_200(self):
+    def test_explicit_template_path_no_llm_200(self):
         client = TestClient(self._app())
         resp = client.post("/v1/optimize", json={
             "prompt": "a cat",
             "platform": "generic",
             "creative_level": 1,
+            "optimization_strategy": "template",
         })
         assert resp.status_code == 200, resp.text
         assert resp.json()["tokens_used"] == 0
@@ -128,8 +184,7 @@ class TestOptimizeEndpointByok:
             "prompt": "a majestic cat",
             "platform": "generic",
             "creative_level": 5,
-            "llm": _llm(provider="sensenova", model="nova-pro"),
-            "caller": "multi-publish-desktop",
+            "llm": _llm(provider="sensenova", model="nova-pro", caller="multi-publish-desktop"),
         })
         assert resp.status_code == 200, resp.text
         data = resp.json()
@@ -150,7 +205,7 @@ class TestOptimizeEndpointByok:
         assert "不支持的 LLM 供应商" in resp.json()["detail"]
 
     def test_low_creative_with_llm_still_caller(self, monkeypatch):
-        """creative_level<=3 模板路径即使带 llm 也免 LLM（key_source 保持 config 语义）。"""
+        """低 creative_level 的缺省 llm 策略使用调用方绑定。"""
         client = self._client_with_mocked_llm(monkeypatch)
         resp = client.post("/v1/optimize", json={
             "prompt": "a cat",
@@ -159,7 +214,29 @@ class TestOptimizeEndpointByok:
             "llm": _llm(),
         })
         assert resp.status_code == 200, resp.text
-        assert resp.json()["key_source"] == "config"
+        assert resp.json()["strategy_used"] == "llm"
+        assert resp.json()["key_source"] == "caller"
+
+    def test_auto_strategy_rejected_by_schema(self):
+        client = TestClient(self._app())
+        resp = client.post("/v1/optimize", json={
+            "prompt": "a cat",
+            "platform": "generic",
+            "optimization_strategy": "auto",
+        })
+        assert resp.status_code == 422
+
+    def test_strategy_resolver_rejects_unknown_value_when_model_validation_is_bypassed(self):
+        from types import SimpleNamespace
+        from prompt_engine.models import DomainType
+        from prompt_engine.optimizer import resolve_optimization_strategy
+
+        request = SimpleNamespace(
+            optimization_strategy="auto",
+            domain=DomainType.IMAGE,
+        )
+        with pytest.raises(ValueError, match="optimization_strategy"):
+            resolve_optimization_strategy(request)
 
     @staticmethod
     def _app():
@@ -200,7 +277,7 @@ class TestBatchByok:
         client = self._client_with_mocked_llm(monkeypatch)
         resp = client.post("/v1/optimize/batch", json={
             "requests": [
-                {"prompt": "template image", "platform": "generic", "creative_level": 1},
+                {"prompt": "image scene", "platform": "generic", "creative_level": 1},
                 {"prompt": "video scene", "domain": "video", "platform": "generic_video", "creative_level": 5},
             ]
         })
@@ -209,6 +286,30 @@ class TestBatchByok:
 
 
 class TestCacheProviderIsolation:
+    def test_default_llm_and_explicit_llm_share_effective_cache(self, monkeypatch):
+        from prompt_engine.models import OptimizeRequest, PlatformType
+
+        optimizer = Optimizer()
+        prompt = "effective-cache-llm-" + __import__("uuid").uuid4().hex
+        calls = []
+        monkeypatch.setattr(optimizer, "_call_llm", lambda *args, **kwargs: calls.append((args, kwargs)) or ("fresh LLM prompt", 1))
+        provider = type("TestProvider", (), {"model_name": "SenseNova"})()
+        provider_id = "multi-publish-desktop|sensenova|SenseNova|key:test"
+
+        defaulted = optimizer.optimize(
+            OptimizeRequest(prompt=prompt, platform=PlatformType.GENERIC, creative_level=5),
+            provider=provider, provider_id=provider_id,
+        )
+        explicit = optimizer.optimize(
+            OptimizeRequest(prompt=prompt, platform=PlatformType.GENERIC, creative_level=5, optimization_strategy="llm"),
+            provider=provider, provider_id=provider_id,
+        )
+
+        assert defaulted.strategy_used == "llm"
+        assert explicit.strategy_used == "llm"
+        assert len(calls) == 1
+        assert explicit.cache_hit is True
+
     def test_cache_key_differs_across_provider_identity(self):
         from prompt_engine.cache import SqlitePromptCache
 
@@ -250,3 +351,71 @@ class TestCacheProviderIsolation:
         )
         assert captured["get"] == identity
         assert captured["set"] == identity
+
+
+class TestBypassCache:
+    """手动重生成必须真实执行 LLM，不能把历史缓存误报为新结果。"""
+
+    @staticmethod
+    def _provider():
+        return type("TestProvider", (), {"model_name": "SenseNova"})()
+
+    def test_bypass_cache_skips_reads_and_writes_then_calls_llm(self, monkeypatch):
+        from prompt_engine.models import OptimizeRequest, OptimizeResult, PlatformType
+
+        optimizer = Optimizer()
+        get_calls = []
+        set_calls = []
+        monkeypatch.setattr(optimizer, "_cache_get", lambda *args, **kwargs: get_calls.append((args, kwargs)) or OptimizeResult(
+            optimized_prompt="stale cached prompt", platform=PlatformType.GENERIC, model_used="stale"
+        ))
+        monkeypatch.setattr(optimizer, "_cache_set", lambda *args, **kwargs: set_calls.append((args, kwargs)))
+        llm_calls = []
+        monkeypatch.setattr(optimizer, "_call_llm", lambda *args, **kwargs: llm_calls.append((args, kwargs)) or ("fresh generated prompt", 42))
+
+        result = optimizer.optimize(
+            OptimizeRequest(
+                prompt="scene",
+                platform=PlatformType.GENERIC,
+                creative_level=1,
+                optimization_strategy="llm",
+                bypass_cache=True,
+            ),
+            provider=self._provider(),
+            provider_id="multi-publish-desktop|sensenova|SenseNova|",
+        )
+
+        assert get_calls == []
+        assert set_calls == []
+        assert len(llm_calls) == 1
+        assert result.optimized_prompt == "fresh generated prompt"
+        assert result.cache_hit is False
+        assert result.strategy_used == "llm"
+        assert result.key_source == "caller"
+
+    def test_normal_cache_hit_sets_cache_hit_without_calling_llm(self, monkeypatch):
+        from prompt_engine.models import OptimizeRequest, OptimizeResult, PlatformType
+
+        optimizer = Optimizer()
+        cached = OptimizeResult(
+            optimized_prompt="cached prompt",
+            platform=PlatformType.GENERIC,
+            model_used="SenseNova",
+        )
+        monkeypatch.setattr(optimizer, "_cache_get", lambda *args, **kwargs: cached)
+        monkeypatch.setattr(optimizer, "_call_llm", lambda *args, **kwargs: pytest.fail("cache hit must not call LLM"))
+
+        result = optimizer.optimize(
+            OptimizeRequest(
+                prompt="scene",
+                platform=PlatformType.GENERIC,
+                creative_level=1,
+                optimization_strategy="llm",
+            ),
+            provider=self._provider(),
+            provider_id="multi-publish-desktop|sensenova|SenseNova|",
+        )
+
+        assert result.optimized_prompt == "cached prompt"
+        assert result.cache_hit is True
+        assert result.strategy_used == "llm"

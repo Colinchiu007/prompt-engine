@@ -14,7 +14,7 @@ from prompt_engine.classifier import StyleCategoryClassifier
 from prompt_engine.models import (
     OptimizeRequest, BatchOptimizeRequest, OptimizeResult,
     ReverseRequest, ReverseResult, RewriteRequest,
-    AutoStyleRequest, StyleCategoryResult, StyleCategory,
+    AutoStyleRequest, EvaluateRequest, StyleCategoryResult, StyleCategory,
     FeedbackEntry, FeedbackStats,
 )
 from prompt_engine.evaluator import evaluate as evaluate_prompt, EvaluationResult
@@ -85,19 +85,24 @@ def _normalize_optimize_request(request: OptimizeRequest) -> OptimizeRequest:
 
 
 def _provider_identity(llm) -> str:
-    """BYOK provider 身份（并入缓存键，防跨调用方串 model/key_source 元数据）。"""
+    """BYOK 身份摘要（不落原始 Key），隔离产品、模型和实际 Key。"""
     if llm is None:
         return ""
-    return f"{llm.provider}|{llm.model}|{llm.base_url or ''}"
+    key_digest = hashlib.sha256(llm.api_key.encode("utf-8")).hexdigest()[:16]
+    return f"{llm.caller or ''}|{llm.provider}|{llm.model}|{llm.base_url or ''}|key:{key_digest}"
 
 
 def _build_provider_for_request(request: OptimizeRequest):
     """BYOK fail-closed：需要调 LLM 的请求必须携带 llm，缺失/非法返回 422。
 
-    模板直出路径（图片 creative_level<=3）免 LLM，允许不携带。
+    模板直出路径（图片显式 template）免 LLM，允许不携带。
     """
     from prompt_engine.optimizer import requires_llm
-    if not requires_llm(request):
+    try:
+        needs_llm = requires_llm(request)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    if not needs_llm:
         return None
     if request.llm is None:
         raise HTTPException(
@@ -107,6 +112,21 @@ def _build_provider_for_request(request: OptimizeRequest):
     try:
         from prompt_engine.llm.base import BaseLLMProvider
         return BaseLLMProvider.from_llm_object(request.llm.model_dump())
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+def _build_provider_from_llm(llm):
+    """为非 Optimize 请求构造调用方 BYOK provider，不读取服务端配置。"""
+    if llm is None:
+        raise HTTPException(
+            status_code=422,
+            detail="llm 必填：调用方需传入自己的模型绑定（provider/model/api_key），引擎不再使用服务端 key 兜底",
+        )
+    try:
+        from prompt_engine.llm.base import BaseLLMProvider
+        payload = llm.model_dump() if hasattr(llm, "model_dump") else llm
+        return BaseLLMProvider.from_llm_object(payload)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -132,7 +152,7 @@ async def optimize(request: OptimizeRequest):
         result = await asyncio.to_thread(optimizer.optimize, request, provider, _provider_identity(request.llm))
         if provider is not None:
             result.key_source = "caller"
-        result.caller = request.caller
+        result.caller = request.llm.caller if request.llm else None
         return result
     except HTTPException:
         raise
@@ -162,7 +182,7 @@ async def batch_optimize(request: BatchOptimizeRequest):
             result = await asyncio.to_thread(optimizer.optimize, req, prov, _provider_identity(req.llm))
             if prov is not None:
                 result.key_source = "caller"
-            result.caller = req.caller
+            result.caller = req.llm.caller if req.llm else None
             return result
 
     results = await asyncio.gather(*[run_one(r, p) for r, p in zip(normalized, providers)])
@@ -173,8 +193,14 @@ async def batch_optimize(request: BatchOptimizeRequest):
 async def reverse_engineer(request: ReverseRequest):
     """图片逆向工程：从图片 URL 生成提示词（需要视觉模型支持）"""
     try:
+        provider = _build_provider_from_llm(request.llm)
         optimizer = get_optimizer()
-        result = await asyncio.to_thread(optimizer.reverse_engineer, request)
+        result = await asyncio.to_thread(
+            optimizer.reverse_engineer,
+            request,
+            provider,
+            _provider_identity(request.llm),
+        )
         if result.error:
             raise HTTPException(status_code=502, detail=result.error)
         return result
@@ -209,8 +235,15 @@ async def rewrite(request: RewriteRequest):
             prompt=request.prompt,
             platform=request.platform,
             max_length=request.max_length,
+            llm=request.llm,
         )
-        result = await asyncio.to_thread(optimizer.rewrite, opt_req)
+        provider = _build_provider_for_request(opt_req)
+        result = await asyncio.to_thread(
+            optimizer.rewrite,
+            opt_req,
+            provider,
+            _provider_identity(request.llm),
+        )
         if result.error:
             raise HTTPException(status_code=502, detail=result.error)
         return result
@@ -227,7 +260,16 @@ async def disturb_optimize(request: OptimizeRequest):
     request = _normalize_optimize_request(request)
     try:
         optimizer = get_optimizer()
-        result = await asyncio.to_thread(optimizer.disturb_and_optimize, request)
+        provider = _build_provider_for_request(request)
+        result = await asyncio.to_thread(
+            optimizer.disturb_and_optimize,
+            request,
+            provider=provider,
+            provider_id=_provider_identity(request.llm),
+        )
+        if provider is not None:
+            result.key_source = "caller"
+        result.caller = request.llm.caller if request.llm else None
         if result.error:
             raise HTTPException(status_code=502, detail=result.error)
         return result
@@ -242,13 +284,27 @@ async def disturb_optimize(request: OptimizeRequest):
 async def classify_style(request: AutoStyleRequest):
     """MJ 风格分类：将 prompt 分配到 27 个风格维度中（零样本，无需训练）"""
     try:
-        classifier = StyleCategoryClassifier()
+        provider = None
+        llm_chat_func = None
+        if request.use_llm:
+            provider = _build_provider_from_llm(request.llm)
+
+            def llm_chat_func(system: str, user: str) -> str:
+                response, _ = provider.chat([
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ])
+                return response
+
+        classifier = StyleCategoryClassifier(llm_chat_func=llm_chat_func)
         result = classifier.classify(
             prompt=request.prompt,
             max_categories=request.max_categories,
             use_llm=request.use_llm,
         )
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("optimize failed: %s", e)
         raise HTTPException(status_code=500, detail="Internal processing error")
@@ -302,12 +358,14 @@ async def apply_feedback(persist_path: str = "./feedback_db.json"):
 
 
 @app.post("/v1/evaluate")
-async def evaluate(request: dict):
+async def evaluate(request: EvaluateRequest):
     """评估 prompt 优化效果。"""
+    provider = _build_provider_from_llm(request.llm)
     result = evaluate_prompt(
-        original=request.get("original", ""),
-        optimized=request.get("optimized", ""),
-        platform=request.get("platform", "generic"),
+        original=request.original,
+        optimized=request.optimized,
+        platform=request.platform,
+        provider=provider,
     )
     return {
         "original": result.original,
@@ -317,6 +375,7 @@ async def evaluate(request: dict):
             for dim, s in result.scores.items()
         },
         "overall_improvement": result.overall_improvement,
+        "caller": request.llm.caller if request.llm else None,
     }
 
 
@@ -673,18 +732,15 @@ async def image_preview(request: dict):
 # ── API Key 管理端点 ─────────────────────────────────
 ENV_FILE = Path(__file__).parent.parent.parent / ".env"
 MIN_ADMIN_TOKEN_LENGTH = 32
-PROVIDER_KEY_ENV_VARS = {
-    "ai_router": "AI_ROUTER_PROJECT_KEY",
+IMAGE_PROVIDER_KEY_ENV_VARS = {
     "minimax": "MINIMAX_API_KEY",
     "openai": "OPENAI_API_KEY",
-    "xfyun": "XFYUN_API_KEY",
-    "gemini": "GEMINI_API_KEY",
     "replicate": "REPLICATE_API_KEY",
     "stability": "STABILITY_API_KEY",
     "together": "TOGETHER_API_KEY",
     "vidu": "VIDU_API_KEY",
 }
-MANAGED_KEY_ENV_VARS = frozenset(PROVIDER_KEY_ENV_VARS.values())
+MANAGED_KEY_ENV_VARS = frozenset(IMAGE_PROVIDER_KEY_ENV_VARS.values())
 
 
 def _is_placeholder_secret(value: str) -> bool:
@@ -774,11 +830,11 @@ async def set_api_key(request: dict):
     ):
         raise HTTPException(status_code=400, detail="api_key 不得包含边界空白或控制字符")
 
-    env_var = PROVIDER_KEY_ENV_VARS.get(provider)
+    env_var = IMAGE_PROVIDER_KEY_ENV_VARS.get(provider)
     if not env_var:
         raise HTTPException(
             status_code=400,
-            detail=f"未知 provider: {provider}，支持: {list(PROVIDER_KEY_ENV_VARS.keys())}",
+            detail=f"未知图片 provider: {provider}，支持: {list(IMAGE_PROVIDER_KEY_ENV_VARS.keys())}",
         )
 
     # 读写 .env

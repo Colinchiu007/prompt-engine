@@ -41,7 +41,7 @@ class TestRequestValidation:
 class TestCacheKey:
     def _key(self, prev):
         req = VideoOptimizeRequest(prompt="hero walks in snow", prev_final_frame=prev)
-        return VideoOptimizer._cache_key(None, req, "generic_video", "en")
+        return VideoOptimizer()._cache_key(req, "generic_video", "en")
 
     def test_prev_final_frame_component(self):
         assert self._key("Jax kneels, eyes closed") != self._key("Jax stands at the door")

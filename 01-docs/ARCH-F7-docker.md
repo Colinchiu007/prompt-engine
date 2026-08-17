@@ -33,9 +33,7 @@ services:
   api:
     build: .
     ports: ["8000:8000"]
-    environment:
-      - LLM_PROVIDER=openai_compat  # 容器内可覆盖
-    env_file: .env  # 用户本地 LLM keys
+    env_file: .env  # 仅用于图片生成、管理和其他运行时配置；文字 LLM 绑定随请求传入
     volumes:
       - ./prompt_engine/data:/app/prompt_engine/data  # 数据持久化
 ```
@@ -48,7 +46,7 @@ services:
 | **`-slim` 而非 `alpine`** | 兼容性更好（chromaprint 编译等） |
 | **`0.0.0.0` 监听** | Docker 容器可外部访问 |
 | **数据卷挂载** | RAG 数据集 / 反馈数据持久化 |
-| **不预装 LLM Key** | 用户通过 .env 自带（更安全） |
+| **不预装文字 LLM Key** | 每个调用方通过请求携带自己的 llm 绑定，避免产品间串用凭据 |
 
 ### 镜像大小目标
 

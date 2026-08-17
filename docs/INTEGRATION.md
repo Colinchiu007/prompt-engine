@@ -14,6 +14,39 @@
 
 ## REST API 端点
 
+## 优化执行策略与调用方模型（v0.20.1）
+
+`POST /v1/optimize`、`POST /v1/optimize/batch`、`POST /v1/disturb-optimize` 和 MCP `optimize_prompt` 使用同一策略契约：
+
+| 字段 | 语义 |
+|---|---|
+| `creative_level` | 1-10 的创意/细节强度；引擎不会从文案自动推断它。 |
+| 未传 `optimization_strategy` | 默认使用调用方 LLM；缺少绑定返回 422。 |
+| `optimization_strategy=template` | 显式选择确定性图片模板；视频请求返回 422。 |
+| `optimization_strategy=llm` | 显式使用调用方 `llm`；缺少绑定返回 422。 |
+| `optimization_strategy=auto` | 已删除；请求返回 422。 |
+| `bypass_cache=true` | 不读也不写优化缓存；适用于用户主动重新生成。 |
+
+LLM 请求必须传入调用方自己的 `llm={provider,model,base_url?,api_key,caller?}`。`caller` 只能嵌套在 `llm` 中；顶层 `caller` 会被拒绝。优化路径不会使用服务端 `config.yaml`、`.env` 或 OpsCenter 的文字 LLM Key 兜底。返回的 `strategy_used`、`key_source`、`model_used`、`caller`、`cache_hit` 用于诊断实际执行路径。
+
+示例：低创意但仍要求使用调用方模型：
+
+```json
+{
+  "prompt": "一位扶余王子在山城落脚",
+  "creative_level": 1,
+  "optimization_strategy": "llm",
+  "bypass_cache": true,
+  "llm": {
+    "provider": "sensenova",
+    "model": "SenseNova",
+    "base_url": "https://token.sensenova.cn/v1",
+    "api_key": "<caller-key>",
+    "caller": "multi-publish-desktop"
+  }
+}
+```
+
 ### 核心优化
 
 | 端点 | 方法 | 说明 |
@@ -113,9 +146,8 @@ Dockerfile 基于 python:3.11-slim，暴露端口 8000。
 
 | 变量 | 说明 | 必需 |
 |------|------|:----:|
-| `OPENAI_API_KEY` | OpenAI 兼容 API Key | 按需 |
-| `XFYUN_API_KEY` / `XFYUN_API_SECRET` | 讯飞星火 | 按需 |
-| `GEMINI_API_KEY` | Google Gemini | 按需 |
+| `MINIMAX_API_KEY` | 图片生成/对比页使用的 MiniMax Key，不用于文字优化 | 按需 |
+| `SPLITTER_BASE_URL` | 分句服务地址 | 按需 |
 | `VOICE_TOOLS_OPENAI_KEY` | TTS 预览用 Open AI Key | 按需 |
 
 ## 版本兼容

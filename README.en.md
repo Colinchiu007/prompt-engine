@@ -149,14 +149,11 @@ Optimized Prompt
 
 ## Configuration
 
-Create a `.env` file:
+Create a `.env` file only for non-text-LLM runtime settings. Text prompt optimization uses
+the caller-provided `llm` object on every request; the engine does not read a text LLM key
+from `config.yaml`, `.env`, or OpsCenter.
 
 ```env
-# LLM Provider (choose one)
-OPENAI_API_KEY=sk-...
-XFYUN_APPID=...
-GEMINI_API_KEY=...
-
 # Image Generation (optional)
 REPLICATE_API_KEY=r8_...
 STABILITY_API_KEY=sk-...

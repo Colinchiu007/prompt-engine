@@ -10,19 +10,13 @@ logger = logging.getLogger(__name__)
 class GeminiProvider(BaseLLMProvider):
     """Google Gemini API provider — 通过 google-genai SDK 调用."""
 
-    def __init__(
-        self,
-        api_key: str,
-        model: str = "gemini-2.0-flash",
-        temperature: float = 0.7,
-        max_tokens: int = 500,
-        timeout: int = 60,
-    ):
-        self.api_key = api_key
-        self._model = model
-        self.temperature = temperature
-        self.max_tokens = max_tokens
-        self.timeout = timeout
+    def __init__(self, config: dict):
+        super().__init__(config)
+        self.api_key = config["api_key"]
+        self._model = config.get("model", "gemini-2.0-flash")
+        self.temperature = config.get("temperature", 0.7)
+        self.max_tokens = config.get("max_tokens", 500)
+        self.timeout = config.get("timeout", 60)
         self._client = None
 
     @property
@@ -64,17 +58,6 @@ class GeminiProvider(BaseLLMProvider):
         except Exception as e:
             logger.warning("Gemini API call failed: %s", e)
             return _fallback_chat(system_prompt, user_prompt), 0
-
-    @classmethod
-    def from_config(cls, config: dict) -> "GeminiProvider":
-        return cls(
-            api_key=config.get("api_key", ""),
-            model=config.get("model", "gemini-2.0-flash"),
-            temperature=config.get("temperature", 0.7),
-            max_tokens=config.get("max_tokens", 500),
-            timeout=config.get("timeout", 60),
-        )
-
 
 def _fallback_chat(system_prompt: str, user_prompt: str) -> str:
     """当 API 不可用时的降级处理."""

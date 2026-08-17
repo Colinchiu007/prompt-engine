@@ -12,11 +12,12 @@
 调用方（如 Multi-Publish 桌面版）在优化请求中直接携带自己配置的 LLM 绑定：
 
 ```json
-{"prompt": "...", "creative_level": 5, "llm": {"provider": "sensenova", "model": "deepseek-v4-flash", "base_url": "https://token.sensenova.cn/v1", "api_key": "sk-..."}, "caller": "multi-publish-desktop"}
+{"prompt": "...", "creative_level": 5, "llm": {"provider": "sensenova", "model": "SenseNova", "base_url": "https://token.sensenova.cn/v1", "api_key": "sk-...", "caller": "multi-publish-desktop"}}
 ```
 
-- 需调 LLM 的请求（图片 `creative_level>3` 或 `domain=video`）**必须**携带 `llm`，否则 HTTP 422 fail-closed。
-- 图片 `creative_level<=3` 走模板直出，无需 `llm`。
+- 优化请求缺省使用调用方 LLM，**必须**携带 `llm`，否则 HTTP 422 fail-closed；`creative_level` 只控制创意/细节强度。
+- 图片只有在显式传 `optimization_strategy=template` 时走模板直出；视频不支持模板策略。
+- 已删除 `optimization_strategy=auto`；传入后返回 HTTP 422。
 - 引擎不再使用服务端 config.yaml / OpsCenter key 兜底；LLM 路径 `key_source="caller"`，`caller` 透传到结果。
 
 ## 独立视频提示词优化引擎（video_prompt_engine）
@@ -317,91 +318,19 @@ Return all 25 MJ style dimensions with Chinese names.
 
 ## 配置
 
-编辑 `config.yaml`：
+`config.yaml` 只保存引擎运行配置、知识库和平台策略，不保存文字 LLM provider、model 或 API Key。
+每个调用方必须在需要 LLM 的请求中携带自己的 `llm` 对象；缺少绑定时返回 HTTP 422，
+引擎不会读取自身 `.env`、OpsCenter 或配置文件中的文字 LLM Key。
 
-### 使用 AI Router 自动选模
+图片显式选择 `optimization_strategy=template` 时不需要 LLM；图片生成/对比页使用的
+`MINIMAX_API_KEY` 属于独立图片能力，不会被文字优化路径读取。
 
-Prompt Engine 通过现有 OpenAI 兼容 Provider 接入 AI Router。只有显式设置
-`LLM_PROVIDER=ai_router` 时才启用，默认 MiniMax 配置不会被改写。
+可配置的运行时变量：
 
-```bash
-LLM_PROVIDER=ai_router
-AI_ROUTER_PROJECT_KEY=<项目内部凭证>
-AI_ROUTER_BASE_URL=https://ai-router.truevideo.top/v1
-AI_ROUTER_MODEL=auto
-```
-
-`AI_ROUTER_MODEL=auto` 会让中间层根据任务能力、项目策略、成本、质量和延迟选择模型。
-视觉理解请求仍走 `/v1/chat/completions`；图片生成使用 AI Router 的
-`/v1/images/generations`，不由 Prompt Engine 的文本 Provider 代替。
-
-### 直接连接模型供应商
-
-```yaml
-llm:
-  provider: openai_compat          # 供应商: openai_compat | xfyun
-  openai_compat:
-    api_key: "${OPENAI_API_KEY}"   # API Key（支持环境变量）
-    base_url: "https://api.openai.com/v1"
-    model: "gpt-4o"
-    temperature: 0.7
-    max_tokens: 500
-    timeout: 60
-  xfyun:
-    api_key: "${XFYUN_API_KEY}"
-    base_url: "https://maas-coding-api.cn-huabei-1.xf-yun.com/v2"
-    model: "astron-code-latest"
-    temperature: 0.7
-    max_tokens: 500
-    timeout: 60
-
-engine:
-  default_platform: generic
-  default_style: realistic
-  max_retries: 2
-
-# 知识库（RAG）配置
-knowledge:
-  enabled: true
-  embedding:
-    model: "text-embedding-3-small"
-  persist_dir: "./prompts_db"
-  retrieval:
-    top_k: 3
-    min_score: 0.3
-
-# 平台策略配置
-platforms:
-  midjourney:
-    enabled: true
-    default_aspect_ratio: "16:9"
-    default_version: "6"
-  stable_diffusion:
-    enabled: true
-  dalle:
-    enabled: true
-  tongyi:
-    enabled: true
-  yizhang:
-    enabled: true
-  jimeng:
-    enabled: true
-  generic:
-    enabled: true
-```
-
-也可以完全通过环境变量覆盖当前选中的 Provider：
-
-- MiniMax：`MINIMAX_API_KEY`、`MINIMAX_BASE_URL`、`MINIMAX_MODEL`、`MINIMAX_TIMEOUT`
-- OpenAI 兼容：`OPENAI_COMPAT_API_KEY`、`OPENAI_COMPAT_BASE_URL`、`OPENAI_COMPAT_MODEL`、`OPENAI_COMPAT_TIMEOUT`
-- 讯飞：`XFYUN_API_KEY`、`XFYUN_BASE_URL`、`XFYUN_MODEL`
-- 自定义配置文件：`CONFIG_PATH`
-
-`OPENAI_API_KEY` 仍可供现有 `config.yaml` 占位符使用；显式设置
-`OPENAI_COMPAT_API_KEY` 时，后者优先。OpsCenter 集成为可选项，只有配置
-至少 32 个字符的 `PO_SECRET_KEY` 或兼容变量 `OPS_SECRET_KEY` 后才会访问；缺少或使用弱密钥时不会签发管理员 JWT。
-默认只允许 `http://127.0.0.1:8010` 等本机来源；使用远程或容器内 OpsCenter 时，
-还必须通过 `OPS_CENTER_ALLOWED_ORIGINS` 按 `scheme://host:port` 精确列入白名单。
+- 图片生成/对比页：`MINIMAX_API_KEY`、`MINIMAX_BASE_URL`
+- 分句服务：`SPLITTER_BASE_URL`
+- 管理端点：`PROMPT_ENGINE_ADMIN_TOKEN`、`PO_SECRET_KEY`
+- 自定义非 LLM 配置文件：`CONFIG_PATH`
 
 ## 项目结构
 

@@ -280,62 +280,12 @@ Return all 25 MJ style dimensions with Chinese names.
 
 ## 配置
 
-编辑 `config.yaml`：
+`config.yaml` 只保存引擎运行配置、知识库和平台策略，不保存文字 LLM provider、model 或 API Key。
+每个调用方必须在需要 LLM 的请求中携带自己的 `llm` 对象；缺少绑定时返回 HTTP 422，
+引擎不会读取自身 `.env`、OpsCenter 或配置文件中的文字 LLM Key。
 
-```yaml
-llm:
-  provider: openai_compat          # 供应商: openai_compat | xfyun
-  openai_compat:
-    api_key: "${OPENAI_API_KEY}"   # API Key（支持环境变量）
-    base_url: "https://api.openai.com/v1"
-    model: "gpt-4o"
-    temperature: 0.7
-    max_tokens: 500
-    timeout: 60
-  xfyun:
-    api_key: "${XFYUN_API_KEY}"
-    base_url: "https://maas-coding-api.cn-huabei-1.xf-yun.com/v2"
-    model: "astron-code-latest"
-    temperature: 0.7
-    max_tokens: 500
-    timeout: 60
-
-engine:
-  default_platform: generic
-  default_style: realistic
-  max_retries: 2
-
-# 知识库（RAG）配置
-knowledge:
-  enabled: true
-  embedding:
-    model: "text-embedding-3-small"
-  persist_dir: "./prompts_db"
-  retrieval:
-    top_k: 3
-    min_score: 0.3
-
-# 平台策略配置
-platforms:
-  midjourney:
-    enabled: true
-    default_aspect_ratio: "16:9"
-    default_version: "6"
-  stable_diffusion:
-    enabled: true
-  dalle:
-    enabled: true
-  tongyi:
-    enabled: true
-  yizhang:
-    enabled: true
-  jimeng:
-    enabled: true
-  generic:
-    enabled: true
-```
-
-支持通过环境变量注入敏感信息：`export OPENAI_API_KEY=sk-xxx`
+图片显式选择 `optimization_strategy=template` 时不需要 LLM；图片生成/对比页使用的
+`MINIMAX_API_KEY` 属于独立图片能力，不会被文字优化路径读取。
 
 ## 项目结构
 
