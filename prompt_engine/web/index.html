@@ -200,6 +200,17 @@ const Workbench = {
             支持 <b>中文</b> 和 <b>英文</b> 输入，自动适配 7 种图片生成平台。
           </div>
 
+          <div style="margin:12px 0;padding:12px;background:#fff7e6;border:1px solid #f3d19e;border-radius:6px">
+            <div style="font-size:13px;color:#b88230;font-weight:bold;margin-bottom:8px">🔐 调用方文字 LLM（BYOK）</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <el-input v-model="llmProvider" size="small" style="width:150px" placeholder="provider，如 sensenova" @change="persistLlm" />
+              <el-input v-model="llmModel" size="small" style="width:210px" placeholder="model，如 deepseek-v4-flash" @change="persistLlm" />
+              <el-input v-model="llmApiKey" type="password" show-password size="small" style="flex:1;min-width:220px;max-width:360px" placeholder="调用方 API Key" @change="persistLlm" />
+              <el-input v-model="llmBaseUrl" size="small" style="flex:1;min-width:220px;max-width:360px" placeholder="base_url（可选）" @change="persistLlm" />
+            </div>
+            <div style="margin-top:6px;font-size:12px;color:#909399">本页仅在浏览器本地保存绑定并随请求发送；引擎不读取 config.yaml 或服务端文字 LLM Key。未填写 Key 时，LLM 操作会被禁用。</div>
+          </div>
+
           <el-input v-model="input" type="textarea" :rows="4"
             placeholder="输入描述，如：a majestic cat sitting on a velvet throne in golden hour light" />
 
@@ -228,19 +239,19 @@ const Workbench = {
               <el-radio-button label="single">单条</el-radio-button>
               <el-radio-button label="batch">批量</el-radio-button>
             </el-radio-group>
-            <el-button v-if="mode==='single'" type="primary" @click="optimize" :loading="loading">
+            <el-button v-if="mode==='single'" type="primary" @click="optimize" :loading="loading" :disabled="!hasLlmBind">
               <el-icon style="margin-right:4px"><Pointer/></el-icon> 优化 Prompt
             </el-button>
-            <el-button v-if="mode==='single'" @click="disturbOptimize" :loading="disturbLoading">
+            <el-button v-if="mode==='single'" @click="disturbOptimize" :loading="disturbLoading" :disabled="!hasLlmBind">
               <el-icon style="margin-right:4px"><DataAnalysis/></el-icon> A/B 多版本
             </el-button>
-            <el-button v-if="mode==='batch'" type="success" @click="optimizeBatch" :loading="batchRunning">
+            <el-button v-if="mode==='batch'" type="success" @click="optimizeBatch" :loading="batchRunning" :disabled="!hasLlmBind">
               <el-icon style="margin-right:4px"><Files/></el-icon> 批量优化 ({{ inputRows.length }})
             </el-button>
             <el-button @click="classify" :loading="classifying">
               <el-icon style="margin-right:4px"><Search/></el-icon> 风格分类
             </el-button>
-            <el-button @click="evaluate" :loading="evaluating">
+            <el-button @click="evaluate" :loading="evaluating" :disabled="!hasLlmBind">
               <el-icon style="margin-right:4px"><DataAnalysis/></el-icon> 评估对比
             </el-button>
             <el-button @click="clear" text>清空</el-button>
@@ -250,7 +261,7 @@ const Workbench = {
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span style="font-size:13px;color:#409eff;font-weight:bold">✍️ 扩写</span>
               <el-input v-model="rewriteInput" style="width:240px" placeholder="输入简短描述" size="small" />
-              <el-button type="primary" size="small" @click="doRewrite" :loading="rewriting">扩写</el-button>
+              <el-button type="primary" size="small" @click="doRewrite" :loading="rewriting" :disabled="!hasLlmBind">扩写</el-button>
               <span v-if="rewriteResult" style="font-size:11px;color:#909399">{{ rewriteResult.duration_ms }}ms</span>
             </div>
             <div v-if="rewriteResult" style="margin-top:8px;font-size:13px;line-height:1.5">
@@ -526,6 +537,40 @@ const Workbench = {
       return input.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
     });
     const speedMode = ref('standard');
+    const readStoredLlm = (key) => {
+      try { return localStorage.getItem(key) || ''; } catch (_) { return ''; }
+    };
+    const llmProvider = ref(readStoredLlm('prompt-engine.web.llm.provider'));
+    const llmModel = ref(readStoredLlm('prompt-engine.web.llm.model'));
+    const llmApiKey = ref(readStoredLlm('prompt-engine.web.llm.api-key'));
+    const llmBaseUrl = ref(readStoredLlm('prompt-engine.web.llm.base-url'));
+    const hasLlmBind = computed(() => Boolean(
+      llmProvider.value.trim() && llmModel.value.trim() && llmApiKey.value.trim(),
+    ));
+    function persistLlm() {
+      try {
+        const values = {
+          'prompt-engine.web.llm.provider': llmProvider.value.trim(),
+          'prompt-engine.web.llm.model': llmModel.value.trim(),
+          'prompt-engine.web.llm.api-key': llmApiKey.value.trim(),
+          'prompt-engine.web.llm.base-url': llmBaseUrl.value.trim(),
+        };
+        for (const [key, value] of Object.entries(values)) {
+          if (value) localStorage.setItem(key, value);
+          else localStorage.removeItem(key);
+        }
+      } catch (_) {}
+    }
+    function buildLlmBind() {
+      const bind = {
+        provider: llmProvider.value.trim(),
+        model: llmModel.value.trim(),
+        api_key: llmApiKey.value.trim(),
+        caller: 'prompt-engine-web-workbench',
+      };
+      if (llmBaseUrl.value.trim()) bind.base_url = llmBaseUrl.value.trim();
+      return bind;
+    }
     const showGuide = ref(false);
     const guideTopics = [
       {name:'风景',icon:'🏞️',example:'sunset over mountain lake with mist'},
@@ -601,7 +646,7 @@ const Workbench = {
       try {
         const d = await api.post('/v1/disturb-optimize', {
           prompt: input.value, platform: platform.value, num_candidates: 2,
-          creative_level: 3  // 模板路径，快速出多版本
+          optimization_strategy: 'llm', llm: buildLlmBind(),
         });
         if (d.detail) { error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail); }
         else if (d.candidates && d.candidates.length >= 2) {
@@ -624,7 +669,9 @@ const Workbench = {
       if (!rewriteInput.value.trim()) return;
       rewriting.value = true; rewriteResult.value = null;
       try {
-        const d = await api.post('/v1/rewrite', {prompt: rewriteInput.value, platform: platform.value});
+        const d = await api.post('/v1/rewrite', {
+          prompt: rewriteInput.value, platform: platform.value, llm: buildLlmBind(),
+        });
         if (d.detail) { error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail); }
         else { rewriteResult.value = d; }
       } catch(e) { error.value = String(e); }
@@ -636,7 +683,14 @@ const Workbench = {
       loading.value = true; result.value = null; classResult.value = null; evalResult.value = null; error.value = '';
       try {
         const speedLen = {fast: 150, standard: 300, detailed: 500};
-        const d = await api.post('/v1/optimize', {prompt: input.value, platform: platform.value, style: style.value || null, max_length: speedLen[speedMode.value] || 300});
+        const d = await api.post('/v1/optimize', {
+          prompt: input.value,
+          platform: platform.value,
+          style: style.value || null,
+          max_length: speedLen[speedMode.value] || 300,
+          optimization_strategy: 'llm',
+          llm: buildLlmBind(),
+        });
                 if (d.detail) {
                   error.value = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail);
                   showGuide.value = d.detail && typeof d.detail === 'string' && (d.detail.includes('太简短') || d.detail.includes('Too short'));
@@ -659,7 +713,13 @@ const Workbench = {
       for (let i = 0; i < prompts.length; i++) {
         try {
           const speedLen2 = {fast: 150, standard: 300, detailed: 500};
-          const d = await api.post('/v1/optimize', {prompt: prompts[i], platform: platform.value, max_length: speedLen2[speedMode.value] || 300});
+          const d = await api.post('/v1/optimize', {
+            prompt: prompts[i],
+            platform: platform.value,
+            max_length: speedLen2[speedMode.value] || 300,
+            optimization_strategy: 'llm',
+            llm: buildLlmBind(),
+          });
           if (d.detail) {
             batchResults.value.push({prompt: prompts[i], result: null, error: typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail)});
           } else {
@@ -688,7 +748,11 @@ const Workbench = {
       }
       evaluating.value = true; error.value = '';
       try {
-        const d = await api.post('/v1/evaluate', {original: inputText.value || result.value.optimized_prompt, optimized: result.value.optimized_prompt});
+        const d = await api.post('/v1/evaluate', {
+          original: inputText.value || result.value.optimized_prompt,
+          optimized: result.value.optimized_prompt,
+          llm: buildLlmBind(),
+        });
         if (d.scores) {
           evalResult.value = {
             scores: Object.entries(d.scores).map(([k,v]) => ({dimension: dimHints[k]||k, ...v})),
@@ -719,6 +783,7 @@ const Workbench = {
              activeHelps, activeTranslate, dimHints, examples, exampleGroups, optimize, optimizeBatch, classify, evaluate, clear, copyText,
              previewModel, imageModelsData, imageModels, previewUrl, previewing, generatePreview,
              style, rewriteInput, rewriteResult, rewriting, keywords,
+             llmProvider, llmModel, llmApiKey, llmBaseUrl, hasLlmBind, persistLlm,
              feedbackMsg, feedbackType, submitFeedback, showGuide, guideTopics, guideExamples, applyGuideTopic, applyGuideExample,
              disturbLoading, disturbResults, bestIdx, disturbOptimize,
              speedMode, EN_CN_DICT, isEnglish, translateEN2CN };
@@ -928,21 +993,17 @@ const Settings = {
         <el-card shadow="never">
           <template #header>
             <div style="display:flex;justify-content:space-between">
-              <span>⚙️ LLM 供应商</span>
-              <span style="font-size:12px;color:#909399">优化和分类使用的 AI 模型</span>
+              <span>⚙️ 调用方 LLM</span>
+              <span style="font-size:12px;color:#909399">由调用产品传入模型与 Key</span>
             </div>
           </template>
           <div class="section-desc">
-            prompt-engine 支持多个 LLM 供应商。切换后需重启服务生效。
+            Prompt Engine 不保存文字推理模型的 API Key，也不从服务端配置兜底。
+            每个产品调用优化接口时，通过请求体的 llm 对象传入自己的 provider、model、api_key
+            和可选 base_url；caller 用于标识产品。
           </div>
-          <el-select v-model="provider" style="width:100%">
-            <el-option label="OpenAI — GPT-4o（推荐，稳定）" value="openai" />
-            <el-option label="讯飞星火 — 国内直连（低延迟）" value="xfyun" />
-            <el-option label="Gemini — Google（高质量，免费额度）" value="gemini" />
-            <el-option label="MiniMax — MiniMax-M3（国内可直连）" value="minimax" />
-          </el-select>
           <div style="margin-top:12px;padding:8px 12px;background:#f0f5ff;border-radius:4px;font-size:13px;color:#409eff">
-            💡 建议：国内市场使用讯飞星火，海外使用 OpenAI 或 Gemini
+            💡 桌面版的模型设置决定实际调用模型；本页面只展示引擎能力，不修改调用方配置。
           </div>
         </el-card>
 
@@ -1018,7 +1079,8 @@ const Settings = {
              <el-collapse-item title="🔑 配置 API Key" name="apikey">
                <div style="margin-bottom:12px">
                  <div style="font-size:13px;color:#606266;margin-bottom:6px">
-                   为当前选定的 LLM 供应商配置 API Key（重启后端服务生效）：
+                   配置独立的图片生成/预览服务 API Key（重启后端服务生效）。
+                   这些 Key 不参与文字提示词优化，也不会替代请求中的 llm。
                  </div>
                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
                    <el-input v-model="adminToken" type="password" show-password clearable size="small"
@@ -1029,17 +1091,18 @@ const Settings = {
                  </div>
                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                   <el-select v-model="provider" style="width:160px" size="small">
-                    <el-option label="AI Router" value="ai_router" />
-                    <el-option label="OpenAI" value="openai" />
-                    <el-option label="讯飞星火" value="xfyun" />
-                    <el-option label="Gemini" value="gemini" />
                     <el-option label="MiniMax" value="minimax" />
+                    <el-option label="OpenAI" value="openai" />
+                    <el-option label="Replicate" value="replicate" />
+                    <el-option label="Stability" value="stability" />
+                    <el-option label="Together" value="together" />
+                    <el-option label="Vidu" value="vidu" />
                   </el-select>
                   <el-input v-model="apiKeyInput" type="password" show-password size="small"
                     placeholder="粘贴 API Key…" style="flex:1;min-width:200px;max-width:360px" />
                    <el-button type="primary" size="small" @click="saveApiKey" :loading="apiKeySaving"
                      :disabled="!provider || !apiKeyInput || !adminToken.trim()">
-                     保存到 .env
+                     保存图片 Key
                    </el-button>
                   <el-tag v-if="apiKeySaved" type="success" size="small">已保存 ✓</el-tag>
                 </div>
@@ -1051,7 +1114,8 @@ const Settings = {
               </div>
               <el-divider style="margin:12px 0" />
               <div style="font-size:12px;color:#909399">
-                API Key 将写入项目根目录 <code>.env</code>，从环境变量加载，重启后端服务后生效。
+                图片生成 Key 将写入项目根目录 <code>.env</code>，从环境变量加载，重启后端服务后生效。
+                文字 LLM Key 不在这里保存。
               </div>
             </el-collapse-item>
           </el-collapse>
@@ -1077,7 +1141,7 @@ const Settings = {
     </el-row>
   `,
   setup() {
-    const provider = ref('openai');
+    const provider = ref('minimax');
     const imageModels = ref([]);
      const configuredKeys = ref([]);
      const apiKeyInput = ref('');

@@ -1,5 +1,6 @@
 """Prompt Engine CLI — 命令行工具"""
 import argparse
+import hashlib
 import json
 import sys
 from typing import Optional
@@ -102,7 +103,8 @@ def _list_categories(args):
 def _optimize(args):
     """运行 prompt 优化"""
     from prompt_engine.optimizer import Optimizer
-    from prompt_engine.models import OptimizeRequest, PlatformType
+    from prompt_engine.llm.base import BaseLLMProvider
+    from prompt_engine.models import OptimizeRequest, OptimizationStrategy, PlatformType
 
     platform_map = {
         "midjourney": PlatformType.MIDJOURNEY,
@@ -114,13 +116,34 @@ def _optimize(args):
         "generic": PlatformType.GENERIC,
     }
 
+    strategy = OptimizationStrategy(args.strategy)
+    llm = None
+    provider = None
+    provider_id = ""
+    if strategy == OptimizationStrategy.LLM:
+        if not args.api_key:
+            raise SystemExit("LLM 策略必须传 --api-key；或使用 --strategy template 走确定性模板")
+        llm = {
+            "provider": args.provider,
+            "model": args.model,
+            "api_key": args.api_key,
+        }
+        if args.base_url:
+            llm["base_url"] = args.base_url
+        llm["caller"] = args.caller
+        provider = BaseLLMProvider.from_llm_object(llm)
+        key_digest = hashlib.sha256(args.api_key.encode("utf-8")).hexdigest()[:16]
+        provider_id = f"{llm['caller']}|{args.provider}|{args.model}|{args.base_url or ''}|key:{key_digest}"
+
     req = OptimizeRequest(
         prompt=args.prompt,
         platform=platform_map.get(args.platform, PlatformType.GENERIC),
         creative_level=args.creative_level,
+        optimization_strategy=strategy,
+        llm=llm,
     )
     optimizer = Optimizer()
-    result = optimizer.optimize(req)
+    result = optimizer.optimize(req, provider=provider, provider_id=provider_id)
 
     print(f"Platform: {args.platform}")
     print(f"Creative: {args.creative_level}")
@@ -253,6 +276,18 @@ def main():
                            help="目标平台 (default: generic)")
     p_optimize.add_argument("-c", "--creative-level", type=int, default=5,
                            help="创意等级 1-10 (default: 5)")
+    p_optimize.add_argument("--strategy", choices=["llm", "template"], default="llm",
+                           help="执行策略：llm 需要调用方 Key；template 不调用 LLM")
+    p_optimize.add_argument("--provider", default="openai_compat",
+                           help="调用方 LLM provider（default: openai_compat）")
+    p_optimize.add_argument("--model", default="gpt-4o",
+                           help="调用方 LLM model（default: gpt-4o）")
+    p_optimize.add_argument("--api-key", default="",
+                           help="调用方 LLM API Key；不会写入引擎配置")
+    p_optimize.add_argument("--base-url", default="",
+                           help="调用方 LLM base URL（可选）")
+    p_optimize.add_argument("--caller", default="prompt-engine-cli",
+                           help="调用方产品标识")
 
     # recommend
     p_recommend = subparsers.add_parser("recommend", help="根据艺术风格推荐 MJ 风格维度")
