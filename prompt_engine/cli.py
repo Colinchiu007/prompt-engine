@@ -145,15 +145,36 @@ def _optimize(args):
     optimizer = Optimizer()
     result = optimizer.optimize(req, provider=provider, provider_id=provider_id)
 
-    print(f"Platform: {args.platform}")
-    print(f"Creative: {args.creative_level}")
-    print(f"\nOriginal: {args.prompt}")
-    print(f"Optimized: {result.optimized_prompt}")
-    if result.detected_categories:
-        print(f"\nDetected Categories:")
-        for cat in result.detected_categories:
-            name = _get_category_name(cat)
-            print(f"  - {cat.value} ({name})")
+    if getattr(args, 'json', False):
+        output = {
+            "optimized_prompt": result.optimized_prompt,
+            "platform": result.platform.value if hasattr(result.platform, 'value') else str(result.platform),
+            "model_used": result.model_used,
+            "tokens_used": result.tokens_used,
+            "duration_ms": result.duration_ms,
+            "key_source": result.key_source,
+            "strategy_used": result.strategy_used,
+            "caller": getattr(result, 'caller', None),
+            "cache_hit": getattr(result, 'cache_hit', False),
+            "error": getattr(result, 'error', None),
+        }
+        if result.detected_categories:
+            output["detected_categories"] = [
+                {"value": c.value, "name": _get_category_name(c)}
+                for c in result.detected_categories
+            ]
+        print(json.dumps(output, ensure_ascii=False))
+    else:
+        print(f"Platform: {args.platform}")
+        print(f"Creative: {args.creative_level}")
+        print(f"\nOriginal: {args.prompt}")
+        print(f"Optimized: {result.optimized_prompt}")
+        if result.detected_categories:
+            print(f"\nDetected Categories:")
+            for cat in result.detected_categories:
+                name = _get_category_name(cat)
+                print(f"  - {cat.value} ({name})")
+
 
 
 
@@ -288,6 +309,7 @@ def main():
                            help="调用方 LLM base URL（可选）")
     p_optimize.add_argument("--caller", default="prompt-engine-cli",
                            help="调用方产品标识")
+    p_optimize.add_argument("--json", action="store_true", help="JSON 输出（供程序解析）")
 
     # recommend
     p_recommend = subparsers.add_parser("recommend", help="根据艺术风格推荐 MJ 风格维度")
