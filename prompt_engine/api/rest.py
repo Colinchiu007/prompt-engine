@@ -5,6 +5,7 @@ import hmac
 import logging
 import os
 import re
+import time
 from functools import lru_cache
 from pathlib import Path
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
@@ -158,9 +159,21 @@ async def optimize(request: OptimizeRequest):
     _validate_prompt(request.prompt)
     request = _normalize_optimize_request(request)
     _ident = _provider_identity(request.llm) if request.llm else "no-llm"
-    logger.info("POST /v1/optimize prompt_len=%d domain=%s creative_level=%s strategy=%s llm=%s",
-                len(request.prompt or ""), request.domain, request.creative_level,
-                request.optimization_strategy, _ident)
+    _t0 = time.time()
+    logger.info(
+        "POST /v1/optimize prompt_len=%d domain=%s creative_level=%d strategy=%s "
+        "platform=%s style=%s max_length=%d num_candidates=%d bypass_cache=%s llm=%s",
+        len(request.prompt or ""), request.domain, request.creative_level,
+        request.optimization_strategy, request.platform, request.style,
+        request.max_length, request.num_candidates, request.bypass_cache, _ident,
+    )
+    if request.llm:
+        logger.info(
+            "BYOK bind: caller=%s provider=%s model=%s base_url=%s key_prefix=%s",
+            request.llm.caller, request.llm.provider, request.llm.model,
+            request.llm.base_url or "(default)",
+            request.llm.api_key[:8] + "..." if request.llm.api_key and len(request.llm.api_key) > 8 else request.llm.api_key,
+        )
     try:
         provider = _build_provider_for_request(request)
         optimizer = get_optimizer()
@@ -170,9 +183,21 @@ async def optimize(request: OptimizeRequest):
         if provider is not None:
             result.key_source = "caller"
         result.caller = request.llm.caller if request.llm else None
+        _elapsed_ms = int((time.time() - _t0) * 1000)
         if result.error:
-            logger.error('optimize LLM failed: %s', result.error[:200])
+            logger.error(
+                "optimize FAILED (%dms): %s | prompt_len=%d strategy=%s model=%s tokens=%d error=%s",
+                _elapsed_ms, _ident, len(request.prompt or ""),
+                result.strategy_used, result.model_used, result.tokens_used,
+                str(result.error)[:200],
+            )
             raise HTTPException(status_code=502, detail=f'LLM调用失败: {result.error[:200]}')
+        logger.info(
+            "optimize OK (%dms): prompt_len=%d -> out_len=%d model=%s tokens=%d strategy=%s caller=%s cache_hit=%s",
+            _elapsed_ms, len(request.prompt or ""), len(result.optimized_prompt or ""),
+            result.model_used, result.tokens_used, result.strategy_used,
+            result.caller, result.cache_hit,
+        )
         return result
     except HTTPException:
         raise

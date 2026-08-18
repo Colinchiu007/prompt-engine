@@ -31,9 +31,19 @@ class LLMCaller:
             {"role": "system", "content": system},
             {"role": "user", "content": user_prompt},
         ]
-        logger.info("LLM call: model=%s variant=%d messages=%d", self.model_name, variant, len(messages))
+        logger.info(
+            "LLM call: model=%s variant=%d messages=%d system_len=%d user_len=%d",
+            self.model_name, variant, len(messages), len(system), len(user_prompt),
+        )
+        logger.debug("LLM system preview: %s", system[:150] + "..." if len(system) > 150 else system)
+        logger.debug("LLM user preview: %s", user_prompt[:150] + "..." if len(user_prompt) > 150 else user_prompt)
         result = self._provider.chat(messages)
-        logger.info("LLM response: model=%s tokens=%d", self.model_name, result[1])
+        _response_preview = (result[0] or "")[:200]
+        logger.info(
+            "LLM response: model=%s tokens=%d response_len=%d preview=%s",
+            self.model_name, result[1], len(result[0] or ""),
+            _response_preview + "..." if len(result[0] or "") > 200 else _response_preview,
+        )
         return result
 
     def call_vision(
@@ -56,9 +66,17 @@ class LLMCaller:
                 ],
             },
         ]
-        logger.info("LLM call_vision: model=%s messages=%d", self.model_name, len(messages))
+        logger.info(
+            "LLM call_vision: model=%s messages=%d system_len=%d",
+            self.model_name, len(messages), len(system_prompt),
+        )
         result = self._provider.chat(messages)
-        logger.info("LLM response: model=%s tokens=%d", self.model_name, result[1])
+        _response_preview = (result[0] or "")[:200]
+        logger.info(
+            "LLM vision response: model=%s tokens=%d response_len=%d preview=%s",
+            self.model_name, result[1], len(result[0] or ""),
+            _response_preview + "..." if len(result[0] or "") > 200 else _response_preview,
+        )
         return result
 
     @property
