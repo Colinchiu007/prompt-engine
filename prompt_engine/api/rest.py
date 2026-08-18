@@ -28,6 +28,19 @@ app = FastAPI(
 )
 
 
+@app.on_event("startup")
+def _configure_logging():
+    root = logging.getLogger()
+    if not root.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s"))
+        root.addHandler(handler)
+    root.setLevel(logging.INFO)
+    # Ensure prompt_engine loggers are at INFO (OpenAI SDK may suppress child loggers)
+    for name in ["prompt_engine", "prompt_engine.llm", "prompt_engine.llm.openai_compat"]:
+        logging.getLogger(name).setLevel(logging.INFO)
+
+
 
 
 
@@ -144,6 +157,10 @@ async def optimize(request: OptimizeRequest):
     from prompt_engine.rest_validation import _validate_prompt
     _validate_prompt(request.prompt)
     request = _normalize_optimize_request(request)
+    _ident = _provider_identity(request.llm) if request.llm else "no-llm"
+    logger.info("POST /v1/optimize prompt_len=%d domain=%s creative_level=%s strategy=%s llm=%s",
+                len(request.prompt or ""), request.domain, request.creative_level,
+                request.optimization_strategy, _ident)
     try:
         provider = _build_provider_for_request(request)
         optimizer = get_optimizer()
@@ -153,6 +170,9 @@ async def optimize(request: OptimizeRequest):
         if provider is not None:
             result.key_source = "caller"
         result.caller = request.llm.caller if request.llm else None
+        if result.error:
+            logger.error('optimize LLM failed: %s', result.error[:200])
+            raise HTTPException(status_code=502, detail=f'LLM调用失败: {result.error[:200]}')
         return result
     except HTTPException:
         raise
