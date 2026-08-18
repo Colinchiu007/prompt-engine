@@ -1,12 +1,14 @@
 """允许 python -m prompt_engine.api.rest 启动 REST 服务器"""
 import os
 
+import logging
 import uvicorn
 from prompt_engine.config import load_config
 from prompt_engine.api.rest import app
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     config = load_config()
     server_config = config.get("server", {})
     host = server_config.get("host", "0.0.0.0")

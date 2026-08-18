@@ -3,7 +3,10 @@
 Extracted from optimizer.py God Class refactoring (Phase 1).
 """
 
+import logging
 from prompt_engine.llm.base import BaseLLMProvider
+
+logger = logging.getLogger(__name__)
 
 
 class LLMCaller:
@@ -28,7 +31,10 @@ class LLMCaller:
             {"role": "system", "content": system},
             {"role": "user", "content": user_prompt},
         ]
-        return self._provider.chat(messages)
+        logger.info("LLM call: model=%s variant=%d messages=%d", self.model_name, variant, len(messages))
+        result = self._provider.chat(messages)
+        logger.info("LLM response: model=%s tokens=%d", self.model_name, result[1])
+        return result
 
     def call_vision(
         self, system_prompt: str, image_url: str, detail: str = "auto",
@@ -50,7 +56,10 @@ class LLMCaller:
                 ],
             },
         ]
-        return self._provider.chat(messages)
+        logger.info("LLM call_vision: model=%s messages=%d", self.model_name, len(messages))
+        result = self._provider.chat(messages)
+        logger.info("LLM response: model=%s tokens=%d", self.model_name, result[1])
+        return result
 
     @property
     def provider(self) -> BaseLLMProvider:
