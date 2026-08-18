@@ -24,7 +24,13 @@ class DeepSeekProvider(BaseLLMProvider):
 
     def chat(self, messages: list) -> tuple:
         _start = time.time()
-        logger.info("DeepSeek request: model=%s base_url=%s messages=%d", self._model, self._client.base_url, len(messages))
+        _key_prefix = self._client.api_key[:8] + "..." if self._client.api_key and len(self._client.api_key) > 8 else self._client.api_key
+        _total_chars = sum(len(m.get("content", "") if isinstance(m.get("content"), str) else str(m.get("content", ""))) for m in messages)
+        logger.info(
+            "DeepSeek request: model=%s base_url=%s messages=%d total_chars=%d temp=%.1f max_tokens=%d key=%s",
+            self._model, self._client.base_url, len(messages), _total_chars,
+            self._temperature, self._max_tokens, _key_prefix,
+        )
         try:
             response = self._client.chat.completions.create(
                 model=self._model,
@@ -35,12 +41,17 @@ class DeepSeekProvider(BaseLLMProvider):
             )
             text = response.choices[0].message.content or ""
             tokens = response.usage.total_tokens if response.usage else 0
+            prompt_tokens = response.usage.prompt_tokens if response.usage else 0
+            completion_tokens = response.usage.completion_tokens if response.usage else 0
             elapsed_ms = int((time.time() - _start) * 1000)
-            logger.info("DeepSeek response: model=%s tokens=%d latency_ms=%d", self._model, tokens, elapsed_ms)
+            logger.info(
+                "DeepSeek response: model=%s tokens=%d (prompt=%d completion=%d) latency_ms=%d output_len=%d",
+                self._model, tokens, prompt_tokens, completion_tokens, elapsed_ms, len(text),
+            )
             return text, tokens
         except Exception as e:
             elapsed_ms = int((time.time() - _start) * 1000)
-            logger.error("DeepSeek error: model=%s latency_ms=%d error=%s", self._model, elapsed_ms, str(e)[:200])
+            logger.error("DeepSeek error: model=%s latency_ms=%d key=%s error=%s", self._model, elapsed_ms, _key_prefix, str(e)[:300])
             raise
 
     @property

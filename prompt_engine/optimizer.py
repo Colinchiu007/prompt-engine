@@ -262,6 +262,14 @@ class Optimizer:
             # BYOK per-request caller：绑定到当前线程，_call_llm 优先使用；finally 清理防跨请求串用
             self._local.llm_caller = LLMCaller(effective_provider)
             _bound_caller = True
+            logger.info(
+                "LLM path: model=%s provider=%s creative_level=%d max_length=%d "
+                "platform=%s style=%s num_candidates=%d domain=%s",
+                effective_provider.model_name, effective_provider.__class__.__name__,
+                request.creative_level, request.max_length,
+                request.platform.value, request.style.value if request.style else "None",
+                request.num_candidates, request.domain.value,
+            )
 
             detected_result: Optional[StyleCategoryResult] = None
 
@@ -296,6 +304,9 @@ class Optimizer:
                 max_length=request.max_length,
                 negative_prompt=request.negative_prompt,
             )
+            logger.info("System prompt: len=%d style=%s creative_level=%d",
+                        len(system_prompt), effective_style.value if effective_style else "None",
+                        request.creative_level)
 
             # 2.5 PROJECT-012 上下文注入（角色一致性）
                         # video-content-fidelity S4b：context 白名单校验（未知键忽略 + warning，不改变优化行为）
@@ -315,6 +326,7 @@ class Optimizer:
             video_meta: dict = {}
 
             for i in range(num):
+                logger.info("Candidate %d/%d: calling LLM variant=%d", i + 1, num, i)
                 raw_output, tokens = self._call_llm(
                     system_prompt, request.prompt, variant=i,
                 )
@@ -343,6 +355,10 @@ class Optimizer:
                 total_tokens += tokens
 
             elapsed = (time.time() - start_time) * 1000
+            logger.info(
+                "LLM completed: %d candidates, total_tokens=%d, elapsed=%dms",
+                num, total_tokens, int(elapsed),
+            )
 
             # 4.5 图片域多候选择优（Higgsfield 对齐 — spec: image-prompt-quality）：
             # 确定性启发式评分降序，最高分为主输出；单候选/视频 legacy 路径不接入（行为不变）。
