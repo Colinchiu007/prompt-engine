@@ -806,3 +806,11 @@ prompt-engine 作为 gstack 子模块，通过 orchestrator 的 JWT 认证体系
 - 实现细节：`CHANGELOG.md`；成本模型：`docs/HELLGRIND-NUM-CANDIDATES-COST-MODEL.md`
 - 质量评估：`docs/VIDEO-PROMPT-ENGINE-QUALITY-EVAL-2026-08-15.md`
 - golden set 校准：`video_prompt_engine/knowledge/golden_set.json` + `scripts/eval_golden_set.py`
+### 14 健犹性：空/纯推理输入的独立调用契约（2026-08-20）
+
+推理模型（如 DeepSeek）可能只输出 <thinking> 思考块而不返回最终提示词。剥离推理块后内容为空时，引擎不应抛错中断单次优化请求：
+
+- 14.1 剥离推理块后为空：先在本候选上有界重试（最多 3 次 LLM 调用），得到非空剥离内容即继续；
+- 14.2 重试后仍为空或后处理结果为空：回退原始 prompt 作为该候选，使 optimize() 整体成功返回；
+- 14.3 独立调用方受益：HTTP / CLI / MCP / 其它项目直连均不因「只返回推理」而 5xx 或整线失败；
+- 验收：单测覆盖「连续 3 次纯推理 → 回退原文」「首次推理、二次有效 → 重试取有效」「正常内容 → 直出」，3 例全部通过。
