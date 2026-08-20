@@ -1,3 +1,10 @@
+## [未发布] 修复：LLM 只输出推理块时优化不整线失败（llm-empty-reasoning-fallback，2026-08-20）
+
+- **空/纯推理有界重试**：候选剥离推理块后为空时，最多重试 3 次 LLM 调用；仍为空则回退原始 prompt 作为该候选，不再抛 RuntimeError。
+- **后处理为空回退**：策略后处理结果为空同样回退原始 prompt。
+- **独立调用契约**：无论 HTTP/CLI/MCP 或其它项目直连，单次优化请求都不会因「模型只返回思考内容」而整体失败。
+- **测试**：新增 04-tests/test_optimizer_empty_reasoning_retry.py 3 例（回退原文 / 重试取有效 / 正常直出）全部通过；既有 04-tests 失败集与基线一致。
+
 ## [未发布] 优化：创意等级与执行策略解耦（decouple-creative-level-strategy，2026-08-17）
 
 - **执行策略**：`optimization_strategy` 只允许 `template|llm`，缺省为 `llm`；`creative_level` 只表达创意/细节强度，不参与路由；传入已删除的 `auto` 返回 422。

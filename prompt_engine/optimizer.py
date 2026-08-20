@@ -327,13 +327,27 @@ class Optimizer:
 
             for i in range(num):
                 logger.info("Candidate %d/%d: calling LLM variant=%d", i + 1, num, i)
-                raw_output, tokens = self._call_llm(
-                    system_prompt, request.prompt, variant=i,
-                )
-                # 推理模型可能把 <think> 思考过程放进内容：先剥离再后处理
-                raw_output = strip_reasoning_blocks(raw_output or "")
+                raw_output, tokens = "", 0
+                stripped_output = ""
+                # 推理模型（如 DeepSeek）可能只输出 <thinking> 思考块而不返回实际内容：
+                # 剥离后为空时先有界重试（最多 3 次），仍为空则回退原文，
+                # 保证引擎被其它项目作为独立服务调用时不因空结论整线失败。
+                for empty_attempt in range(3):
+                    raw_output, tokens = self._call_llm(
+                        system_prompt, request.prompt, variant=i,
+                    )
+                    stripped_output = strip_reasoning_blocks(raw_output or "")
+                    if stripped_output:
+                        break
+                    logger.warning(
+                        "Candidate %d/%d attempt %d: LLM 剥离推理块后为空（原始长度=%d），重试",
+                        i + 1, num, empty_attempt + 1, len(raw_output or ""),
+                    )
+                raw_output = stripped_output
                 if not raw_output:
-                    raise RuntimeError("LLM 返回了空内容或仅包含推理内容，未生成有效优化词")
+                    logger.warning("Candidate %d/%d: LLM 仍只返回推理/空内容，回退原文", i + 1, num)
+                    candidates.append(request.prompt)
+                    continue
                 if is_video:
                     # 视频领域：结构化输出（渲染单串 + 结构化字段）
                     optimized, video_meta = strategy_cls.post_process_video(
@@ -350,7 +364,9 @@ class Optimizer:
                 if len(optimized) > request.max_length:
                     optimized = optimized[:request.max_length]
                 if not optimized or not optimized.strip():
-                    raise RuntimeError("LLM 输出未生成有效优化词")
+                    logger.warning("Candidate %d/%d: 后处理结果为空，回退原文", i + 1, num)
+                    candidates.append(request.prompt)
+                    continue
                 candidates.append(optimized)
                 total_tokens += tokens
 
