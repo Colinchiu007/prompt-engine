@@ -1,3 +1,12 @@
+## [未发布] 修复：OpenAI 兼容 provider 兼容推理模型输出（llm-reasoning-output-compat，2026-08-21）
+
+- **输出预算交由网关默认**：`OpenAICompatProvider` 未显式配置 `max_tokens` 时省略该字段（推理模型如 MiMo/DeepSeek 先思考后输出，硬编码 500 预算会把思考耗尽导致 `content` 为空）；显式配置仍透传。
+- **超时放宽**：默认 `timeout` 15s -> 120s（桌面端同一 opencode-go/mimo-v2.5 网关实测耗时 27~53s）；显式配置可覆盖。
+- **纯推理响应防护**：`content` 为空但 `reasoning_content` 非空时记录 warning 并返回空文本（fail-closed，不把思考内容当提示词），由上层 optimizer 既有回退原文逻辑兜底。
+- **内核安全读取**：`prompt_engine_core/llm.py` 对 `message.content` 改用 `.get`，缺键/为 null 不抛 KeyError。
+- **测试**：新增 04-tests/test_llm_reasoning_output_compat.py 5 例；相关模块测试 54 passed；CI 整库 pytest 全绿（PR #68）。
+- **合并**：PR #68 已 squash 合并入 origin/main（1ed7536）。
+
 ## [未发布] 修复：LLM 只输出推理块时优化不整线失败（llm-empty-reasoning-fallback，2026-08-20）
 
 - **空/纯推理有界重试**：候选剥离推理块后为空时，最多重试 3 次 LLM 调用；仍为空则回退原始 prompt 作为该候选，不再抛 RuntimeError。

@@ -1,12 +1,13 @@
 {
   "id": "llm-reasoning-output-compat",
   "title": "prompt-engine OpenAI 兼容 provider 兼容推理模型输出（输出预算 + 空/纯推理防护）",
-  "status": "in_progress",
+  "status": "completed",
   "complexity": "M",
   "risk": "medium",
   "domain": "backend",
-  "currentPhase": "analysis",
-  "nextAction": "双模型分析并实施",
+  "currentPhase": "completed",
+  "nextAction": "已合并 PR #68（squash）并入 origin/main；归档",
   "createdAt": "2026-08-21T00:00:00Z",
-  "branch": "codex/llm-reasoning-output-compat"
+  "branch": "codex/llm-reasoning-output-compat",
+  "remoteStatus": "merged:PR#68:1ed7536"
 }
