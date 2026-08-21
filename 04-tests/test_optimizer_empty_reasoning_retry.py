@@ -16,6 +16,7 @@ import prompt_engine.optimizer as optimizer_module
 from prompt_engine.optimizer import Optimizer
 from prompt_engine.models import OptimizeRequest, PlatformType
 from prompt_engine.llm.base import BaseLLMProvider
+from types import SimpleNamespace
 
 
 class _StubProvider(BaseLLMProvider):
@@ -48,6 +49,10 @@ def _install_strip_stub(monkeypatch):
 def _run(queue, prompt, monkeypatch):
     _install_strip_stub(monkeypatch)
     optimizer = Optimizer()
+    monkeypatch.setattr(
+        optimizer, "_render_from_template",
+        lambda _req: SimpleNamespace(optimized_prompt="template-optimized:" + prompt),
+    )
     req = OptimizeRequest(
         prompt=prompt,
         platform=PlatformType.GENERIC,
@@ -57,14 +62,15 @@ def _run(queue, prompt, monkeypatch):
     return optimizer.optimize(req, provider=_StubProvider(queue), provider_id="stub")
 
 
-def test_pure_reasoning_blocks_fall_back_to_original(monkeypatch):
+def test_pure_reasoning_blocks_fall_back_to_template(monkeypatch):
     queue = [
         ("REASONING_ONLY first", 10),
         ("REASONING_ONLY second", 10),
         ("REASONING_ONLY third", 10),
     ]
     result = _run(queue, "原文A", monkeypatch)
-    assert result.optimized_prompt == "原文A"
+    assert result.optimized_prompt.startswith("template-optimized:")
+    assert result.optimized_prompt != "原文A"
     assert result.error is None
 
 
