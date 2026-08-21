@@ -13,6 +13,17 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+# Path 2 — 推理模型仅输出思考块（content 为空）时的自动重试指令。
+# 告知模型：之前的响应只包含推理内容，现在请把实际回复放在 content 字段。
+# 不伪造/拼接提示词（fail-closed）：若重试仍为空，_request 返回 None，
+# 由上层 optimizer 既有回退原文逻辑兜底。
+_REASONING_RETRY_INSTRUCTION = (
+    "You have previously output only thinking/reasoning content without a visible "
+    "response in the content field. Please provide your complete actual response "
+    "in the content field now, following the output format specified in the system prompt. "
+    "Do NOT include any thinking blocks in the content field."
+)
+
 _DEFAULT_BASE_URLS = {
     "openai_compat": "https://api.openai.com/v1",
     "minimax": "https://api.minimax.chat/v1",
@@ -44,25 +55,59 @@ class BaseLLMProvider:
     def model_name(self) -> str:
         return self.model or self.provider
 
-    def _request(self, system_prompt: str, user_prompt: str, max_tokens: int = 3000) -> str:
-        url = f"{self.base_url}/chat/completions"
+    def _raw_request(
+        self, messages: list[dict], max_tokens: int, url: str, headers: dict
+    ) -> tuple[str | None, str]:
+        """执行单次 LLM HTTP 请求。
+
+        返回 (content, reasoning_content)。
+        - content 可能为 None（推理模型仅输出思考块）；
+        - reasoning_content 始终为字符串（空表示模型未提供推理）。
+        """
         payload = {
             "model": self.model or "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+            "messages": messages,
             "temperature": 0.7,
             "max_tokens": max_tokens,
         }
-        headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
         req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers=headers)
         with urllib.request.urlopen(req, timeout=self.timeout) as resp:
             data = json.loads(resp.read().decode())
-        # 部分网关（推理模型）可能缺 content 键或 content 为 null：安全读取，不抛 KeyError
-        return data["choices"][0]["message"].get("content")
+        message = data["choices"][0]["message"]
+        content = message.get("content")
+        reasoning = message.get("reasoning_content") or ""
+        return content, reasoning
+
+    def _request(self, system_prompt: str, user_prompt: str, max_tokens: int = 3000) -> str | None:
+        """调用 LLM，返回 content 文本（可能为 None）。
+
+        部分网关（推理模型）可能缺 content 键或 content 为 null：安全读取，不抛 KeyError。
+
+        Path 2 — 自动检测推理模型仅输出思考块的情况：
+        若 content 为空但 reasoning_content 非空，自动追加指令重试一次，
+        引导模型把实际回复输出到 content 字段。普通模型（content 非空）不受影响。
+        重试仍为空则返回 None（fail-closed），由上层 optimizer 回退原文。
+        """
+        url = f"{self.base_url}/chat/completions"
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        content, reasoning = self._raw_request(messages, max_tokens, url, headers)
+
+        if not content and reasoning:
+            logger.warning(
+                "BaseLLMProvider: content 为空但含推理内容（model=%s），自动重试引导输出到 content 字段",
+                self.model,
+            )
+            messages.append({"role": "user", "content": _REASONING_RETRY_INSTRUCTION})
+            content, _ = self._raw_request(messages, max_tokens, url, headers)
+
+        return content
 
     def call(self, system_prompt: str, user_prompt: str, variant: int = 0, max_length: int | None = None) -> tuple[str, int]:
         """返回 (content, tokens)。无 key 时抛错（fail closed）。
