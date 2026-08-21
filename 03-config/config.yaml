@@ -28,10 +28,9 @@ llm:
   openai_compat:
     api_key: ${OPENAI_API_KEY}
     base_url: https://openrouter.ai/api/v1
-    max_tokens: 500
     model: deepseek/deepseek-chat
     temperature: 0.7
-    timeout: 60
+    timeout: 120
   provider: deepseek
   xfyun:
     api_key: ${XFYUN_API_KEY}
