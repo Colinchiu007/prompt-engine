@@ -4,8 +4,9 @@
 - **超时放宽**：默认 `timeout` 15s -> 120s（桌面端同一 opencode-go/mimo-v2.5 网关实测耗时 27~53s）；显式配置可覆盖。
 - **纯推理响应防护**：`content` 为空但 `reasoning_content` 非空时记录 warning 并返回空文本（fail-closed，不把思考内容当提示词），由上层 optimizer 既有回退原文逻辑兜底。
 - **内核安全读取**：`prompt_engine_core/llm.py` 对 `message.content` 改用 `.get`，缺键/为 null 不抛 KeyError。
-- **测试**：新增 04-tests/test_llm_reasoning_output_compat.py 5 例；相关模块测试 54 passed；CI 整库 pytest 全绿（PR #68）。
-- **合并**：PR #68 已 squash 合并入 origin/main（1ed7536）。
+- **Path 2 自动重试（推理模型友好）**：图片引擎 `OpenAICompatProvider.chat()` 与视频/共享内核 `BaseLLMProvider._request()` 检测到「content 为空 + reasoning_content 非空」时，自动追加一条指令（要求把实际回复输出到 content 字段）重试一次。普通模型（content 非空）不触发重试，行为不变。重试仍为空才返回空文本（fail-closed），不伪造提示词。
+- **测试**：test_llm_reasoning_output_compat.py 11 例（含重试成功/重试仍空/普通无重试/非推理无重试，覆盖图片引擎与共享内核双路径）；相关回归 21 passed。
+- **合并**：PR #68 已 squash 合并入 origin/main（1ed7536）；本补丁（Path 2 自动重试）待提交。
 
 ## [未发布] 修复：LLM 只输出推理块时优化不整线失败（llm-empty-reasoning-fallback，2026-08-20）
 

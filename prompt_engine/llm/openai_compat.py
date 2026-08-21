@@ -4,6 +4,7 @@ import logging
 from openai import OpenAI
 
 from prompt_engine.llm.base import BaseLLMProvider
+from prompt_engine_core.llm import _REASONING_RETRY_INSTRUCTION
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,11 @@ class OpenAICompatProvider(BaseLLMProvider):
 
         未显式配置 max_tokens 时省略该字段（交由网关默认输出预算），
         与桌面端 OpenAI 兼容适配器行为一致；仅在显式配置时透传。
+
+        Path 2 — 自动检测推理模型仅输出思考块的情况：
+        若 content 为空但 reasoning_content 非空，追加指令重试一次，
+        引导模型把实际回复输出到 content 字段。普通模型（content 非空）不受影响。
+        重试仍为空则返回空文本（fail-closed，不伪造提示词），由上层回退原文逻辑兜底。
         """
         params = {
             "model": self._model,
@@ -44,16 +50,31 @@ class OpenAICompatProvider(BaseLLMProvider):
         message = response.choices[0].message
         text = message.content or ""
         reasoning = getattr(message, "reasoning_content", None) or ""
+        tokens = response.usage.total_tokens if response.usage else 0
+
         if not text and reasoning:
-            # 纯推理响应：不把思考内容当提示词（fail-closed），只记录诊断，
-            # 返回空文本由上层 optimize/调用方既有回退原文逻辑兜底。
+            # Path 2：纯推理响应 — 记录诊断，自动重试引导输出到 content 字段（fail-closed，不伪造提示词）
             logger.warning(
-                "OpenAICompatProvider: content 为空但含推理内容（model=%s finish_reason=%s reasoning_len=%d），返回空文本",
+                "OpenAICompatProvider: content 为空但含推理内容（model=%s finish_reason=%s reasoning_len=%d），自动重试",
                 self._model,
                 getattr(response.choices[0], "finish_reason", None),
                 len(reasoning),
             )
-        tokens = response.usage.total_tokens if response.usage else 0
+            retry_messages = messages + [
+                {"role": "user", "content": _REASONING_RETRY_INSTRUCTION},
+            ]
+            retry_response = self._client.chat.completions.create(
+                **{**params, "messages": retry_messages}
+            )
+            retry_message = retry_response.choices[0].message
+            text = retry_message.content or ""
+            tokens = retry_response.usage.total_tokens if retry_response.usage else 0
+            if not text:
+                logger.warning(
+                    "OpenAICompatProvider: 重试后 content 仍为空（model=%s），返回空文本（fail-closed）",
+                    self._model,
+                )
+
         return text, tokens
 
     @property
