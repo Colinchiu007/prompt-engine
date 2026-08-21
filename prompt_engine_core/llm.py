@@ -61,7 +61,8 @@ class BaseLLMProvider:
         req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers=headers)
         with urllib.request.urlopen(req, timeout=self.timeout) as resp:
             data = json.loads(resp.read().decode())
-        return data["choices"][0]["message"]["content"]
+        # 部分网关（推理模型）可能缺 content 键或 content 为 null：安全读取，不抛 KeyError
+        return data["choices"][0]["message"].get("content")
 
     def call(self, system_prompt: str, user_prompt: str, variant: int = 0, max_length: int | None = None) -> tuple[str, int]:
         """返回 (content, tokens)。无 key 时抛错（fail closed）。
