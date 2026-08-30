@@ -1,0 +1,13 @@
+{
+  "id": "prompt-engine-reasoning-recovery",
+  "title": "推理模型空 content 时真正产出优化词并增强日志",
+  "status": "completed",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "prompt-engine",
+  "currentPhase": "completed",
+  "nextAction": "PR #70 已合并",
+  "createdAt": "2026-08-21T00:00:00Z",
+  "branch": "codex/prompt-engine-reasoning-recovery",
+  "remoteStatus": "merged:dad77df3c48107d2c6bec92ce044567308e1c321"
+}

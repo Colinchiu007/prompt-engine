@@ -1,3 +1,11 @@
+## [未发布] 修复：推理模型空 content 第二轮强化（prompt-engine-reasoning-recovery，2026-08-21）
+
+- **更强重试（最多 3 次调用）**：`OpenAICompatProvider.chat()` 与 `BaseLLMProvider._request()` 在 `content` 为空但 `reasoning_content` 非空时，第一次追加用户指令，第二次再追加 final-output system 指令；小 `max_tokens` 自动提升到 8192（受 `max_tokens_cap` 约束）。
+- **详细日志**：补充 request（模型/消息数/字符数/max_tokens/timeout）、raw response（content/reasoning 长度、延迟）、retry 次数与最终结果结构化日志，便于定位慢推理与空内容。
+- **图片域模板兜底**：LLM 重试耗尽后图片域改用模板优化结果，不再直接回原文；视频域保持 fail-closed 回原文。
+- **桌面 PromptBridge 超时 60s → 120s**：HTTP 与 CLI fallback 均放宽，避免慢推理被传输层提前掐断（配套 Multi-Publish 修改）。
+- **示例配置**：`03-config/config.yaml` 中 `openai_compat` 移除 `max_tokens: 500`，`timeout` 对齐 120s。
+
 ## [未发布] 修复：OpenAI 兼容 provider 兼容推理模型输出（llm-reasoning-output-compat，2026-08-21）
 
 - **输出预算交由网关默认**：`OpenAICompatProvider` 未显式配置 `max_tokens` 时省略该字段（推理模型如 MiMo/DeepSeek 先思考后输出，硬编码 500 预算会把思考耗尽导致 `content` 为空）；显式配置仍透传。

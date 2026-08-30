@@ -345,8 +345,16 @@ class Optimizer:
                     )
                 raw_output = stripped_output
                 if not raw_output:
-                    logger.warning("Candidate %d/%d: LLM 仍只返回推理/空内容，回退原文", i + 1, num)
-                    candidates.append(request.prompt)
+                    if is_video:
+                        logger.warning("Candidate %d/%d: LLM 仍只返回推理/空内容（视频域），回退原文", i + 1, num)
+                        candidates.append(request.prompt)
+                    else:
+                        template_result = self._render_from_template(request)
+                        fallback_prompt = template_result.optimized_prompt
+                        logger.warning(
+                            "Candidate %d/%d: LLM 仍只返回推理/空内容，使用模板优化兜底（len=%d）", i + 1, num, len(fallback_prompt),
+                        )
+                        candidates.append(fallback_prompt)
                     continue
                 if is_video:
                     # 视频领域：结构化输出（渲染单串 + 结构化字段）

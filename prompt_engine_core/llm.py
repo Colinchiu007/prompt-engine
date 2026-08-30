@@ -13,16 +13,22 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Path 2 — 推理模型仅输出思考块（content 为空）时的自动重试指令。
+# Path 2+ — 推理模型仅输出思考块（content 为空）时的自动重试指令。
 # 告知模型：之前的响应只包含推理内容，现在请把实际回复放在 content 字段。
 # 不伪造/拼接提示词（fail-closed）：若重试仍为空，_request 返回 None，
-# 由上层 optimizer 既有回退原文逻辑兜底。
+# 由上层 optimizer 的模板优化兜底（图片域）或回退原文（视频域）处理。
 _REASONING_RETRY_INSTRUCTION = (
     "You have previously output only thinking/reasoning content without a visible "
     "response in the content field. Please provide your complete actual response "
     "in the content field now, following the output format specified in the system prompt. "
     "Do NOT include any thinking blocks in the content field."
 )
+_REASONING_FINAL_OUTPUT_INSTRUCTION = (
+    "You must return the complete final answer as the visible content field now. "
+    "Do NOT output thinking, reasoning, or hidden tags in the content field."
+)
+_REASONING_RETRY_ATTEMPTS = 3
+_REASONING_RETRY_MAX_TOKENS = 8192
 
 _DEFAULT_BASE_URLS = {
     "openai_compat": "https://api.openai.com/v1",
@@ -71,11 +77,17 @@ class BaseLLMProvider:
             "max_tokens": max_tokens,
         }
         req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers=headers)
+        _start = time.time()
         with urllib.request.urlopen(req, timeout=self.timeout) as resp:
             data = json.loads(resp.read().decode())
         message = data["choices"][0]["message"]
         content = message.get("content")
         reasoning = message.get("reasoning_content") or ""
+        logger.info(
+            "BaseLLMProvider raw: model=%s max_tokens=%d content_len=%d reasoning_len=%d latency_ms=%d",
+            self.model, max_tokens, len(content or ""), len(reasoning),
+            int((time.time() - _start) * 1000),
+        )
         return content, reasoning
 
     def _request(self, system_prompt: str, user_prompt: str, max_tokens: int = 3000) -> str | None:
@@ -83,29 +95,49 @@ class BaseLLMProvider:
 
         部分网关（推理模型）可能缺 content 键或 content 为 null：安全读取，不抛 KeyError。
 
-        Path 2 — 自动检测推理模型仅输出思考块的情况：
-        若 content 为空但 reasoning_content 非空，自动追加指令重试一次，
-        引导模型把实际回复输出到 content 字段。普通模型（content 非空）不受影响。
-        重试仍为空则返回 None（fail-closed），由上层 optimizer 回退原文。
+        Path 2+ — 自动检测推理模型仅输出思考块的情况：
+        - content 为空但 reasoning_content 非空时最多重试两次（共三次调用）；
+        - 每次重试追加用户指令，最后一次追加 final-output system 指令；
+        - 重试预算提升到 8192（仍受 max_tokens_cap 约束），避免思考耗尽输出预算；
+        - 重试仍为空则返回 None（fail-closed），由上层 optimizer 模板兜底或回退原文。
         """
         url = f"{self.base_url}/chat/completions"
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
 
+        logger.info(
+            "BaseLLMProvider request: model=%s max_tokens=%d system_len=%d user_len=%d",
+            self.model, max_tokens, len(system_prompt), len(user_prompt),
+        )
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
         content, reasoning = self._raw_request(messages, max_tokens, url, headers)
+        retries = 0
 
-        if not content and reasoning:
+        while not (content and content.strip()) and reasoning:
+            if retries >= _REASONING_RETRY_ATTEMPTS - 1:
+                break
+            retries += 1
             logger.warning(
-                "BaseLLMProvider: content 为空但含推理内容（model=%s），自动重试引导输出到 content 字段",
-                self.model,
+                "BaseLLMProvider: content 为空但含推理内容（model=%s reasoning_len=%d attempt=%d/%d），重试",
+                self.model, len(reasoning), retries, _REASONING_RETRY_ATTEMPTS,
             )
             messages.append({"role": "user", "content": _REASONING_RETRY_INSTRUCTION})
-            content, _ = self._raw_request(messages, max_tokens, url, headers)
+            if retries >= 2:
+                messages.append({"role": "system", "content": _REASONING_FINAL_OUTPUT_INSTRUCTION})
+            retry_max_tokens = max(max_tokens, _REASONING_RETRY_MAX_TOKENS)
+            if self.max_tokens_cap:
+                retry_max_tokens = min(retry_max_tokens, self.max_tokens_cap)
+            content, reasoning = self._raw_request(messages, retry_max_tokens, url, headers)
+
+        if not (content and content.strip()):
+            logger.warning(
+                "BaseLLMProvider: content 仍为空（model=%s attempts=%d），返回 None（fail-closed）",
+                self.model, retries,
+            )
 
         return content
 

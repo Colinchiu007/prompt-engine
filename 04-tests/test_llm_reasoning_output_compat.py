@@ -107,8 +107,8 @@ class TestOpenAICompatOutputCompatibility:
         with caplog.at_level(logging.WARNING, logger="prompt_engine.llm.openai_compat"):
             text, tokens = p.chat([{"role": "user", "content": "hi"}])
         assert text == ""
-        assert call_count == 2  # 一次重试
-        assert "自动重试" in caplog.text
+        assert call_count == 3  # 两次重试
+        assert "重试" in caplog.text
         assert "finish_reason=length" in caplog.text
 
     def test_normal_response_no_retry(self):
@@ -206,8 +206,8 @@ class TestCoreReasoningRetry:
         with caplog.at_level(logging.WARNING, logger="prompt_engine_core.llm"):
             result = provider._request("sys", "user")
         assert result is None
-        assert call_count == 2  # 一次重试
-        assert "自动重试" in caplog.text
+        assert call_count == 3  # 两次重试
+        assert "重试" in caplog.text
 
     def test_normal_response_no_retry(self, monkeypatch):
         """Path 2：content 非空 -> 不触发重试，单次调用。"""
@@ -238,3 +238,35 @@ class TestCoreReasoningRetry:
         result = provider._request("sys", "user")
         assert result is None
         assert call_count == 1  # 无重试（不是推理模型）
+
+class TestReasoningRecoveryHardening:
+    def test_retry_boosts_small_explicit_max_tokens(self):
+        captured = {}
+
+        def fake_create(**kw):
+            if "max_tokens" in kw:
+                captured["retry_max_tokens"] = kw["max_tokens"]
+            captured["calls"] = captured.get("calls", 0) + 1
+            if captured["calls"] == 1:
+                return _msg(None, "thinking", finish_reason="length")
+            return _msg("optimized_prompt_here", None)
+
+        p = _provider({"api_key": "sk-test", "base_url": "https://x/v1", "max_tokens": 500}, fake_create)
+        text, _ = p.chat([{"role": "user", "content": "hi"}])
+        assert text == "optimized_prompt_here"
+        assert captured["retry_max_tokens"] == 8192
+
+    def test_second_retry_adds_final_output_system_instruction(self):
+        calls = []
+
+        def fake_create(**kw):
+            calls.append(kw["messages"])
+            if len(calls) <= 2:
+                return _msg(None, "thinking", finish_reason="length")
+            return _msg("optimized_prompt_here", None)
+
+        p = _provider({"api_key": "sk-test", "base_url": "https://x/v1"}, fake_create)
+        text, _ = p.chat([{"role": "user", "content": "hi"}])
+        assert text == "optimized_prompt_here"
+        assert calls[2][-1]["role"] == "system"
+        assert "content field" in calls[2][-1]["content"]

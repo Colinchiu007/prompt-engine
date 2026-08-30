@@ -57,7 +57,7 @@ class TestOptimizerReasoningFallback:
         assert "<think>" not in result.optimized_prompt
 
     @patch.object(Optimizer, "_call_llm")
-    def test_think_only_output_falls_back_to_original(self, mock_call):
+    def test_think_only_output_uses_template_fallback(self, mock_call):
         mock_call.return_value = (
             "<think>The user wants me to transform this Chinese description into an English prompt. "
             "Let me carefully analyze the scene details and compose a rich image generation prompt "
@@ -68,6 +68,8 @@ class TestOptimizerReasoningFallback:
         prompt = _unique_prompt("清晨的湖边")
         req = OptimizeRequest(prompt=prompt, platform=PlatformType.GENERIC, creative_level=5)
         result = optimizer.optimize(req, provider=_mock_provider())
-        assert result.optimized_prompt == prompt
+        assert result.optimized_prompt != prompt
+        assert result.optimized_prompt and result.optimized_prompt.strip()
+        assert " thinking" not in result.optimized_prompt
         # BYOK: pure reasoning content no longer falls back silently, errors instead
         # assert result.error is None  # old behavior
