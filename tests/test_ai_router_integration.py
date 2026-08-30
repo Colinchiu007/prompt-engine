@@ -62,11 +62,14 @@ def test_ai_router_provider_passes_auto_model_to_openai(monkeypatch):
             "base_url": "https://router.example/v1",
         })
         result = provider.chat([{"role": "user", "content": "hello"}])
-    openai.assert_called_once_with(
-        api_key="project-test-key",
-        base_url="https://router.example/v1",
-        max_retries=3,
-    )
+    openai.assert_called_once()
+    openai_call_kwargs = openai.call_args.kwargs
+    assert openai_call_kwargs["api_key"] == "project-test-key"
+    assert openai_call_kwargs["base_url"] == "https://router.example/v1"
+    assert openai_call_kwargs["max_retries"] == 3
+    # 有界连接池契约（CLOSE_WAIT 泄漏回归保护）：必须注入 httpx.Client
+    assert "http_client" in openai_call_kwargs
+    assert openai_call_kwargs["http_client"] is not None
     assert provider.model_name == "auto"
     assert result == ("ok", 3)
     assert fake_client.chat.completions.create.call_args.kwargs["model"] == "auto"
