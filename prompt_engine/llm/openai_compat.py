@@ -1,12 +1,22 @@
 """OpenAI 兼容 API LLM Provider"""
 import logging
 
+import httpx
 from openai import OpenAI
 
 from prompt_engine.llm.base import BaseLLMProvider
 from prompt_engine_core.llm import _REASONING_RETRY_INSTRUCTION
 
 logger = logging.getLogger(__name__)
+
+# 有界连接池：限制 keep-alive 复用连接数，避免透明代理（如 OpenClash）中断连接时
+# httpx 连接池残留 CLOSE_WAIT 泄漏。max_keepalive_connections 有界 + keepalive_expiry
+# 定期过期空闲连接，从客户端侧根治连接泄漏。
+_CONNECTION_POOL_LIMITS = httpx.Limits(
+    max_connections=5,
+    max_keepalive_connections=2,
+    keepalive_expiry=30.0,
+)
 
 
 class OpenAICompatProvider(BaseLLMProvider):
@@ -18,6 +28,8 @@ class OpenAICompatProvider(BaseLLMProvider):
             api_key=config["api_key"],
             base_url=config["base_url"],
             max_retries=3,  # 自动指数退避重试
+            # 显式注入有界连接池，防止 keep-alive 连接在代理中断时残留 CLOSE_WAIT 泄漏
+            http_client=httpx.Client(limits=_CONNECTION_POOL_LIMITS),
         )
         self._model = config.get("model", "gpt-4o")
         self._temperature = config.get("temperature", 0.7)

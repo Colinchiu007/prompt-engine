@@ -25,6 +25,7 @@ prompt-engine: prompt-engine
 - 测试必须全部 mock 隔离，不依赖真实 API Key
 - 25 个 StyleCategory 枚举在 models.py，不新增不删除
 - 权重系统使用 keyword_weights.json 持久化，_get_weights() 惰性加载
+- 所有 OpenAI 客户端必须显式注入有界 httpx 连接池（http_client=httpx.Client(limits=...))，禁止默认无限 keep-alive 连接池，防止透明代理中断导致 CLOSE_WAIT 泄漏（详见 references/architecture.md）
 
 ## PRD 参考
 
