@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import os
 import sys
 from typing import Optional
 
@@ -34,6 +35,13 @@ def _classify(args):
         _print_table(result, args.max_categories)
 
 
+def _category_value(cat):
+    """兼容 StyleCategory 对象与 (value, name) tuple 两类来源。"""
+    if isinstance(cat, (tuple, list)) and len(cat) > 0:
+        return str(cat[0])
+    return str(getattr(cat, "value", cat))
+
+
 def _get_category_name(cat) -> str:
     """获取风格的中文名称"""
     cn_names = {
@@ -64,7 +72,8 @@ def _get_category_name(cat) -> str:
         "emojis": "Emoji 表情",
         "miscellaneous": "杂项",
     }
-    return cn_names.get(cat.value, cat.value.replace("_", " ").title())
+    value = _category_value(cat)
+    return cn_names.get(value, value.replace("_", " ").title())
 
 
 def _print_table(result, max_categories=5):
@@ -100,6 +109,24 @@ def _list_categories(args):
         print(f"{i:<3} {cat.value:<35} {name}")
 
 
+def _resolve_api_key(args):
+    """解析调用方 LLM API Key。
+
+    优先 --api-key 参数；未提供时回退到环境变量 PROMPT_ENGINE_API_KEY，
+    避免 Key 经命令行参数暴露（进程列表/ps 可读）。两者皆缺则 fail-closed。
+    """
+    key = getattr(args, "api_key", "") or ""
+    if key:
+        return key
+    env_key = os.environ.get("PROMPT_ENGINE_API_KEY", "").strip()
+    if env_key:
+        return env_key
+    raise SystemExit(
+        "LLM 策略必须提供 API Key：--api-key 参数或环境变量 PROMPT_ENGINE_API_KEY；"
+        "或使用 --strategy template 走确定性模板"
+    )
+
+
 def _optimize(args):
     """运行 prompt 优化"""
     from prompt_engine.optimizer import Optimizer
@@ -121,18 +148,17 @@ def _optimize(args):
     provider = None
     provider_id = ""
     if strategy == OptimizationStrategy.LLM:
-        if not args.api_key:
-            raise SystemExit("LLM 策略必须传 --api-key；或使用 --strategy template 走确定性模板")
+        api_key = _resolve_api_key(args)
         llm = {
             "provider": args.provider,
             "model": args.model,
-            "api_key": args.api_key,
+            "api_key": api_key,
         }
         if args.base_url:
             llm["base_url"] = args.base_url
         llm["caller"] = args.caller
         provider = BaseLLMProvider.from_llm_object(llm)
-        key_digest = hashlib.sha256(args.api_key.encode("utf-8")).hexdigest()[:16]
+        key_digest = hashlib.sha256(api_key.encode("utf-8")).hexdigest()[:16]
         provider_id = f"{llm['caller']}|{args.provider}|{args.model}|{args.base_url or ''}|key:{key_digest}"
 
     req = OptimizeRequest(
@@ -160,7 +186,7 @@ def _optimize(args):
         }
         if result.detected_categories:
             output["detected_categories"] = [
-                {"value": c.value, "name": _get_category_name(c)}
+                {"value": _category_value(c), "name": _get_category_name(c)}
                 for c in result.detected_categories
             ]
         print(json.dumps(output, ensure_ascii=False))
@@ -173,7 +199,7 @@ def _optimize(args):
             print(f"\nDetected Categories:")
             for cat in result.detected_categories:
                 name = _get_category_name(cat)
-                print(f"  - {cat.value} ({name})")
+                print(f"  - {_category_value(cat)} ({name})")
 
 
 
@@ -187,7 +213,7 @@ def _recommend(args):
 
     if args.json:
         import json
-        output = [{'value': c.value, 'name': _get_category_name(c)} for c in cats]
+        output = [{'value': _category_value(c), 'name': _get_category_name(c)} for c in cats]
         print(json.dumps(output, indent=2, ensure_ascii=False))
     else:
         print(f"Style: {args.style}")
@@ -198,7 +224,7 @@ def _recommend(args):
         print(f"{'Category':<35} {'中文':<15}")
         print("-" * 55)
         for c in cats:
-            print(f"{c.value:<35} {_get_category_name(c):<15}")
+            print(f"{_category_value(c):<35} {_get_category_name(c):<15}")
 
 
 def _feedback(args):
@@ -304,7 +330,7 @@ def main():
     p_optimize.add_argument("--model", default="gpt-4o",
                            help="调用方 LLM model（default: gpt-4o）")
     p_optimize.add_argument("--api-key", default="",
-                           help="调用方 LLM API Key；不会写入引擎配置")
+                           help="调用方 LLM API Key；不会写入引擎配置（未提供时回退环境变量 PROMPT_ENGINE_API_KEY）")
     p_optimize.add_argument("--base-url", default="",
                            help="调用方 LLM base URL（可选）")
     p_optimize.add_argument("--caller", default="prompt-engine-cli",
