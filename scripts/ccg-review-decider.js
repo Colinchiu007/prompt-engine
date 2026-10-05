@@ -82,7 +82,9 @@ function git(args, opts = {}) {
   }
 }
 
-/** 读取暂存区变更：文件 + 行数 + 改动内容 */
+/**
+ * 采集"已落地的改动"：从 git 暂存区读（验证层用）
+ */
 function collectStaged() {
   const numstat = git(["diff", "--cached", "--numstat"]);
   if (numstat === null) return null;
@@ -109,27 +111,104 @@ function collectStaged() {
   return { files, changedLines };
 }
 
+/**
+ * 采集"尚未落地的方案"：从文档读（决策层用）
+ *
+ * 决策层跑在动手写码之前，那时没有 git diff，只有方案文档。
+ * 这里用文档的「预计改动规模」代替实际 diff 行数：
+ *   - 方案里显式写了"预计新增 N 行 / M 个文件"就采信
+ *   - 没写就按文档体量估算（非空行 + 代码块行）
+ * 敏感判定仍走同一套规则，所以两个层的判定口径一致。
+ */
+function collectProposal(file) {
+  let text;
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch (err) {
+    return { error: `读不到方案文件: ${file} (${err.message})` };
+  }
+
+  // 显式声明的预计规模优先于估算
+  let declaredLines = null;
+  let declaredFiles = null;
+  const declLine = text.match(/预计(?:新增|改动|变更)[^\n]{0,12}?(\d+)\s*行/);
+  if (declLine) declaredLines = Number(declLine[1]);
+  const declFile = text.match(/(\d+)\s*个?(?:文件|模块|接口|函数)/);
+  if (declFile) declaredFiles = Number(declFile[1]);
+
+  const codeBlocks = (text.match(/```[\s\S]*?```/g) || []).join("\n");
+  const nonEmpty = text.split("\n").filter((l) => l.trim()).length;
+  const codeLines = codeBlocks
+    .split("\n")
+    .filter((l) => l.trim() && !/^\s*(#|\/\/|\*|<!--)/.test(l)).length;
+
+  const changedLines = declaredLines !== null ? declaredLines : Math.max(nonEmpty, codeLines);
+  const fileCount = declaredFiles !== null ? declaredFiles : 1;
+
+  // 抽正文里的路径样式 token —— 既用于敏感判定，也用于事后范围漂移比对
+  const allPaths = new Set();
+  for (const line of text.split("\n")) {
+    const tokens = line.match(/[\w./\\-]{3,}\.[A-Za-z]{1,5}\b/g) || [];
+    for (const tk of tokens) allPaths.add(tk);
+  }
+  // 过滤掉明显不是文件路径的（域名、版本号之类）
+  const plannedFiles = [...allPaths].filter(
+    (p) => !/^https?:/i.test(p) && !/^\d+(\.\d+)+/.test(p) && /[\\/]|\.[A-Za-z]{1,5}$/.test(p)
+  );
+
+  return {
+    proposal: true,
+    files: [{ file, added: changedLines, deleted: 0 }],
+    changedLines: text.split("\n"),
+    plannedFiles,
+    stats: {
+      changedLines,
+      fileCount,
+      declared: declaredLines !== null || declaredFiles !== null,
+      docLines: text.split("\n").length,
+      estimated: declaredLines === null,
+    },
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════
 //  判定
 // ═══════════════════════════════════════════════════════════════════
 
 function judge(staged) {
-  const codeFiles = staged.files.filter((f) =>
-    RULES.codeExtensions.has(path.extname(f.file).toLowerCase())
-  );
-  const changedLines = codeFiles.reduce(
-    (sum, f) => sum + (f.added || 0) + (f.deleted || 0),
-    0
-  );
+  // 决策层：方案本身通常是 .md，不能按源码扩展名过滤（否则规模会被算成 0）
+  const isProposal = !!staged.proposal;
+  const codeFiles = isProposal
+    ? staged.files
+    : staged.files.filter((f) =>
+        RULES.codeExtensions.has(path.extname(f.file).toLowerCase())
+      );
+  const changedLines = isProposal
+    ? (staged.stats ? staged.stats.changedLines : 0)
+    : codeFiles.reduce(
+        (sum, f) => sum + (f.added || 0) + (f.deleted || 0),
+        0
+      );
 
   // 敏感命中：路径 或 内容，任一即可
   const pathHits = codeFiles
     .map((f) => f.file)
     .filter((f) => RULES.sensitivePaths.some((re) => re.test(f)));
+
+  // 决策层：方案文件本身叫 plan.md，不含敏感信息，但正文里点名的待改文件含。
+  // 所以从正文抽出路径样式的 token 再跑一遍路径规则。
+  let plannedPathHits = [];
+  if (isProposal && staged.plannedFiles) {
+    plannedPathHits = staged.plannedFiles.filter((tk) =>
+      RULES.sensitivePaths.some((re) => re.test(tk))
+    );
+  }
+
   const contentHits = staged.changedLines.filter((l) =>
     RULES.sensitiveContents.some((re) => re.test(l))
   );
-  const sensitive = pathHits.length > 0 || contentHits.length > 0;
+  const sensitive =
+    pathHits.length > 0 || plannedPathHits.length > 0 || contentHits.length > 0;
 
   let mode, reason;
   if (changedLines > RULES.dualLineThreshold) {
@@ -139,6 +218,7 @@ function judge(staged) {
     mode = "dual";
     const parts = [];
     if (pathHits.length) parts.push(`敏感路径 ${pathHits.slice(0, 3).join(", ")}`);
+    if (plannedPathHits.length) parts.push(`方案点名敏感文件 ${plannedPathHits.slice(0, 3).join(", ")}`);
     if (contentHits.length) parts.push(`敏感内容 ${contentHits.length} 处`);
     reason = `变更 ${changedLines} 行（≤ ${RULES.dualLineThreshold}）但命中 auth/数据库/加密：${parts.join("；")}`;
   } else if (changedLines <= RULES.skipLineThreshold) {
@@ -155,8 +235,9 @@ function judge(staged) {
     stats: {
       changedLines,
       fileCount: staged.files.length,
-      codeFileCount: codeFiles.length,
+      codeFileCount: isProposal ? staged.files.length : codeFiles.length,
       sensitivePathHits: pathHits,
+      plannedPathHits,
       sensitiveContentHits: contentHits.length,
     },
   };
@@ -166,18 +247,20 @@ function judge(staged) {
 //  落盘（可审计）
 // ═══════════════════════════════════════════════════════════════════
 
-function saveRecord(result, sha) {
+function saveRecord(result, sha, layer, plannedFiles) {
   const dir = path.join(process.cwd(), ".ccg", "reviews");
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, `${sha}.json`);
   const record = {
     sha,
+    layer: layer || "diff", // plan = 决策层(动手前) | diff = 验证层(动手后)
     mode: result.mode,
     reason: result.reason,
     stats: result.stats,
+    // 决策层记录方案点名的待改文件，供事后范围漂移比对
+    plannedFiles: (layer === "plan" && plannedFiles) || undefined,
     decidedAt: new Date().toISOString(),
     decidedBy: "ccg-review-decider",
-    // 深度审查由 PR/CI 层执行；此处仅登记要求
     deepReview: {
       required: result.mode !== "skip",
       status: "pending",
@@ -223,22 +306,43 @@ function main() {
   const printOnly = argv.includes("--print");
   const shaIdx = argv.indexOf("--sha");
   const sha = shaIdx >= 0 && argv[shaIdx + 1] ? argv[shaIdx + 1] : currentSha();
+  const inputIdx = argv.indexOf("--input");
 
-  const staged = collectStaged();
-  if (!staged) {
-    console.log("   [CCG] 判定器无法读取 git 暂存区，跳过（不影响提交）");
-    return 0;
-  }
-  if (staged.files.length === 0) {
-    console.log("   [CCG] 暂存区无变更，跳过审查模式判定");
-    return 0;
+  // --input <方案文件> = 决策层：动手之前对方案判复杂度
+  // 无 --input      = 验证层：对已落地的暂存改动判复杂度
+  let staged;
+  if (inputIdx >= 0 && argv[inputIdx + 1]) {
+    const file = path.resolve(argv[inputIdx + 1]);
+    staged = collectProposal(file);
+    if (staged.error) {
+      console.log(`   [CCG] ${staged.error}`);
+      return 0;
+    }
+  } else {
+    staged = collectStaged();
+    if (!staged) {
+      console.log("   [CCG] 判定器无法读取 git 暂存区，跳过（不影响提交）");
+      return 0;
+    }
+    if (staged.files.length === 0) {
+      console.log("   [CCG] 暂存区无变更，跳过审查模式判定");
+      return 0;
+    }
   }
 
   const result = judge(staged);
   const backends = detectBackends();
+  const layer = staged.proposal ? "决策层(动手前·方案)" : "验证层(动手后·diff)";
 
-  console.log(`   [CCG] 审查模式判定: ${result.mode.toUpperCase()}`);
+  console.log(`   [CCG] 审查模式判定 [${layer}]: ${result.mode.toUpperCase()}`);
   console.log(`          ${result.reason}`);
+  if (staged.proposal) {
+    const s = staged.stats;
+    console.log(
+      `          方案规模估算 ${result.stats.changedLines} 行 / ${s.fileCount} 个文件` +
+        (s.estimated ? "（方案未声明预计规模，按文档体量估算）" : "（采信方案声明的预计规模）")
+    );
+  }
   console.log(
     `          变更 ${result.stats.changedLines} 行 / ${result.stats.codeFileCount} 个源文件` +
       (result.stats.sensitivePathHits.length || result.stats.sensitiveContentHits
@@ -260,12 +364,24 @@ function main() {
     } else {
       console.log(`          要求 ${target} 深度审查，后端就绪（${available.join(" + ")}）`);
     }
-    console.log("          → 深度审查在 PR/CI 层执行；本地提交只需完成确定性门禁");
+    console.log(
+      staged.proposal
+        ? "          → 决策层：动手之前跑 sh scripts/plan-review.sh，收敛后才可开始写码"
+        : "          → 验证层：动手之后跑 sh scripts/deep-review.sh"
+    );
   }
 
   if (!printOnly) {
-    const f = saveRecord(result, sha);
+    const f = saveRecord(
+      result,
+      sha,
+      staged.proposal ? "plan" : "diff",
+      staged.plannedFiles
+    );
     console.log(`          判定已落盘: ${path.relative(process.cwd(), f)}`);
+    if (staged.proposal && staged.plannedFiles && staged.plannedFiles.length) {
+      console.log(`          方案点名待改文件 ${staged.plannedFiles.length} 个（供事后范围比对）`);
+    }
   }
   return 0;
 }
